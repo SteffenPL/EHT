@@ -1,6 +1,7 @@
 /**
  * Batch simulation runner.
  * Runs multiple simulations and collects snapshots at specified times.
+ * Supports both sequential and parallel (Web Worker) execution.
  */
 
 import { SimulationEngine } from '../simulation';
@@ -15,11 +16,19 @@ import type {
   ParameterRange,
 } from './types';
 import { generateParameterConfigs, getTimeSamples } from './types';
+import { WorkerPool } from './workerPool';
 
 export interface BatchRunnerCallbacks {
   onProgress?: (progress: BatchProgress) => void;
   onSnapshot?: (snapshot: BatchSnapshot) => void;
   onComplete?: (data: BatchData) => void;
+}
+
+export interface BatchRunnerOptions {
+  /** Use Web Workers for parallel execution. Default: true if supported. */
+  parallel?: boolean;
+  /** Number of workers for parallel execution. Default: navigator.hardwareConcurrency. */
+  workerCount?: number;
 }
 
 /**
@@ -160,10 +169,9 @@ function yieldToUI(): Promise<void> {
 }
 
 /**
- * Run batch simulations asynchronously.
- * Yields control between runs to allow progress UI updates.
+ * Run batch simulations sequentially (single-threaded).
  */
-export async function runBatch(
+async function runBatchSequential(
   baseParams: SimulationParams,
   config: BatchConfig,
   callbacks?: BatchRunnerCallbacks
@@ -229,6 +237,141 @@ export async function runBatch(
   callbacks?.onComplete?.(batchData);
 
   return batchData;
+}
+
+/**
+ * Run batch simulations in parallel using Web Workers.
+ */
+async function runBatchParallel(
+  baseParams: SimulationParams,
+  config: BatchConfig,
+  callbacks?: BatchRunnerCallbacks,
+  workerCount?: number
+): Promise<BatchData> {
+  const paramConfigs = generateParameterConfigs(
+    config.parameter_ranges,
+    config.sampling_mode,
+    config.random_sample_count
+  );
+  const timeSamples = getTimeSamples(config.time_samples);
+
+  const totalRuns = paramConfigs.length * config.seeds_per_config;
+  const allSnapshots: BatchSnapshot[] = [];
+  let completedRuns = 0;
+
+  // Create worker pool
+  const pool = new WorkerPool(workerCount);
+  pool.init();
+
+  try {
+    // Build list of all tasks
+    const tasks: Array<{
+      paramConfig: Record<string, number>;
+      seed: number;
+      runIndex: number;
+    }> = [];
+
+    let runIndex = 0;
+    for (const paramConfig of paramConfigs) {
+      for (let seedOffset = 0; seedOffset < config.seeds_per_config; seedOffset++) {
+        const seed = baseParams.general.random_seed + seedOffset;
+        tasks.push({ paramConfig, seed, runIndex });
+        runIndex++;
+      }
+    }
+
+    // Report initial progress
+    callbacks?.onProgress?.({
+      current_run: 0,
+      total_runs: totalRuns,
+      current_config: {},
+      is_running: true,
+      is_complete: false,
+    });
+
+    // Submit all tasks and collect results
+    const promises = tasks.map(async (task) => {
+      const snapshots = await pool.submit(
+        baseParams,
+        task.paramConfig,
+        task.seed,
+        timeSamples,
+        task.runIndex
+      );
+
+      // Report progress after each completion
+      completedRuns++;
+      callbacks?.onProgress?.({
+        current_run: completedRuns,
+        total_runs: totalRuns,
+        current_config: task.paramConfig,
+        is_running: true,
+        is_complete: false,
+      });
+
+      // Notify about snapshots
+      for (const snapshot of snapshots) {
+        callbacks?.onSnapshot?.(snapshot);
+      }
+
+      return snapshots;
+    });
+
+    // Wait for all to complete
+    const results = await Promise.all(promises);
+
+    // Collect all snapshots
+    for (const snapshots of results) {
+      allSnapshots.push(...snapshots);
+    }
+
+    // Sort snapshots by run_index and time_h for consistent ordering
+    allSnapshots.sort((a, b) => {
+      if (a.run_index !== b.run_index) return a.run_index - b.run_index;
+      return a.time_h - b.time_h;
+    });
+  } finally {
+    // Clean up workers
+    pool.terminate();
+  }
+
+  const batchData: BatchData = {
+    config,
+    snapshots: allSnapshots,
+    completed_runs: totalRuns,
+    total_runs: totalRuns,
+  };
+
+  callbacks?.onProgress?.({
+    current_run: totalRuns,
+    total_runs: totalRuns,
+    current_config: {},
+    is_running: false,
+    is_complete: true,
+  });
+
+  callbacks?.onComplete?.(batchData);
+
+  return batchData;
+}
+
+/**
+ * Run batch simulations.
+ * Uses Web Workers for parallel execution if available, falls back to sequential.
+ */
+export async function runBatch(
+  baseParams: SimulationParams,
+  config: BatchConfig,
+  callbacks?: BatchRunnerCallbacks,
+  options?: BatchRunnerOptions
+): Promise<BatchData> {
+  const useParallel = options?.parallel ?? WorkerPool.isSupported();
+
+  if (useParallel && WorkerPool.isSupported()) {
+    return runBatchParallel(baseParams, config, callbacks, options?.workerCount);
+  } else {
+    return runBatchSequential(baseParams, config, callbacks);
+  }
 }
 
 /**

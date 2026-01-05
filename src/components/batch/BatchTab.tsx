@@ -35,6 +35,7 @@ import {
   readFileAsText,
   computeStatistics,
   getTimeSamples,
+  WorkerPool,
 } from '@/core/batch';
 
 export interface BatchTabProps {
@@ -74,6 +75,10 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
   const [plotStatistic, setPlotStatistic] = useState<string>('');
   const [plotType, setPlotType] = useState<'line' | 'line_ci'>('line');
 
+  // Parallel execution
+  const [useParallel, setUseParallel] = useState(WorkerPool.isSupported());
+  const workerCount = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4;
+
   // File input refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tomlInputRef = useRef<HTMLInputElement>(null);
@@ -104,6 +109,10 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
               setProgress(p);
             }
           },
+        },
+        {
+          parallel: useParallel,
+          workerCount,
         }
       );
 
@@ -120,7 +129,7 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
       setProgress(null);
       setStartTime(null);
     }
-  }, [baseParams, paramRanges, timeSampleConfig, seedsPerConfig]);
+  }, [baseParams, paramRanges, timeSampleConfig, seedsPerConfig, useParallel, workerCount]);
 
   // Stop batch
   const handleStopBatch = useCallback(() => {
@@ -341,6 +350,25 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
 
           </div>
 
+          {WorkerPool.isSupported() && (
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useParallel}
+                  onChange={(e) => setUseParallel(e.target.checked)}
+                  disabled={isRunning}
+                  className="rounded"
+                />
+                Parallel execution
+              </label>
+              {useParallel && (
+                <span className="text-xs text-muted-foreground">
+                  ({workerCount} workers)
+                </span>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-2">
             {isRunning ? (

@@ -35,5 +35,7 @@ export {
   readFileAsText,
 } from './serialization';
 
-export type { BatchRunnerCallbacks } from './runner';
+export type { BatchRunnerCallbacks, BatchRunnerOptions } from './runner';
 export { runBatch, computeTotalRuns } from './runner';
+
+export { WorkerPool } from './workerPool';
