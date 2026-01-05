@@ -7,11 +7,26 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { ParameterRange } from '@/core/batch';
+import type { SimulationParams } from '@/core/types';
 
 export interface ParameterRangeListProps {
   ranges: ParameterRange[];
   onChange: (ranges: ParameterRange[]) => void;
+  baseParams: SimulationParams;
   disabled?: boolean;
+}
+
+/** Get a nested value from params using dot notation path */
+function getNestedValue(obj: unknown, path: string): number | undefined {
+  const parts = path.split('.');
+  let current: unknown = obj;
+  for (const part of parts) {
+    if (current === null || current === undefined || typeof current !== 'object') {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[part];
+  }
+  return typeof current === 'number' ? current : undefined;
 }
 
 /** Available parameters for batch sweeps */
@@ -36,12 +51,13 @@ const AVAILABLE_PARAMS = [
   { path: 'cell_types.control.k_B', label: 'Control k_B' },
 ];
 
-export function ParameterRangeList({ ranges, onChange, disabled }: ParameterRangeListProps) {
+export function ParameterRangeList({ ranges, onChange, baseParams, disabled }: ParameterRangeListProps) {
   const usedPaths = new Set(ranges.map((r) => r.path));
   const availableParams = AVAILABLE_PARAMS.filter((p) => !usedPaths.has(p.path));
 
   const handleAdd = (path: string) => {
-    onChange([...ranges, { path, min: 0, max: 1, steps: 3 }]);
+    const baseValue = getNestedValue(baseParams, path) ?? 0;
+    onChange([...ranges, { path, min: baseValue, max: baseValue, steps: 3 }]);
   };
 
   const handleRemove = (index: number) => {
@@ -85,6 +101,7 @@ export function ParameterRangeList({ ranges, onChange, disabled }: ParameterRang
         <div className="space-y-2">
           {ranges.map((range, index) => {
             const paramInfo = AVAILABLE_PARAMS.find((p) => p.path === range.path);
+            const baseValue = getNestedValue(baseParams, range.path);
             return (
               <div
                 key={range.path}
@@ -93,6 +110,12 @@ export function ParameterRangeList({ ranges, onChange, disabled }: ParameterRang
                 <span className="text-sm font-medium flex-1 truncate" title={range.path}>
                   {paramInfo?.label ?? range.path}
                 </span>
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs text-muted-foreground">Base:</Label>
+                  <span className="w-16 h-7 text-xs flex items-center justify-center bg-muted rounded border text-muted-foreground">
+                    {baseValue ?? '—'}
+                  </span>
+                </div>
                 <div className="flex items-center gap-1">
                   <Label className="text-xs text-muted-foreground">Min:</Label>
                   <Input

@@ -228,6 +228,7 @@ export function BatchTab({ baseParams }: BatchTabProps) {
           <ParameterRangeList
             ranges={paramRanges}
             onChange={setParamRanges}
+            baseParams={baseParams}
             disabled={isRunning}
           />
 
