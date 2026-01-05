@@ -6,6 +6,20 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 
+/** Parameters that should be treated as integers */
+const INTEGER_PARAMS = new Set([
+  'N_init',
+  'N_emt',
+  'random_seed',
+  'n_substeps',
+]);
+
+/** Check if a parameter path ends with an integer parameter name */
+function isIntegerParam(path: string): boolean {
+  const lastPart = path.split('.').pop() ?? '';
+  return INTEGER_PARAMS.has(lastPart);
+}
+
 export interface ParameterInputProps {
   label: string;
   path: string;
@@ -38,6 +52,12 @@ export function ParameterInput({ label, path, value, onChange, disabled }: Param
 
   // Number - number input
   if (typeof value === 'number') {
+    const isInteger = isIntegerParam(path);
+    const step = isInteger ? 1 : 0.01;
+    const parseValue = isInteger
+      ? (v: string) => parseInt(v, 10) || 0
+      : (v: string) => parseFloat(v) || 0;
+
     return (
       <div className="grid grid-cols-2 gap-1.5">
         <Label htmlFor={path} className="text-sm col-span-1">
@@ -48,8 +68,8 @@ export function ParameterInput({ label, path, value, onChange, disabled }: Param
             id={path}
             type="number"
             value={value}
-            step="any"
-            onChange={(e) => handleChange(parseFloat(e.target.value) || 0)}
+            step={step}
+            onChange={(e) => handleChange(parseValue(e.target.value))}
             disabled={disabled}
             className="h-8 text-sm"
           />

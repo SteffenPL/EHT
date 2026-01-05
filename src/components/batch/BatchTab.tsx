@@ -343,6 +343,7 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
               disabled={isRunning}
               className="w-24 h-8"
               min={1}
+              step={1}
             />
             <p className="text-sm text-muted-foreground">
             Total: {totalRuns} run{totalRuns !== 1 ? 's' : ''} × {timeSamples.length} time point{timeSamples.length !== 1 ? 's' : ''} = {totalSnapshots} snapshot{totalSnapshots !== 1 ? 's' : ''}

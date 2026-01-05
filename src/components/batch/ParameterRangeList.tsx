@@ -30,11 +30,11 @@ function getNestedValue(obj: unknown, path: string): number | undefined {
 }
 
 /** Available parameters for batch sweeps */
-const AVAILABLE_PARAMS = [
-  { path: 'general.N_emt', label: 'N_emt (EMT cell count)' },
-  { path: 'general.N_init', label: 'N_init (Initial cells)' },
+const AVAILABLE_PARAMS: Array<{ path: string; label: string; isInteger?: boolean }> = [
+  { path: 'general.N_emt', label: 'N_emt (EMT cell count)', isInteger: true },
+  { path: 'general.N_init', label: 'N_init (Initial cells)', isInteger: true },
   { path: 'general.curvature', label: 'Curvature' },
-  { path: 'general.random_seed', label: 'Random seed' },
+  { path: 'general.random_seed', label: 'Random seed', isInteger: true },
   { path: 'cell_prop.R_hard', label: 'R_hard (Hard radius)' },
   { path: 'cell_prop.R_soft', label: 'R_soft (Soft radius)' },
   { path: 'cell_prop.repulsion_stiffness', label: 'Repulsion stiffness' },
@@ -102,6 +102,8 @@ export function ParameterRangeList({ ranges, onChange, baseParams, disabled }: P
           {ranges.map((range, index) => {
             const paramInfo = AVAILABLE_PARAMS.find((p) => p.path === range.path);
             const baseValue = getNestedValue(baseParams, range.path);
+            const isInteger = paramInfo?.isInteger ?? false;
+            const valueStep = isInteger ? 1 : 0.01;
             return (
               <div
                 key={range.path}
@@ -124,7 +126,7 @@ export function ParameterRangeList({ ranges, onChange, baseParams, disabled }: P
                     onChange={(e) => handleUpdate(index, 'min', e.target.value)}
                     disabled={disabled}
                     className="w-16 h-7 text-xs"
-                    step="any"
+                    step={valueStep}
                   />
                 </div>
                 <div className="flex items-center gap-1">
@@ -135,7 +137,7 @@ export function ParameterRangeList({ ranges, onChange, baseParams, disabled }: P
                     onChange={(e) => handleUpdate(index, 'max', e.target.value)}
                     disabled={disabled}
                     className="w-16 h-7 text-xs"
-                    step="any"
+                    step={valueStep}
                   />
                 </div>
                 <div className="flex items-center gap-1">
@@ -147,6 +149,7 @@ export function ParameterRangeList({ ranges, onChange, baseParams, disabled }: P
                     disabled={disabled}
                     className="w-14 h-7 text-xs"
                     min={1}
+                    step={1}
                   />
                 </div>
                 <Button

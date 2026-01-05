@@ -34,7 +34,7 @@ export function TimeSampleConfig({ config, onChange, disabled }: TimeSampleConfi
             disabled={disabled}
             className="h-8"
             min={0}
-            step="any"
+            step={0.01}
           />
         </div>
         <div className="space-y-1">
@@ -49,7 +49,7 @@ export function TimeSampleConfig({ config, onChange, disabled }: TimeSampleConfi
             disabled={disabled}
             className="h-8"
             min={0}
-            step="any"
+            step={0.01}
           />
         </div>
         <div className="space-y-1">
@@ -63,8 +63,8 @@ export function TimeSampleConfig({ config, onChange, disabled }: TimeSampleConfi
             onChange={(e) => handleChange('step', e.target.value)}
             disabled={disabled}
             className="h-8"
-            min={0.1}
-            step="any"
+            min={0.01}
+            step={0.01}
           />
         </div>
       </div>
