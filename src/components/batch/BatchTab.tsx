@@ -56,6 +56,7 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
   const [batchData, setBatchData] = useState<BatchData | null>(null);
   const [progress, setProgress] = useState<BatchProgress | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
   const abortRef = useRef(false);
 
   // Statistics
@@ -83,43 +84,42 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
   const totalSnapshots = totalRuns * timeSamples.length;
 
   // Run batch
-  const handleRunBatch = useCallback(() => {
+  const handleRunBatch = useCallback(async () => {
     setIsRunning(true);
+    setStartTime(Date.now());
     abortRef.current = false;
 
-    // Use setTimeout to allow UI to update
-    setTimeout(() => {
-      try {
-        const data = runBatch(
-          baseParams,
-          {
-            parameter_ranges: paramRanges,
-            time_samples: timeSampleConfig,
-            seeds_per_config: seedsPerConfig,
-            sampling_mode: 'grid',
+    try {
+      const data = await runBatch(
+        baseParams,
+        {
+          parameter_ranges: paramRanges,
+          time_samples: timeSampleConfig,
+          seeds_per_config: seedsPerConfig,
+          sampling_mode: 'grid',
+        },
+        {
+          onProgress: (p) => {
+            if (!abortRef.current) {
+              setProgress(p);
+            }
           },
-          {
-            onProgress: (p) => {
-              if (!abortRef.current) {
-                setProgress(p);
-              }
-            },
-          }
-        );
-
-        if (!abortRef.current) {
-          setBatchData(data);
-          setResultsColumns([]);
-          setResultsRows([]);
         }
-      } catch (err) {
-        console.error('Batch run failed:', err);
-        alert('Batch run failed. Check console for details.');
-      } finally {
-        setIsRunning(false);
-        setProgress(null);
+      );
+
+      if (!abortRef.current) {
+        setBatchData(data);
+        setResultsColumns([]);
+        setResultsRows([]);
       }
-    }, 50);
+    } catch (err) {
+      console.error('Batch run failed:', err);
+      alert('Batch run failed. Check console for details.');
+    } finally {
+      setIsRunning(false);
+      setProgress(null);
+      setStartTime(null);
+    }
   }, [baseParams, paramRanges, timeSampleConfig, seedsPerConfig]);
 
   // Stop batch
@@ -263,6 +263,29 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
     ? (progress.current_run / progress.total_runs) * 100
     : 0;
 
+  // Compute estimated time remaining
+  const getTimeRemaining = (): string | null => {
+    if (!progress || !startTime || progress.current_run === 0) return null;
+
+    const elapsed = Date.now() - startTime;
+    const avgTimePerRun = elapsed / progress.current_run;
+    const remainingRuns = progress.total_runs - progress.current_run;
+    const remainingMs = avgTimePerRun * remainingRuns;
+
+    if (remainingMs < 1000) return '< 1s';
+    if (remainingMs < 60000) return `${Math.ceil(remainingMs / 1000)}s`;
+    if (remainingMs < 3600000) {
+      const mins = Math.floor(remainingMs / 60000);
+      const secs = Math.ceil((remainingMs % 60000) / 1000);
+      return `${mins}m ${secs}s`;
+    }
+    const hours = Math.floor(remainingMs / 3600000);
+    const mins = Math.ceil((remainingMs % 3600000) / 60000);
+    return `${hours}h ${mins}m`;
+  };
+
+  const timeRemaining = getTimeRemaining();
+
   // Prepare plot data
   const plotCompatibility = checkLinePlotCompatibility(resultsColumns);
   const plotData =
@@ -340,8 +363,9 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
           {isRunning && progress && (
             <div className="space-y-1">
               <Progress value={progressPercent} className="h-2" />
-              <p className="text-xs">
+              <p className="text-xs text-muted-foreground">
                 {progress.current_run} / {progress.total_runs} runs
+                {timeRemaining && ` · ~${timeRemaining} remaining`}
               </p>
             </div>
           )}

@@ -153,13 +153,21 @@ function runSingleSimulation(
 }
 
 /**
- * Run batch simulations.
+ * Yield control to the browser to allow UI updates.
  */
-export function runBatch(
+function yieldToUI(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/**
+ * Run batch simulations asynchronously.
+ * Yields control between runs to allow progress UI updates.
+ */
+export async function runBatch(
   baseParams: SimulationParams,
   config: BatchConfig,
   callbacks?: BatchRunnerCallbacks
-): BatchData {
+): Promise<BatchData> {
   const paramConfigs = generateParameterConfigs(
     config.parameter_ranges,
     config.sampling_mode,
@@ -184,6 +192,9 @@ export function runBatch(
         is_running: true,
         is_complete: false,
       });
+
+      // Yield to allow UI to update
+      await yieldToUI();
 
       // Run simulation
       const snapshots = runSingleSimulation(
