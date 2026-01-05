@@ -4,7 +4,7 @@
  */
 import { Vector2 } from '../math/vector2';
 import { SeededRandom } from '../math/random';
-import { basalArcLength, basalCurve, basalCurveParam, basalNormal } from '../math/geometry';
+import { basalArcLength, basalCurve, curvedCoordsToPosition } from '../math/geometry';
 import type {
   SimulationParams,
   SimulationState,
@@ -67,13 +67,9 @@ export class SimulationEngine {
     // Generate initial positions
     const positions: Vector2[] = [];
     for (let i = 0; i < N; i++) {
-      const x = this.rng.random(-w / 2, w / 2);
-      const y = this.rng.random(h / 3, (2 * h) / 3);
-
-      // Get position on basal curve
-      let pos = basalCurveParam(x, pg.curvature);
-      const normal = basalNormal(pos, pg.curvature);
-      pos = pos.add(normal.scale(y));
+      const l = this.rng.random(-w, w);
+      const height = this.rng.random(h / 3, (2 * h) / 3);
+      const pos = curvedCoordsToPosition(l, height, pg.curvature);
 
       positions.push(pos);
     }

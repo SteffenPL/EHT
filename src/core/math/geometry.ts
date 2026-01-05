@@ -32,13 +32,12 @@ export function basalCurveParam(l: number, curvature: number): Vector2 {
 
   const center = shapeCenter(curvature);
   const radius = Math.abs(1 / curvature);
-
-  const factor = 1 / (0.5 * Math.PI * radius);
   const dir = -Math.sign(curvature);
+  const theta = l / radius;
 
   return new Vector2(
-    center.x + dir * radius * Math.sin(l * factor),
-    center.y + dir * radius * Math.cos(l * factor)
+    center.x + dir * radius * Math.sin(theta),
+    center.y + dir * radius * Math.cos(theta)
   );
 }
 
@@ -99,8 +98,24 @@ export function basalArcLength(pos: Vector2, curvature: number): number {
 
   const center = shapeCenter(curvature);
   const toPos = pos.sub(center);
-  const angle = Math.atan2(toPos.x, toPos.y * -Math.sign(curvature));
   const radius = Math.abs(1 / curvature);
+  const dir = -Math.sign(curvature);
+  const angle = Math.atan2(dir * toPos.x, dir * toPos.y);
 
-  return angle * 0.5 * Math.PI * radius;
+  // With basalCurveParam using theta = l / radius, we have l = theta * radius.
+  return angle * radius;
+}
+
+/**
+ * Convert curved coordinates (l along basal curve, h along outward normal)
+ * into Cartesian coordinates.
+ *
+ * @param l - Basal curve parameter
+ * @param h - Distance along the outward normal (into tissue)
+ * @param curvature - Membrane curvature
+ * @returns Cartesian position
+ */
+export function curvedCoordsToPosition(l: number, h: number, curvature: number): Vector2 {
+  const bp = basalCurveParam(l, curvature);
+  return bp.add(basalNormal(bp, curvature).scale(h));
 }

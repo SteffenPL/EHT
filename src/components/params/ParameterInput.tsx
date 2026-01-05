@@ -36,16 +36,17 @@ export function ParameterInput({ label, path, value, onChange, disabled }: Param
   // Boolean - checkbox
   if (typeof value === 'boolean') {
     return (
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-2 gap-1.5">
+        <Label htmlFor={path} className="text-sm font-normal cursor-pointer col-span-1">
+          {label}
+        </Label>
         <Checkbox
+          className="col-span-1"
           id={path}
           checked={value}
           onCheckedChange={(checked) => handleChange(checked === true)}
           disabled={disabled}
         />
-        <Label htmlFor={path} className="text-sm font-normal cursor-pointer">
-          {label}
-        </Label>
       </div>
     );
   }
