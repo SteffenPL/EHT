@@ -7,17 +7,17 @@ const params = {
     t_end: 48,
     dt: 0.1,
     random_seed: 0,
-    N_init: 25,
+    N_init: 30,
     N_max: 80,
     N_emt: 5,
-    w_init: 70, // ~ N_init * 1.5
+    w_init: 80, // ~ N_init * 1.5
     h_init: 5,
     mu: 0.2,
     n_substeps: 30,
     alg_dt: 0.01,
     w_screen: 70,
     h_screen: (70 * 1) / 3,
-    p_div_out: 0.95, // cp. NC
+    p_div_out: 1.0, // cp. NC
     curvature: 0.06,
   },
   cell_prop: {
@@ -25,8 +25,8 @@ const params = {
     max_basal_junction_dist: 2.0,
     basal_daming_ratio: 1.0,
     basal_membrane_repulsion: 0.0,
-    cytos_init: 0.1,
-    diffusion: 0.1,
+    cytos_init: 0.0,
+    diffusion: 0.2,
   },
   cell_types: {
     control: {
@@ -37,9 +37,9 @@ const params = {
       color: { r: 30, g: 100, b: 20 },
       dur_G2: 0.5,
       dur_mitosis: 0.5,
-      k_apical_junction: 1.0,
+      k_apical_junction: 5.0,
       k_cytos: 5.0,
-      max_cytoskeleton_length: 1.0,
+      max_cytoskeleton_length:  0.0,
       run: 0.0,
       running_speed: 1.0,
       running_mode: 0,
@@ -47,10 +47,10 @@ const params = {
       stiffness_apical_apical_div: 4.0,
       stiffness_nuclei_apical: 3.0,
       stiffness_nuclei_basal: 2.0,
-      stiffness_repulsion: 4.0,
-      stiffness_straightness: 15.0,
+      stiffness_repulsion: 2.0,
+      stiffness_straightness: 5.0,
       lifespan: { min: 5.5, max: 6.5 },
-      INM: 1.0,
+      INM: 0.0,
       hetero: false,
       events: {
         time_A: { min: Infinity, max: Infinity },
@@ -69,7 +69,7 @@ const params = {
       dur_mitosis: 0.5,
       k_apical_junction: 1.0,
       k_cytos: 5.0,
-      max_cytoskeleton_length: 3.7,
+      max_cytoskeleton_length: 0.0,
       run: 0.0,
       running_speed: 1.0,
       running_mode: 0,
@@ -78,9 +78,9 @@ const params = {
       stiffness_nuclei_apical: 3.0,
       stiffness_nuclei_basal: 2.0,
       stiffness_repulsion: 4.0,
-      stiffness_straightness: 15.0,
+      stiffness_straightness: 2.0,
       lifespan: { min: 5.5, max: 6.5 },
-      INM: 1.0,
+      INM: 0.0,
       hetero: true,
       events: {
         time_A: { min: 3, max: 12 },
@@ -948,6 +948,11 @@ const pane = new Pane({
 pane.addBinding(params.general, "N_init", {min: 5, max: 100});
 pane.addBinding(params.general, "N_emt", {min: 0, max: 50});
 pane.addBinding(params.general, "curvature", {min: -0.1, max: 0.1, step: 0.001});
+pane.addBinding(params.cell_prop, "max_basal_junction_dist", {
+  min: 0.1,
+  max: 4.0,
+  step: 0.01,
+});
 
 pane.addBlade({ view: "separator" });
 const btn_pause = pane.addButton({title: "Pause/Resume",});
