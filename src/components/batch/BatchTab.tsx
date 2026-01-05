@@ -13,6 +13,8 @@ import { ParameterRangeList } from './ParameterRangeList';
 import { TimeSampleConfig } from './TimeSampleConfig';
 import { StatisticSelector } from './StatisticSelector';
 import { ResultsTable } from './ResultsTable';
+import { BatchPlot } from './BatchPlot';
+import { aggregateByTime, checkLinePlotCompatibility } from './plotUtils';
 import type { SimulationParams } from '@/core/types';
 import type {
   ParameterRange,
@@ -64,6 +66,10 @@ export function BatchTab({ baseParams }: BatchTabProps) {
   const [outputMode, setOutputMode] = useState<'time_series' | 'terminal'>('time_series');
   const [resultsColumns, setResultsColumns] = useState<string[]>([]);
   const [resultsRows, setResultsRows] = useState<(string | number)[][]>([]);
+
+  // Plot configuration
+  const [plotStatistic, setPlotStatistic] = useState<string>('');
+  const [plotType, setPlotType] = useState<'line'>('line');
 
   // File input ref
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -200,6 +206,11 @@ export function BatchTab({ baseParams }: BatchTabProps) {
 
     setResultsColumns(columns);
     setResultsRows(rows);
+
+    // Set default plot statistic if not set
+    if (!plotStatistic && selectedStats.length > 0) {
+      setPlotStatistic(selectedStats[0]);
+    }
   };
 
   // Export statistics CSV
@@ -212,6 +223,13 @@ export function BatchTab({ baseParams }: BatchTabProps) {
   const progressPercent = progress
     ? (progress.current_run / progress.total_runs) * 100
     : 0;
+
+  // Prepare plot data
+  const plotCompatibility = checkLinePlotCompatibility(resultsColumns);
+  const plotData =
+    plotCompatibility.isCompatible && plotStatistic
+      ? aggregateByTime(resultsColumns, resultsRows, plotStatistic)
+      : [];
 
   return (
     <div className="space-y-4">
@@ -383,11 +401,76 @@ export function BatchTab({ baseParams }: BatchTabProps) {
               Export CSV
             </Button>
           </CardHeader>
-          <CardContent>
-            <ResultsTable columns={resultsColumns} rows={resultsRows} />
-            <p className="text-xs text-muted-foreground mt-2">
-              {resultsRows.length} row{resultsRows.length !== 1 ? 's' : ''}
-            </p>
+          <CardContent className="space-y-4">
+            <div>
+              <ResultsTable columns={resultsColumns} rows={resultsRows} />
+              <p className="text-xs text-muted-foreground mt-2">
+                {resultsRows.length} row{resultsRows.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+
+            <Separator />
+
+            {/* Plot Configuration */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">Visualization</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="plot-statistic" className="text-sm">
+                    Statistic to Plot
+                  </Label>
+                  <select
+                    id="plot-statistic"
+                    value={plotStatistic}
+                    onChange={(e) => setPlotStatistic(e.target.value)}
+                    className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                  >
+                    <option value="">Select a statistic...</option>
+                    {selectedStats.map((stat) => (
+                      <option key={stat} value={stat}>
+                        {stat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="plot-type" className="text-sm">
+                    Plot Type
+                  </Label>
+                  <select
+                    id="plot-type"
+                    value={plotType}
+                    onChange={(e) => setPlotType(e.target.value as 'line')}
+                    className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                  >
+                    <option value="line">Line Plot</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Compatibility message */}
+              {!plotCompatibility.isCompatible && (
+                <div className="p-3 rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm text-amber-900 dark:text-amber-100">
+                    {plotCompatibility.message}
+                  </p>
+                </div>
+              )}
+
+              {/* Plot display */}
+              {plotCompatibility.isCompatible && plotStatistic && plotData.length > 0 && (
+                <div className="mt-4 border rounded-md p-4 bg-muted/30">
+                  <BatchPlot
+                    data={plotData}
+                    statisticName={plotStatistic}
+                    width={640}
+                    height={400}
+                  />
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
