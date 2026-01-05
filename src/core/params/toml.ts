@@ -3,8 +3,15 @@
  */
 import TOML from '@iarna/toml';
 import type { SimulationParams, PartialSimulationParams } from '../types';
+import type { ParameterRange } from '../batch/types';
 import { mergeWithDefaults } from './merge';
 import { validatePartialParams, safeValidatePartialParams } from './schema';
+
+/** Result of parsing TOML with optional batch config */
+export interface TomlParseResult {
+  params: SimulationParams;
+  parameterRanges?: ParameterRange[];
+}
 
 /**
  * Parse TOML string into partial parameters.
@@ -153,4 +160,63 @@ export async function loadTomlFromUrl(url: string): Promise<SimulationParams> {
   }
   const tomlString = await response.text();
   return parseTomlWithDefaults(tomlString);
+}
+
+/**
+ * Parse TOML string and extract both parameters and optional parameter_ranges.
+ * The parameter_ranges section is stored separately and not merged with simulation params.
+ *
+ * @param tomlString - TOML formatted string
+ * @returns Object containing params and optional parameterRanges
+ */
+export function parseTomlWithRanges(tomlString: string): TomlParseResult {
+  const parsed = TOML.parse(tomlString) as Record<string, unknown>;
+
+  // Extract parameter_ranges if present
+  let parameterRanges: ParameterRange[] | undefined;
+  if (parsed.parameter_ranges && Array.isArray(parsed.parameter_ranges)) {
+    parameterRanges = (parsed.parameter_ranges as unknown[]).map((r) => {
+      const range = r as Record<string, unknown>;
+      return {
+        path: String(range.path ?? ''),
+        min: Number(range.min ?? 0),
+        max: Number(range.max ?? 0),
+        steps: Number(range.steps ?? 1),
+      };
+    });
+    // Remove from parsed so it doesn't interfere with param validation
+    delete parsed.parameter_ranges;
+  }
+
+  // Parse remaining as simulation params
+  const partial = parsed as PartialSimulationParams;
+  const params = mergeWithDefaults(partial);
+
+  return { params, parameterRanges };
+}
+
+/**
+ * Serialize parameters to TOML string, optionally including parameter_ranges.
+ *
+ * @param params - Simulation parameters to serialize
+ * @param parameterRanges - Optional array of parameter ranges to include
+ * @returns TOML formatted string
+ */
+export function toTomlWithRanges(
+  params: SimulationParams,
+  parameterRanges?: ParameterRange[]
+): string {
+  // Convert Infinity to a large number that TOML can handle
+  const prepared = JSON.parse(JSON.stringify(params, (_, value) => {
+    if (value === Infinity) return 1e308;
+    if (value === -Infinity) return -1e308;
+    return value;
+  }));
+
+  // Add parameter_ranges if provided and non-empty
+  if (parameterRanges && parameterRanges.length > 0) {
+    prepared.parameter_ranges = parameterRanges;
+  }
+
+  return TOML.stringify(prepared);
 }

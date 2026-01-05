@@ -22,7 +22,7 @@ function App() {
         </TabsContent>
 
         <TabsContent value="batch">
-          <BatchTab baseParams={params} />
+          <BatchTab baseParams={params} onParamsChange={setParams} />
         </TabsContent>
       </Tabs>
     </AppLayout>

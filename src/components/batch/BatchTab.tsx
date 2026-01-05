@@ -14,8 +14,9 @@ import { TimeSampleConfig } from './TimeSampleConfig';
 import { StatisticSelector } from './StatisticSelector';
 import { ResultsTable } from './ResultsTable';
 import { BatchPlot } from './BatchPlot';
-import { aggregateByTime, checkLinePlotCompatibility } from './plotUtils';
+import { aggregateByTime, aggregateByTimeWithCI, checkLinePlotCompatibility } from './plotUtils';
 import type { SimulationParams } from '@/core/types';
+import { parseTomlWithRanges, toTomlWithRanges } from '@/core/params';
 import type {
   ParameterRange,
   TimeSampleConfig as TimeSampleConfigType,
@@ -38,9 +39,10 @@ import {
 
 export interface BatchTabProps {
   baseParams: SimulationParams;
+  onParamsChange: (params: SimulationParams) => void;
 }
 
-export function BatchTab({ baseParams }: BatchTabProps) {
+export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
   // Batch configuration
   const [paramRanges, setParamRanges] = useState<ParameterRange[]>([]);
   const [timeSampleConfig, setTimeSampleConfig] = useState<TimeSampleConfigType>({
@@ -69,10 +71,11 @@ export function BatchTab({ baseParams }: BatchTabProps) {
 
   // Plot configuration
   const [plotStatistic, setPlotStatistic] = useState<string>('');
-  const [plotType, setPlotType] = useState<'line'>('line');
+  const [plotType, setPlotType] = useState<'line' | 'line_ci'>('line');
 
-  // File input ref
+  // File input refs
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const tomlInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate total runs
   const totalRuns = computeTotalRuns(paramRanges, seedsPerConfig);
@@ -153,6 +156,42 @@ export function BatchTab({ baseParams }: BatchTabProps) {
     downloadCSV(csv, 'batch_snapshots.csv');
   };
 
+  // Load TOML (params + optional parameter ranges)
+  const handleLoadToml = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const result = parseTomlWithRanges(text);
+      onParamsChange(result.params);
+      if (result.parameterRanges) {
+        setParamRanges(result.parameterRanges);
+      }
+    } catch (err) {
+      console.error('Failed to parse TOML:', err);
+      alert('Failed to parse TOML file. Check console for details.');
+    }
+
+    if (tomlInputRef.current) {
+      tomlInputRef.current.value = '';
+    }
+  };
+
+  // Save TOML (params + parameter ranges)
+  const handleSaveToml = () => {
+    const tomlString = toTomlWithRanges(baseParams, paramRanges);
+    const blob = new Blob([tomlString], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'batch_params.toml';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Compute statistics
   const handleComputeStats = () => {
     if (!batchData || selectedStats.length === 0) return;
@@ -230,6 +269,10 @@ export function BatchTab({ baseParams }: BatchTabProps) {
     plotCompatibility.isCompatible && plotStatistic
       ? aggregateByTime(resultsColumns, resultsRows, plotStatistic)
       : [];
+  const plotDataWithCI =
+    plotCompatibility.isCompatible && plotStatistic
+      ? aggregateByTimeWithCI(resultsColumns, resultsRows, plotStatistic)
+      : [];
 
   return (
     <div className="space-y-4">
@@ -305,9 +348,42 @@ export function BatchTab({ baseParams }: BatchTabProps) {
         </CardContent>
       </Card>
 
-      {/* Load/Save Batch */}
+      {/* Load/Save Parameters & Batch */}
       <Card>
-        <CardContent className="pt-4">
+        <CardContent className="pt-4 space-y-3">
+          <div className="flex gap-2 items-center">
+            <input
+              ref={tomlInputRef}
+              type="file"
+              accept=".toml"
+              onChange={handleLoadToml}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => tomlInputRef.current?.click()}
+              disabled={isRunning}
+            >
+              <Upload className="h-4 w-4 mr-1" />
+              Load TOML
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveToml}
+              disabled={isRunning}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Save TOML
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              (params + ranges)
+            </span>
+          </div>
+
+          <Separator />
+
           <div className="flex gap-2 items-center">
             <input
               ref={fileInputRef}
@@ -442,10 +518,11 @@ export function BatchTab({ baseParams }: BatchTabProps) {
                   <select
                     id="plot-type"
                     value={plotType}
-                    onChange={(e) => setPlotType(e.target.value as 'line')}
+                    onChange={(e) => setPlotType(e.target.value as 'line' | 'line_ci')}
                     className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
                   >
-                    <option value="line">Line Plot</option>
+                    <option value="line">Line (Mean Only)</option>
+                    <option value="line_ci">Line + Confidence Band (95% CI)</option>
                   </select>
                 </div>
               </div>
@@ -460,11 +537,16 @@ export function BatchTab({ baseParams }: BatchTabProps) {
               )}
 
               {/* Plot display */}
-              {plotCompatibility.isCompatible && plotStatistic && plotData.length > 0 && (
+              {plotCompatibility.isCompatible && plotStatistic && (
+                (plotType === 'line' && plotData.length > 0) ||
+                (plotType === 'line_ci' && plotDataWithCI.length > 0)
+              ) && (
                 <div className="mt-4 border rounded-md p-4 bg-muted/30">
                   <BatchPlot
                     data={plotData}
+                    dataWithCI={plotDataWithCI}
                     statisticName={plotStatistic}
+                    plotType={plotType}
                     width={640}
                     height={400}
                   />

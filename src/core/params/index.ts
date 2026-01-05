@@ -35,4 +35,8 @@ export {
   toToml,
   toMinimalToml,
   loadTomlFromUrl,
+  parseTomlWithRanges,
+  toTomlWithRanges,
 } from './toml';
+
+export type { TomlParseResult } from './toml';
