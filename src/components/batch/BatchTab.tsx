@@ -240,7 +240,7 @@ export function BatchTab({ baseParams }: BatchTabProps) {
             disabled={isRunning}
           />
 
-          <div className="space-y-1">
+          <div className="grid grid-cols-3 gap-2">
             <Label htmlFor="seeds" className="text-sm">Seeds per configuration</Label>
             <Input
               id="seeds"
@@ -251,11 +251,12 @@ export function BatchTab({ baseParams }: BatchTabProps) {
               className="w-24 h-8"
               min={1}
             />
-          </div>
-
-          <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
             Total: {totalRuns} run{totalRuns !== 1 ? 's' : ''} × {timeSamples.length} time point{timeSamples.length !== 1 ? 's' : ''} = {totalSnapshots} snapshot{totalSnapshots !== 1 ? 's' : ''}
           </p>
+
+          </div>
+
 
           <div className="flex gap-2">
             {isRunning ? (
@@ -278,7 +279,7 @@ export function BatchTab({ baseParams }: BatchTabProps) {
           {isRunning && progress && (
             <div className="space-y-1">
               <Progress value={progressPercent} className="h-2" />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs">
                 {progress.current_run} / {progress.total_runs} runs
               </p>
             </div>
