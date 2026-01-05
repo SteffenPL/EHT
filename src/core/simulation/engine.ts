@@ -4,7 +4,7 @@
  */
 import { Vector2 } from '../math/vector2';
 import { SeededRandom } from '../math/random';
-import { basalCurveParam, basalNormal } from '../math/geometry';
+import { basalArcLength, basalCurve, basalCurveParam, basalNormal } from '../math/geometry';
 import type {
   SimulationParams,
   SimulationState,
@@ -76,8 +76,13 @@ export class SimulationEngine {
       positions.push(pos);
     }
 
-    // Sort by x position
-    positions.sort((a, b) => a.x - b.x);
+    // Sort by position along the basal curve (arc length), not by x coordinate.
+    // This preserves ordering for curved membranes.
+    positions.sort((a, b) => {
+      const la = basalArcLength(basalCurve(a, pg.curvature), pg.curvature);
+      const lb = basalArcLength(basalCurve(b, pg.curvature), pg.curvature);
+      return la - lb;
+    });
 
     // Create cells
     for (let i = 0; i < N; i++) {
