@@ -56,6 +56,7 @@ export interface GeneralParams {
   t_end: number;            // End time
   dt: number;               // Time step
   random_seed: number;      // Random seed for reproducibility
+  full_circle: boolean;     // If true: compute w_init from curvature and close initial connections
   N_init: number;           // Initial number of cells
   N_max: number;            // Maximum number of cells
   N_emt: number;            // Number of EMT cells

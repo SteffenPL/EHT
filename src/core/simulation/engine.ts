@@ -55,7 +55,9 @@ export class SimulationEngine {
 
     const pg = this.params.general;
     const N = pg.N_init;
-    const w = pg.w_init;
+    const w = pg.full_circle && pg.curvature !== 0
+      ? 2 * Math.PI * Math.abs(1 / pg.curvature)
+      : pg.w_init;
     const h = pg.h_init;
 
     // Determine EMT cell indices (middle section)
@@ -112,6 +114,20 @@ export class SimulationEngine {
       this.state.ba_links.push({
         l: i,
         r: i + 1,
+      });
+    }
+
+    // If simulating a closed ring, connect the last and first cells as well.
+    if (pg.full_circle && this.state.cells.length > 2) {
+      const last = this.state.cells.length - 1;
+      this.state.ap_links.push({
+        l: last,
+        r: 0,
+        rl: this.params.cell_prop.apical_junction_init,
+      });
+      this.state.ba_links.push({
+        l: last,
+        r: 0,
       });
     }
 

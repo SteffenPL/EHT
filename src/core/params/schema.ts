@@ -57,6 +57,7 @@ export const generalParamsSchema = z.object({
   t_end: z.number().positive(),
   dt: z.number().positive(),
   random_seed: z.number().int(),
+  full_circle: z.boolean(),
   N_init: z.number().int().positive(),
   N_max: z.number().int().positive(),
   N_emt: z.number().int().nonnegative(),

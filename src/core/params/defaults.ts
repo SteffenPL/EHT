@@ -74,6 +74,7 @@ export const DEFAULT_PARAMS: SimulationParams = {
     t_end: 48,
     dt: 0.1,
     random_seed: 0,
+    full_circle: false,
     N_init: 30,
     N_max: 80,
     N_emt: 5,
