@@ -33,12 +33,21 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
   const engineRef = useRef<SimulationEngine | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
+  const snapshotState = useCallback((): SimulationState | null => {
+    const current = engineRef.current?.getState();
+    if (!current) return null;
+    return JSON.parse(JSON.stringify(current)) as SimulationState;
+  }, []);
+
   // Initialize engine
   useEffect(() => {
+    // Clear the previous state so we don't render it with the new params/viewport.
+    setState(null);
+
     engineRef.current = new SimulationEngine({ params });
     if (autoInit) {
       engineRef.current.init();
-      setState({ ...engineRef.current.getState() } as SimulationState);
+      setState(snapshotState());
     }
 
     return () => {
@@ -46,7 +55,13 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [params, autoInit]);
+  }, [params, autoInit, snapshotState]);
+
+  // Sync external parameter changes into hook state
+  useEffect(() => {
+    setIsRunning(false);
+    setParamsState(initialParams);
+  }, [initialParams]);
 
   // Animation loop
   useEffect(() => {
@@ -69,7 +84,7 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
         }
 
         engineRef.current.step();
-        setState({ ...engineRef.current.getState() } as SimulationState);
+        setState(snapshotState());
       }
 
       animationFrameRef.current = requestAnimationFrame(animate);
@@ -82,7 +97,7 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isRunning]);
+  }, [isRunning, snapshotState]);
 
   const start = useCallback(() => {
     setIsRunning(true);
@@ -96,16 +111,16 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
     setIsRunning(false);
     if (engineRef.current) {
       engineRef.current.reset();
-      setState({ ...engineRef.current.getState() } as SimulationState);
+      setState(snapshotState());
     }
-  }, []);
+  }, [snapshotState]);
 
   const step = useCallback(() => {
     if (engineRef.current && !engineRef.current.isComplete()) {
       engineRef.current.step();
-      setState({ ...engineRef.current.getState() } as SimulationState);
+      setState(snapshotState());
     }
-  }, []);
+  }, [snapshotState]);
 
   const setParams = useCallback((newParams: SimulationParams) => {
     setIsRunning(false);

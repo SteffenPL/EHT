@@ -16,9 +16,15 @@ export interface ParameterPanelProps {
   params: SimulationParams;
   onChange: (params: SimulationParams) => void;
   disabled?: boolean;
+  showFileActions?: boolean;
 }
 
-export function ParameterPanel({ params, onChange, disabled }: ParameterPanelProps) {
+export function ParameterPanel({
+  params,
+  onChange,
+  disabled,
+  showFileActions = true,
+}: ParameterPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleParamChange = (path: string, value: unknown) => {
@@ -102,30 +108,34 @@ export function ParameterPanel({ params, onChange, disabled }: ParameterPanelPro
           </Accordion>
         </ScrollArea>
 
-        <Separator />
+        {showFileActions && (
+          <>
+            <Separator />
 
-        <div className="p-4 flex gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".toml"
-            onChange={handleLoadToml}
-            className="hidden"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Load TOML
-          </Button>
-          <Button variant="outline" size="sm" className="flex-1" onClick={handleSaveToml}>
-            <Download className="h-4 w-4 mr-2" />
-            Save TOML
-          </Button>
-        </div>
+            <div className="p-4 flex gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".toml"
+                onChange={handleLoadToml}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Load TOML
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={handleSaveToml}>
+                <Download className="h-4 w-4 mr-2" />
+                Save TOML
+              </Button>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

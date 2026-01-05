@@ -5,21 +5,15 @@ import { useState, useRef, useCallback } from 'react';
 import { Play, Upload, Download, FileSpreadsheet, Square } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
-import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Progress } from '../ui/progress';
 import { Separator } from '../ui/separator';
-import { ParameterRangeList } from './ParameterRangeList';
-import { TimeSampleConfig } from './TimeSampleConfig';
 import { StatisticSelector } from './StatisticSelector';
 import { ResultsTable } from './ResultsTable';
 import { BatchPlot } from './BatchPlot';
 import { aggregateByTime, aggregateByTimeWithCI, checkLinePlotCompatibility } from './plotUtils';
-import type { SimulationParams } from '@/core/types';
-import { parseTomlWithRanges, toTomlWithRanges } from '@/core/params';
+import type { SimulationConfig } from '@/core/params';
 import type {
-  ParameterRange,
-  TimeSampleConfig as TimeSampleConfigType,
   BatchData,
   BatchProgress,
   BatchSnapshot,
@@ -39,20 +33,11 @@ import {
 } from '@/core/batch';
 
 export interface BatchTabProps {
-  baseParams: SimulationParams;
-  onParamsChange: (params: SimulationParams) => void;
+  config: SimulationConfig;
+  onConfigChange: (config: SimulationConfig) => void;
 }
 
-export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
-  // Batch configuration
-  const [paramRanges, setParamRanges] = useState<ParameterRange[]>([]);
-  const [timeSampleConfig, setTimeSampleConfig] = useState<TimeSampleConfigType>({
-    start: 0,
-    end: 48,
-    step: 12,
-  });
-  const [seedsPerConfig, setSeedsPerConfig] = useState(1);
-
+export function BatchTab({ config, onConfigChange }: BatchTabProps) {
   // Batch data and progress
   const [batchData, setBatchData] = useState<BatchData | null>(null);
   const [progress, setProgress] = useState<BatchProgress | null>(null);
@@ -81,11 +66,10 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
 
   // File input refs
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const tomlInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate total runs
-  const totalRuns = computeTotalRuns(paramRanges, seedsPerConfig);
-  const timeSamples = getTimeSamples(timeSampleConfig);
+  const totalRuns = computeTotalRuns(config.parameterRanges, config.seedsPerConfig);
+  const timeSamples = getTimeSamples(config.timeSamples);
   const totalSnapshots = totalRuns * timeSamples.length;
 
   // Run batch
@@ -96,11 +80,11 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
 
     try {
       const data = await runBatch(
-        baseParams,
+        config.params,
         {
-          parameter_ranges: paramRanges,
-          time_samples: timeSampleConfig,
-          seeds_per_config: seedsPerConfig,
+          parameter_ranges: config.parameterRanges,
+          time_samples: config.timeSamples,
+          seeds_per_config: config.seedsPerConfig,
           sampling_mode: 'grid',
         },
         {
@@ -129,7 +113,7 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
       setProgress(null);
       setStartTime(null);
     }
-  }, [baseParams, paramRanges, timeSampleConfig, seedsPerConfig, useParallel, workerCount]);
+  }, [config, useParallel, workerCount]);
 
   // Stop batch
   const handleStopBatch = useCallback(() => {
@@ -166,41 +150,6 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
   };
 
   // Load TOML (params + optional parameter ranges)
-  const handleLoadToml = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const result = parseTomlWithRanges(text);
-      onParamsChange(result.params);
-      if (result.parameterRanges) {
-        setParamRanges(result.parameterRanges);
-      }
-    } catch (err) {
-      console.error('Failed to parse TOML:', err);
-      alert('Failed to parse TOML file. Check console for details.');
-    }
-
-    if (tomlInputRef.current) {
-      tomlInputRef.current.value = '';
-    }
-  };
-
-  // Save TOML (params + parameter ranges)
-  const handleSaveToml = () => {
-    const tomlString = toTomlWithRanges(baseParams, paramRanges);
-    const blob = new Blob([tomlString], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'batch_params.toml';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   // Compute statistics
   const handleComputeStats = () => {
     if (!batchData || selectedStats.length === 0) return;
@@ -315,40 +264,35 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Base parameters from Single Simulation tab will be used.
+            Uses the shared parameters, ranges, seeds, and time samples configured in the Parameters panel.
           </p>
 
-          <ParameterRangeList
-            ranges={paramRanges}
-            onChange={setParamRanges}
-            baseParams={baseParams}
-            disabled={isRunning}
-          />
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Parameter ranges</Label>
+            {config.parameterRanges.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No ranges defined.</p>
+            ) : (
+              <ul className="space-y-1 text-sm">
+                {config.parameterRanges.map((range) => (
+                  <li key={range.path} className="flex items-center gap-2">
+                    <span className="font-mono text-xs">{range.path}</span>
+                    <span className="text-muted-foreground">
+                      {range.min} → {range.max} ({range.steps} steps)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           <Separator />
 
-          <TimeSampleConfig
-            config={timeSampleConfig}
-            onChange={setTimeSampleConfig}
-            disabled={isRunning}
-          />
-
-          <div className="grid grid-cols-3 gap-2">
-            <Label htmlFor="seeds" className="text-sm">Seeds per configuration</Label>
-            <Input
-              id="seeds"
-              type="number"
-              value={seedsPerConfig}
-              onChange={(e) => setSeedsPerConfig(Math.max(1, parseInt(e.target.value) || 1))}
-              disabled={isRunning}
-              className="w-24 h-8"
-              min={1}
-              step={1}
-            />
-            <p className="text-sm text-muted-foreground">
-            Total: {totalRuns} run{totalRuns !== 1 ? 's' : ''} × {timeSamples.length} time point{timeSamples.length !== 1 ? 's' : ''} = {totalSnapshots} snapshot{totalSnapshots !== 1 ? 's' : ''}
-          </p>
-
+          <div className="space-y-1 text-sm">
+            <p>Time samples: {config.timeSamples.start}h → {config.timeSamples.end}h (step {config.timeSamples.step}h)</p>
+            <p>Seeds per configuration: {config.seedsPerConfig}</p>
+            <p className="text-muted-foreground">
+              Total: {totalRuns} run{totalRuns !== 1 ? 's' : ''} × {timeSamples.length} time point{timeSamples.length !== 1 ? 's' : ''} = {totalSnapshots} snapshot{totalSnapshots !== 1 ? 's' : ''}
+            </p>
           </div>
 
           {WorkerPool.isSupported() && (
@@ -381,7 +325,7 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
               <Button
                 onClick={handleRunBatch}
                 size="sm"
-                disabled={paramRanges.length === 0 && seedsPerConfig <= 1}
+                disabled={config.parameterRanges.length === 0 && config.seedsPerConfig <= 1}
               >
                 <Play className="h-4 w-4 mr-1" />
                 Run Batch
@@ -401,42 +345,9 @@ export function BatchTab({ baseParams, onParamsChange }: BatchTabProps) {
         </CardContent>
       </Card>
 
-      {/* Load/Save Parameters & Batch */}
+      {/* Load/Save Batch Snapshots */}
       <Card>
         <CardContent className="pt-4 space-y-3">
-          <div className="flex gap-2 items-center">
-            <input
-              ref={tomlInputRef}
-              type="file"
-              accept=".toml"
-              onChange={handleLoadToml}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => tomlInputRef.current?.click()}
-              disabled={isRunning}
-            >
-              <Upload className="h-4 w-4 mr-1" />
-              Load TOML
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSaveToml}
-              disabled={isRunning}
-            >
-              <Download className="h-4 w-4 mr-1" />
-              Save TOML
-            </Button>
-            <span className="text-xs text-muted-foreground">
-              (params + ranges)
-            </span>
-          </div>
-
-          <Separator />
-
           <div className="flex gap-2 items-center">
             <input
               ref={fileInputRef}

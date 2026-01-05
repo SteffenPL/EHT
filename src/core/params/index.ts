@@ -10,6 +10,12 @@ export {
 } from './defaults';
 
 export {
+  DEFAULT_TIME_SAMPLES,
+  createDefaultSimulationConfig,
+} from './config';
+export type { SimulationConfig } from './config';
+
+export {
   simulationParamsSchema,
   cellTypeSchema,
   generalParamsSchema,
@@ -37,6 +43,8 @@ export {
   loadTomlFromUrl,
   parseTomlWithRanges,
   toTomlWithRanges,
+  parseSimulationConfigToml,
+  toSimulationConfigToml,
 } from './toml';
 
 export type { TomlParseResult } from './toml';

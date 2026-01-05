@@ -5,6 +5,8 @@ import TOML from '@iarna/toml';
 import type { SimulationParams, PartialSimulationParams } from '../types';
 import type { ParameterRange } from '../batch/types';
 import { mergeWithDefaults } from './merge';
+import type { SimulationConfig } from './config';
+import { DEFAULT_TIME_SAMPLES } from './config';
 import { validatePartialParams, safeValidatePartialParams } from './schema';
 
 /** Result of parsing TOML with optional batch config */
@@ -217,6 +219,78 @@ export function toTomlWithRanges(
   if (parameterRanges && parameterRanges.length > 0) {
     prepared.parameter_ranges = parameterRanges;
   }
+
+  return TOML.stringify(prepared);
+}
+
+/**
+ * Parse TOML string into a unified simulation configuration.
+ * Includes base params, parameter ranges, time samples, and seeds per config.
+ */
+export function parseSimulationConfigToml(tomlString: string): SimulationConfig {
+  const parsed = TOML.parse(tomlString) as Record<string, unknown>;
+
+  // Extract parameter_ranges if present
+  let parameterRanges: ParameterRange[] = [];
+  if (parsed.parameter_ranges && Array.isArray(parsed.parameter_ranges)) {
+    parameterRanges = (parsed.parameter_ranges as unknown[]).map((r) => {
+      const range = r as Record<string, unknown>;
+      return {
+        path: String(range.path ?? ''),
+        min: Number(range.min ?? 0),
+        max: Number(range.max ?? 0),
+        steps: Number(range.steps ?? 1),
+      };
+    });
+    delete parsed.parameter_ranges;
+  }
+
+  // Extract time_samples if present
+  let timeSamples = { ...DEFAULT_TIME_SAMPLES };
+  if (parsed.time_samples && typeof parsed.time_samples === 'object') {
+    const ts = parsed.time_samples as Record<string, unknown>;
+    timeSamples = {
+      start: Number(ts.start ?? DEFAULT_TIME_SAMPLES.start),
+      end: Number(ts.end ?? DEFAULT_TIME_SAMPLES.end),
+      step: Number(ts.step ?? DEFAULT_TIME_SAMPLES.step),
+    };
+    delete parsed.time_samples;
+  }
+
+  // Extract seeds_per_config if present
+  const seedsRaw = parsed.seeds_per_config;
+  const seedsPerConfig =
+    typeof seedsRaw === 'number' && !Number.isNaN(seedsRaw) ? seedsRaw : 1;
+  if ('seeds_per_config' in parsed) {
+    delete parsed.seeds_per_config;
+  }
+
+  // Parse remaining as simulation params
+  const partial = parsed as PartialSimulationParams;
+  const params = mergeWithDefaults(partial);
+
+  return {
+    params,
+    parameterRanges,
+    timeSamples,
+    seedsPerConfig,
+  };
+}
+
+/**
+ * Serialize unified simulation configuration to TOML string.
+ * Always writes params together with parameter ranges, time samples, and seeds.
+ */
+export function toSimulationConfigToml(config: SimulationConfig): string {
+  const prepared = JSON.parse(JSON.stringify(config.params, (_, value) => {
+    if (value === Infinity) return 1e308;
+    if (value === -Infinity) return -1e308;
+    return value;
+  }));
+
+  prepared.parameter_ranges = config.parameterRanges ?? [];
+  prepared.time_samples = config.timeSamples ?? DEFAULT_TIME_SAMPLES;
+  prepared.seeds_per_config = config.seedsPerConfig ?? 1;
 
   return TOML.stringify(prepared);
 }

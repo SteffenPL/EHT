@@ -1,0 +1,157 @@
+/**
+ * Combined parameter editor for base params, ranges, and batch sampling settings.
+ * Handles unified load/save to TOML so all values stay together.
+ */
+import { useRef } from 'react';
+import { Upload, Download } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
+import { Separator } from '../ui/separator';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { ParameterPanel } from './ParameterPanel';
+import { ParameterRangeList } from '../batch/ParameterRangeList';
+import { TimeSampleConfig } from '../batch/TimeSampleConfig';
+import type { SimulationConfig } from '@/core/params';
+import { parseSimulationConfigToml, toSimulationConfigToml } from '@/core/params';
+
+export interface ParameterConfigViewProps {
+  config: SimulationConfig;
+  onConfigChange: (config: SimulationConfig) => void;
+  disabled?: boolean;
+}
+
+export function ParameterConfigView({ config, onConfigChange, disabled }: ParameterConfigViewProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleParamsChange = (params: SimulationConfig['params']) => {
+    onConfigChange({ ...config, params });
+  };
+
+  const handleRangesChange = (parameterRanges: SimulationConfig['parameterRanges']) => {
+    onConfigChange({ ...config, parameterRanges });
+  };
+
+  const handleTimeSamplesChange = (timeSamples: SimulationConfig['timeSamples']) => {
+    onConfigChange({ ...config, timeSamples });
+  };
+
+  const handleSeedsChange = (value: string) => {
+    const parsed = Math.max(1, parseInt(value, 10) || 1);
+    onConfigChange({ ...config, seedsPerConfig: parsed });
+  };
+
+  const handleLoadConfig = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const loaded = parseSimulationConfigToml(text);
+      onConfigChange(loaded);
+    } catch (err) {
+      console.error('Failed to parse TOML:', err);
+      alert('Failed to parse TOML file. Check console for details.');
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSaveConfig = () => {
+    const tomlString = toSimulationConfigToml(config);
+    const blob = new Blob([tomlString], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'simulation_config.toml';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <Card className="h-full">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base">Parameters &amp; Ranges</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <ParameterPanel
+          params={config.params}
+          onChange={handleParamsChange}
+          disabled={disabled}
+          showFileActions={false}
+        />
+
+        <Separator />
+
+        <ParameterRangeList
+          ranges={config.parameterRanges}
+          onChange={handleRangesChange}
+          baseParams={config.params}
+          disabled={disabled}
+        />
+
+        <Separator />
+
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Batch Sampling</Label>
+          <TimeSampleConfig
+            config={config.timeSamples}
+            onChange={handleTimeSamplesChange}
+            disabled={disabled}
+          />
+          <div className="space-y-1">
+            <Label htmlFor="seeds" className="text-xs text-muted-foreground">
+              Seeds per configuration
+            </Label>
+            <Input
+              id="seeds"
+              type="number"
+              min={1}
+              step={1}
+              value={config.seedsPerConfig}
+              onChange={(e) => handleSeedsChange(e.target.value)}
+              disabled={disabled}
+              className="h-8 w-32"
+            />
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="flex gap-2 items-center">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".toml"
+            onChange={handleLoadConfig}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+            className="flex-1"
+          >
+            <Upload className="h-4 w-4 mr-2" />
+            Load TOML (params + ranges + sampling)
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSaveConfig}
+            disabled={disabled}
+            className="flex-1"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Save TOML
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

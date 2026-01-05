@@ -6,3 +6,6 @@ export type { ParameterGroupProps } from './ParameterGroup';
 
 export { ParameterPanel } from './ParameterPanel';
 export type { ParameterPanelProps } from './ParameterPanel';
+
+export { ParameterConfigView } from './ParameterConfigView';
+export type { ParameterConfigViewProps } from './ParameterConfigView';

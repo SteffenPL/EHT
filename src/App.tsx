@@ -1,30 +1,27 @@
 import { useState } from 'react';
 import { AppLayout } from './components/layout';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { SingleSimulationTab } from './components/simulation';
 import { BatchTab } from './components/batch';
-import { DEFAULT_PARAMS } from './core';
-import type { SimulationParams } from './core/types';
+import { ParameterConfigView } from './components/params';
+import { createDefaultSimulationConfig } from './core/params';
+import type { SimulationConfig } from './core/params';
 
 function App() {
-  const [params, setParams] = useState<SimulationParams>(DEFAULT_PARAMS);
+  const [config, setConfig] = useState<SimulationConfig>(createDefaultSimulationConfig());
 
   return (
     <AppLayout>
-      <Tabs defaultValue="single" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="single">Single Simulation</TabsTrigger>
-          <TabsTrigger value="batch">Batch Simulations</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="single">
-          <SingleSimulationTab params={params} onParamsChange={setParams} />
-        </TabsContent>
-
-        <TabsContent value="batch">
-          <BatchTab baseParams={params} onParamsChange={setParams} />
-        </TabsContent>
-      </Tabs>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <section className="lg:col-span-7">
+          <SingleSimulationTab params={config.params} />
+        </section>
+        <section className="lg:col-span-5">
+          <ParameterConfigView config={config} onConfigChange={setConfig} />
+        </section>
+        <section className="lg:col-span-12">
+          <BatchTab config={config} onConfigChange={setConfig} />
+        </section>
+      </div>
     </AppLayout>
   );
 }
