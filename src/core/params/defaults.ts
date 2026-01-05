@@ -85,7 +85,7 @@ export const DEFAULT_PARAMS: SimulationParams = {
     n_substeps: 30,
     alg_dt: 0.01,
     w_screen: 70,
-    h_screen: (70 * 1) / 3,
+    h_screen: (70 * 1),
     p_div_out: 1.0,
     curvature: 0.06,
   },
@@ -140,7 +140,7 @@ export const PARAM_PRESETS: Array<{
     create: () => {
       const params = createDefaultParams();
       params.general.curvature = 0.2;
-      params.general.full_circle = 0 as unknown as boolean;
+      params.general.full_circle = true;
       return params;
     },
   },
