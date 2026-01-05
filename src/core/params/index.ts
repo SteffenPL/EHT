@@ -7,6 +7,7 @@ export {
   DEFAULT_CONTROL_CELL,
   DEFAULT_EMT_CELL,
   createDefaultParams,
+  PARAM_PRESETS,
 } from './defaults';
 
 export {

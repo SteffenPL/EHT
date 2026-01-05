@@ -9,11 +9,18 @@ import { Separator } from '../ui/separator';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { ParameterPanel } from './ParameterPanel';
 import { ParameterRangeList } from '../batch/ParameterRangeList';
 import { TimeSampleConfig } from '../batch/TimeSampleConfig';
 import type { SimulationConfig } from '@/core/params';
-import { parseSimulationConfigToml, toSimulationConfigToml } from '@/core/params';
+import { PARAM_PRESETS, parseSimulationConfigToml, toSimulationConfigToml } from '@/core/params';
 
 export interface ParameterConfigViewProps {
   config: SimulationConfig;
@@ -23,6 +30,17 @@ export interface ParameterConfigViewProps {
 
 export function ParameterConfigView({ config, onConfigChange, disabled }: ParameterConfigViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const presetOptions = PARAM_PRESETS;
+
+  const applyPreset = (key: string) => {
+    const preset = presetOptions.find((p) => p.key === key);
+    if (!preset) return;
+    const params = preset.create();
+    onConfigChange({
+      ...config,
+      params,
+    });
+  };
 
   const handleParamsChange = (params: SimulationConfig['params']) => {
     onConfigChange({ ...config, params });
@@ -78,6 +96,24 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
         <CardTitle className="text-base">Parameters &amp; Ranges</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-1">
+          <Label className="text-sm font-medium">Select preset</Label>
+          <Select onValueChange={applyPreset} disabled={disabled}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Choose a preset" />
+            </SelectTrigger>
+            <SelectContent>
+              {presetOptions.map((preset) => (
+                <SelectItem key={preset.key} value={preset.key}>
+                  {preset.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Separator />
+
         <ParameterPanel
           params={config.params}
           onChange={handleParamsChange}

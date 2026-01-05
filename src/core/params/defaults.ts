@@ -3,6 +3,7 @@
  * Based on the original simulation.js params object.
  */
 import type { SimulationParams, CellTypeParams } from '../types';
+import { cloneDeep } from 'lodash-es';
 
 /** Default control cell type */
 export const DEFAULT_CONTROL_CELL: CellTypeParams = {
@@ -109,3 +110,38 @@ export const DEFAULT_PARAMS: SimulationParams = {
 export function createDefaultParams(): SimulationParams {
   return JSON.parse(JSON.stringify(DEFAULT_PARAMS));
 }
+
+/**
+ * Preset parameter shortcuts built from the defaults.
+ */
+export const PARAM_PRESETS: Array<{
+  key: string;
+  label: string;
+  create: () => SimulationParams;
+}> = [
+  {
+    key: 'default',
+    label: 'Default',
+    create: () => cloneDeep(DEFAULT_PARAMS),
+  },
+  {
+    key: 'straight',
+    label: 'Straight',
+    create: () => {
+      const params = createDefaultParams();
+      params.general.curvature = 0;
+      params.general.full_circle = false;
+      return params;
+    },
+  },
+  {
+    key: 'full_circle',
+    label: 'Full Circle',
+    create: () => {
+      const params = createDefaultParams();
+      params.general.curvature = 0.2;
+      params.general.full_circle = 0 as unknown as boolean;
+      return params;
+    },
+  },
+];
