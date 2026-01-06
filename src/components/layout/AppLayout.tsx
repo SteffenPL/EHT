@@ -1,26 +1,15 @@
 /**
  * Main application layout.
  */
-import { useState, useEffect } from 'react';
 import { Header } from './Header';
+import { ThemeProvider, useTheme } from '@/contexts';
 
 export interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark);
-  }, [isDark]);
-
-  const toggleTheme = () => setIsDark((prev) => !prev);
+function AppLayoutInner({ children }: AppLayoutProps) {
+  const { isDark, toggleTheme } = useTheme();
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -29,5 +18,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         {children}
       </main>
     </div>
+  );
+}
+
+export function AppLayout({ children }: AppLayoutProps) {
+  return (
+    <ThemeProvider>
+      <AppLayoutInner>{children}</AppLayoutInner>
+    </ThemeProvider>
   );
 }

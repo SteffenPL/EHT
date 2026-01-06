@@ -116,6 +116,15 @@ export class SimulationRenderer {
   }
 
   /**
+   * Set the color theme.
+   */
+  setTheme(theme: ColorTheme): void {
+    this.theme = theme;
+    // Update background color
+    this.app.renderer.background.color = theme.background;
+  }
+
+  /**
    * Resize the renderer.
    */
   resize(width: number, height: number): void {

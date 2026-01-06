@@ -3,7 +3,8 @@
  * Automatically resizes to fill its container.
  */
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { SimulationRenderer } from '../../rendering';
+import { SimulationRenderer, defaultTheme, darkTheme } from '../../rendering';
+import { useTheme } from '@/contexts';
 import type { SimulationState, SimulationParams } from '../../core/types';
 
 export interface SimulationCanvasProps {
@@ -27,6 +28,7 @@ export function SimulationCanvas({
   const rendererRef = useRef<SimulationRenderer | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [size, setSize] = useState({ width: 800, height: minHeight });
+  const { isDark } = useTheme();
 
   // Measure container size
   const updateSize = useCallback(() => {
@@ -124,6 +126,17 @@ export function SimulationCanvas({
       rendererRef.current.render(state);
     }
   }, [state, isReady]);
+
+  // Update theme when dark mode changes
+  useEffect(() => {
+    if (rendererRef.current && isReady) {
+      rendererRef.current.setTheme(isDark ? darkTheme : defaultTheme);
+      // Re-render with new theme
+      if (state) {
+        rendererRef.current.render(state);
+      }
+    }
+  }, [isDark, isReady, state]);
 
   return (
     <div
