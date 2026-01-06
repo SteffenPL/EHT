@@ -43,6 +43,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "file-saver": "^2.0.5",
+    "leva": "^0.10.1",
     "lodash-es": "^4.17.22",
     "lucide-react": "^0.562.0",
     "papaparse": "^5.5.3",

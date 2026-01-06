@@ -7,5 +7,8 @@ export type { ParameterGroupProps } from './ParameterGroup';
 export { ParameterPanel } from './ParameterPanel';
 export type { ParameterPanelProps } from './ParameterPanel';
 
+export { LevaParameterPanel } from './LevaParameterPanel';
+export type { LevaParameterPanelProps } from './LevaParameterPanel';
+
 export { ParameterConfigView } from './ParameterConfigView';
 export type { ParameterConfigViewProps } from './ParameterConfigView';
