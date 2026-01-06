@@ -55,6 +55,7 @@ export function projectBasalOrderingConstraints(
   state: SimulationState,
   params: SimulationParams
 ): void {
+
   const cells = state.cells;
   const baLinks = state.ba_links;
   const curvature_1 = params.general.curvature_1;
@@ -132,7 +133,8 @@ export function projectBasalOrderingConstraints(
 
 /**
  * Project maximum basal junction distance constraints.
- * Prevents basal points from separating too far along the arc length.
+ * Prevents basal points from separating too far (Euclidean distance).
+ * Points will be projected back onto the curve in a subsequent step.
  */
 export function projectMaxBasalDistanceConstraints(
   state: SimulationState,
@@ -140,8 +142,6 @@ export function projectMaxBasalDistanceConstraints(
 ): void {
   const cells = state.cells;
   const baLinks = state.ba_links;
-  const curvature_1 = params.general.curvature_1;
-  const curvature_2 = params.general.curvature_2;
   const maxDist = params.cell_prop.max_basal_junction_dist;
 
   for (const link of baLinks) {
@@ -151,25 +151,19 @@ export function projectMaxBasalDistanceConstraints(
     const Bi = Vector2.from(ci.B);
     const Bj = Vector2.from(cj.B);
 
-    const li = basalArcLength(Bi, curvature_1, curvature_2);
-    const lj = basalArcLength(Bj, curvature_1, curvature_2);
+    // Euclidean distance between basal points
+    const dist = Bi.dist(Bj);
 
-    // Arc length distance between basal points
-    const deltaL = lj - li;
+    if (dist > maxDist) {
+      // Exceeds max distance - pull points closer along straight line
+      const excess = dist - maxDist;
+      const direction = Bj.sub(Bi).normalize();
+      const correction = direction.scale(excess / 2);
 
-    if (deltaL > maxDist) {
-      // Exceeds max distance - pull points closer along the curve
-      const excess = deltaL - maxDist;
-      const newLi = li + excess / 2;
-      const newLj = lj - excess / 2;
-
-      const newBi = basalCurveParam(newLi, curvature_1, curvature_2);
-      const newBj = basalCurveParam(newLj, curvature_1, curvature_2);
-
-      ci.B.x = newBi.x;
-      ci.B.y = newBi.y;
-      cj.B.x = newBj.x;
-      cj.B.y = newBj.y;
+      ci.B.x += correction.x;
+      ci.B.y += correction.y;
+      cj.B.x -= correction.x;
+      cj.B.y -= correction.y;
     }
   }
 }
