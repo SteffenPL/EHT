@@ -7,13 +7,13 @@
 import { cloneDeep } from 'lodash-es';
 import { SimulationEngine } from '../simulation';
 import { setNestedValue } from '../params';
-import type { SimulationParams, SimulationState, ApicalLink, BasalLink } from '../types';
+import { createSnapshot } from '../snapshot';
+import type { SimulationParams, SimulationState } from '../types';
 import type {
   BatchConfig,
   BatchSnapshot,
   BatchData,
   BatchProgress,
-  CellSnapshotMinimal,
   ParameterRange,
 } from './types';
 import { generateParameterConfigs, getTimeSamples } from './types';
@@ -30,77 +30,6 @@ export interface BatchRunnerOptions {
   parallel?: boolean;
   /** Number of workers for parallel execution. Default: navigator.hardwareConcurrency. */
   workerCount?: number;
-}
-
-/**
- * Build neighbor string from links.
- */
-function getNeighbors(
-  cellIndex: number,
-  links: { l: number; r: number }[],
-  cells: { id: number }[]
-): string {
-  const neighborIndices: number[] = [];
-  for (const link of links) {
-    if (link.l === cellIndex) {
-      neighborIndices.push(link.r);
-    } else if (link.r === cellIndex) {
-      neighborIndices.push(link.l);
-    }
-  }
-  return neighborIndices.map((i) => cells[i]?.id ?? i).join(',');
-}
-
-/**
- * Create minimal cell snapshot from full state.
- */
-function createCellSnapshot(
-  state: SimulationState,
-  cellIndex: number,
-  apLinks: ApicalLink[],
-  baLinks: BasalLink[]
-): CellSnapshotMinimal {
-  const cell = state.cells[cellIndex];
-  return {
-    id: cell.id,
-    type: cell.typeIndex,
-    pos_x: cell.pos.x,
-    pos_y: cell.pos.y,
-    A_x: cell.A.x,
-    A_y: cell.A.y,
-    B_x: cell.B.x,
-    B_y: cell.B.y,
-    has_A: cell.has_A,
-    has_B: cell.has_B,
-    phase: cell.phase,
-    age: state.t - cell.birth_time,
-    apical_neighbors: getNeighbors(cellIndex, apLinks, state.cells),
-    basal_neighbors: getNeighbors(cellIndex, baLinks, state.cells),
-  };
-}
-
-/**
- * Create batch snapshot from simulation state.
- */
-function createBatchSnapshot(
-  runIndex: number,
-  seed: number,
-  timeH: number,
-  sampledParams: Record<string, number>,
-  state: SimulationState
-): BatchSnapshot {
-  const cells: CellSnapshotMinimal[] = [];
-  for (let i = 0; i < state.cells.length; i++) {
-    cells.push(createCellSnapshot(state, i, state.ap_links, state.ba_links));
-  }
-
-  return {
-    run_index: runIndex,
-    seed,
-    time_h: timeH,
-    sampled_params: sampledParams,
-    cells,
-  };
 }
 
 /**
@@ -130,7 +59,11 @@ function runSingleSimulation(
 
   // Check if we should sample at t=0
   if (timeSamples.length > 0 && timeSamples[0] <= 0) {
-    const snapshot = createBatchSnapshot(runIndex, seed, 0, overrides, engine.getState() as SimulationState);
+    const snapshot = createSnapshot(engine.getState() as SimulationState, {
+      runIndex,
+      seed,
+      sampledParams: overrides,
+    });
     snapshots.push(snapshot);
     callbacks?.onSnapshot?.(snapshot);
     nextSampleIndex = 1;
@@ -146,13 +79,11 @@ function runSingleSimulation(
       nextSampleIndex < timeSamples.length &&
       state.t >= timeSamples[nextSampleIndex]
     ) {
-      const snapshot = createBatchSnapshot(
+      const snapshot = createSnapshot(state, {
         runIndex,
         seed,
-        timeSamples[nextSampleIndex],
-        overrides,
-        state
-      );
+        sampledParams: overrides,
+      });
       snapshots.push(snapshot);
       callbacks?.onSnapshot?.(snapshot);
       nextSampleIndex++;

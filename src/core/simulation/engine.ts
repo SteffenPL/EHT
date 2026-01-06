@@ -12,13 +12,16 @@ import type {
   TimeSnapshot,
   CellSnapshot,
 } from '../types';
+import type { BatchSnapshot } from '../batch/types';
 import { createInitialState } from '../types/state';
 import { createCell } from './cell';
 import { performTimestep } from './timestep';
+import { createSnapshot } from '../snapshot';
 
 export interface SimulationEngineConfig {
   params: SimulationParams;
   onSnapshot?: (snapshot: TimeSnapshot) => void;
+  onBatchSnapshot?: (snapshot: BatchSnapshot) => void;
   snapshotInterval?: number; // Record every N steps (default: 1)
 }
 
@@ -31,9 +34,11 @@ export class SimulationEngine {
   private params: SimulationParams;
   private rng: SeededRandom;
   private snapshots: TimeSnapshot[] = [];
+  private batchSnapshots: BatchSnapshot[] = [];
   private totalDivisions = 0;
 
   private onSnapshot?: (snapshot: TimeSnapshot) => void;
+  private onBatchSnapshot?: (snapshot: BatchSnapshot) => void;
   private snapshotInterval: number;
 
   constructor(config: SimulationEngineConfig) {
@@ -41,6 +46,7 @@ export class SimulationEngine {
     this.rng = new SeededRandom(config.params.general.random_seed);
     this.state = createInitialState();
     this.onSnapshot = config.onSnapshot;
+    this.onBatchSnapshot = config.onBatchSnapshot;
     this.snapshotInterval = config.snapshotInterval ?? 1;
   }
 
@@ -51,6 +57,7 @@ export class SimulationEngine {
     this.state = createInitialState();
     this.rng = new SeededRandom(this.params.general.random_seed);
     this.snapshots = [];
+    this.batchSnapshots = [];
     this.totalDivisions = 0;
 
     const pg = this.params.general;
@@ -223,21 +230,39 @@ export class SimulationEngine {
   }
 
   /**
+   * Get batch snapshots (unified format with neighbor info).
+   */
+  getBatchSnapshots(): BatchSnapshot[] {
+    return this.batchSnapshots;
+  }
+
+  /**
    * Record a snapshot of the current state.
    */
   private recordSnapshot(): void {
-    const snapshot = this.createSnapshot();
-    this.snapshots.push(snapshot);
+    // Create unified batch snapshot (includes neighbor info)
+    const batchSnapshot = createSnapshot(this.state, {
+      seed: this.params.general.random_seed,
+    });
+    this.batchSnapshots.push(batchSnapshot);
+
+    if (this.onBatchSnapshot) {
+      this.onBatchSnapshot(batchSnapshot);
+    }
+
+    // Also create legacy TimeSnapshot for UI compatibility
+    const timeSnapshot = this.createTimeSnapshot();
+    this.snapshots.push(timeSnapshot);
 
     if (this.onSnapshot) {
-      this.onSnapshot(snapshot);
+      this.onSnapshot(timeSnapshot);
     }
   }
 
   /**
-   * Create a snapshot from current state.
+   * Create a TimeSnapshot from current state (for UI compatibility).
    */
-  private createSnapshot(): TimeSnapshot {
+  private createTimeSnapshot(): TimeSnapshot {
     const cells: CellSnapshot[] = this.state.cells.map((cell) => ({
       id: cell.id,
       type_name: cell.typeIndex,

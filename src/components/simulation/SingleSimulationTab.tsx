@@ -1,7 +1,8 @@
 /**
  * Single simulation tab - combines canvas, controls, params, and stats.
  */
-import { useSimulation } from '@/hooks';
+import { useState } from 'react';
+import { useSimulation, type ParamChangeBehavior } from '@/hooks';
 import { SimulationCanvas } from './SimulationCanvas';
 import { SimulationControls } from './SimulationControls';
 import { Card } from '../ui/card';
@@ -12,6 +13,8 @@ export interface SingleSimulationTabProps {
 }
 
 export function SingleSimulationTab({ params }: SingleSimulationTabProps) {
+  const [paramChangeBehavior, setParamChangeBehavior] = useState<ParamChangeBehavior>('init');
+
   const {
     state,
     isRunning,
@@ -21,7 +24,7 @@ export function SingleSimulationTab({ params }: SingleSimulationTabProps) {
     pause,
     reset,
     step,
-  } = useSimulation({ params });
+  } = useSimulation({ params, paramChangeBehavior });
 
   return (
     <div className="space-y-4">
@@ -46,6 +49,8 @@ export function SingleSimulationTab({ params }: SingleSimulationTabProps) {
         onPause={pause}
         onReset={reset}
         onStep={step}
+        paramChangeBehavior={paramChangeBehavior}
+        onParamChangeBehaviorChange={setParamChangeBehavior}
       />
     </div>
   );

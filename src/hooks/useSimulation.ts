@@ -4,9 +4,14 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { SimulationEngine, type SimulationParams, type SimulationState, DEFAULT_PARAMS } from '../core';
 
+/** Behavior when parameters change */
+export type ParamChangeBehavior = 'init' | 'step' | 'run';
+
 export interface UseSimulationOptions {
   params?: SimulationParams;
   autoInit?: boolean;
+  /** What to do when params change. Default: 'init' */
+  paramChangeBehavior?: ParamChangeBehavior;
 }
 
 export interface UseSimulationResult {
@@ -24,7 +29,7 @@ export interface UseSimulationResult {
 }
 
 export function useSimulation(options: UseSimulationOptions = {}): UseSimulationResult {
-  const { params: initialParams = DEFAULT_PARAMS, autoInit = true } = options;
+  const { params: initialParams = DEFAULT_PARAMS, autoInit = true, paramChangeBehavior = 'init' } = options;
 
   const [params, setParamsState] = useState<SimulationParams>(initialParams);
   const [state, setState] = useState<SimulationState | null>(null);
@@ -32,6 +37,7 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
 
   const engineRef = useRef<SimulationEngine | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const isFirstRender = useRef(true);
 
   const snapshotState = useCallback((): SimulationState | null => {
     const current = engineRef.current?.getState();
@@ -39,12 +45,9 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
     return JSON.parse(JSON.stringify(current)) as SimulationState;
   }, []);
 
-  // Initialize engine
+  // Initialize engine on first render
   useEffect(() => {
-    // Clear the previous state so we don't render it with the new params/viewport.
-    setState(null);
-
-    engineRef.current = new SimulationEngine({ params });
+    engineRef.current = new SimulationEngine({ params: initialParams });
     if (autoInit) {
       engineRef.current.init();
       setState(snapshotState());
@@ -55,13 +58,36 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [params, autoInit, snapshotState]);
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Sync external parameter changes into hook state
+  // Handle parameter changes based on behavior setting
   useEffect(() => {
-    setIsRunning(false);
+    // Skip the first render - engine is initialized above
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+
     setParamsState(initialParams);
-  }, [initialParams]);
+
+    // Reinitialize the engine with new params
+    setIsRunning(false);
+    engineRef.current = new SimulationEngine({ params: initialParams });
+    engineRef.current.init();
+    setState(snapshotState());
+
+    if (paramChangeBehavior === 'step') {
+      // Run one step after init
+      engineRef.current.step();
+      setState(snapshotState());
+    } else if (paramChangeBehavior === 'run') {
+      // Start the simulation running
+      setIsRunning(true);
+    }
+    // 'init' just initializes (already done above)
+  }, [initialParams, paramChangeBehavior, snapshotState]);
 
   // Animation loop
   useEffect(() => {

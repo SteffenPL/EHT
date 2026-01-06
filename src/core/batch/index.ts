@@ -23,6 +23,8 @@ export type { StatisticDefinition } from './statistics';
 export {
   AVAILABLE_STATISTICS,
   getStatistic,
+  getAllStatisticIds,
+  listStatistics,
   computeStatistics,
 } from './statistics';
 

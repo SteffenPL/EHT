@@ -4,6 +4,14 @@
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
+import type { ParamChangeBehavior } from '@/hooks/useSimulation';
 
 export interface SimulationControlsProps {
   isRunning: boolean;
@@ -14,6 +22,8 @@ export interface SimulationControlsProps {
   onPause: () => void;
   onReset: () => void;
   onStep: () => void;
+  paramChangeBehavior: ParamChangeBehavior;
+  onParamChangeBehaviorChange: (behavior: ParamChangeBehavior) => void;
 }
 
 export function SimulationControls({
@@ -25,12 +35,14 @@ export function SimulationControls({
   onPause,
   onReset,
   onStep,
+  paramChangeBehavior,
+  onParamChangeBehaviorChange,
 }: SimulationControlsProps) {
   const progress = endTime > 0 ? (time / endTime) * 100 : 0;
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
         {isRunning ? (
           <Button onClick={onPause} variant="outline" size="sm">
             <Pause className="h-4 w-4 mr-1" />
@@ -52,6 +64,23 @@ export function SimulationControls({
           <RotateCcw className="h-4 w-4 mr-1" />
           Reset
         </Button>
+
+        <div className="flex items-center gap-2 ml-4">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">On param change:</span>
+          <Select
+            value={paramChangeBehavior}
+            onValueChange={(v) => onParamChangeBehaviorChange(v as ParamChangeBehavior)}
+          >
+            <SelectTrigger className="h-7 w-28 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="init">Init</SelectItem>
+              <SelectItem value="step">One step</SelectItem>
+              <SelectItem value="run">Run</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <span className="ml-auto text-sm text-muted-foreground self-center">
           {time.toFixed(2)}h / {endTime}h

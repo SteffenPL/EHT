@@ -216,6 +216,20 @@ export function getStatistic(id: string): StatisticDefinition | undefined {
   return AVAILABLE_STATISTICS.find((s) => s.id === id);
 }
 
+/** Get all statistic IDs */
+export function getAllStatisticIds(): string[] {
+  return AVAILABLE_STATISTICS.map((s) => s.id);
+}
+
+/** List all available statistics with their descriptions */
+export function listStatistics(): Array<{ id: string; label: string; description: string }> {
+  return AVAILABLE_STATISTICS.map((s) => ({
+    id: s.id,
+    label: s.label,
+    description: s.description,
+  }));
+}
+
 /** Compute multiple statistics for a snapshot */
 export function computeStatistics(
   snapshot: BatchSnapshot,

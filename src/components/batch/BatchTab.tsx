@@ -37,7 +37,7 @@ export interface BatchTabProps {
   onConfigChange: (config: SimulationConfig) => void;
 }
 
-export function BatchTab({ config, onConfigChange }: BatchTabProps) {
+export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabProps) {
   // Batch data and progress
   const [batchData, setBatchData] = useState<BatchData | null>(null);
   const [progress, setProgress] = useState<BatchProgress | null>(null);

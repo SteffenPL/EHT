@@ -3,7 +3,7 @@
  * Enforces hard constraints like collision, basal ordering, etc.
  */
 import { Vector2 } from '../math/vector2';
-import { basalCurve } from '../math/geometry';
+import { basalCurve, basalArcLength, basalCurveParam } from '../math/geometry';
 import type { SimulationState } from '../types/state';
 import type { SimulationParams } from '../types/params';
 
@@ -48,32 +48,90 @@ export function projectHardSphereConstraints(
 
 /**
  * Project basal ordering constraints.
- * Ensures basal points maintain their left-right ordering.
+ * Ensures basal points maintain their left-right ordering along the arc length.
+ * Uses arc length comparison instead of x-coordinate for curved membranes.
  */
 export function projectBasalOrderingConstraints(
   state: SimulationState,
-  _params: SimulationParams
+  params: SimulationParams
 ): void {
   const cells = state.cells;
   const baLinks = state.ba_links;
+  const curvature = params.general.curvature;
 
   for (const link of baLinks) {
     const ci = cells[link.l];
     const cj = cells[link.r];
 
-    const bij = cj.B.x - ci.B.x;
+    const Bi = Vector2.from(ci.B);
+    const Bj = Vector2.from(cj.B);
 
-    if (bij < 0) {
-      // Swap positions to restore ordering
-      ci.B.x += bij / 2;
-      cj.B.x -= bij / 2;
+    const li = basalArcLength(Bi, curvature);
+    const lj = basalArcLength(Bj, curvature);
+
+    
+    
+    // Arc length delta: positive means j is "ahead" of i (correct ordering)
+    let deltaL = 0 ; // lj - li;
+
+    // Compute modulo for periodic boundary if needed
+    if (params.general.full_circle && curvature !== 0) {
+      const circumference = 2 * Math.PI * Math.abs(1 / curvature);
+      while (deltaL > circumference / 2) {
+        // j is too far ahead - wrap around
+        deltaL -= circumference;
+        console.log('[DEBUG] Adjusting deltaL for periodicity:', {
+          ci: ci.id,
+          cj: cj.id,
+          li,
+          lj,
+          deltaL,
+        });
+      } 
+      
+      while (deltaL < -circumference / 2) {
+        // j is too far behind - wrap around
+        deltaL += circumference;
+        console.log('[DEBUG] Adjusting deltaL for periodicity:', {
+          ci: ci.id,
+          cj: cj.id,
+          li,
+          lj,
+          deltaL,
+        });
+      }
+    }
+
+    if (deltaL < 0) {
+      // Ordering violation - move each point by half the violation along the curve
+      const correction = deltaL / 2;
+      const newLi = li + correction;
+      const newLj = lj - correction;
+
+      const newBi = basalCurveParam(newLi, curvature);
+      const newBj = basalCurveParam(newLj, curvature);
+
+      console.log('[DEBUG] Correcting basal ordering violation:', {
+        ci: ci.id,
+        cj: cj.id,
+        li,
+        lj,
+        newLi,
+        newLj,
+      });
+
+      ci.B.x = newBi.x;
+      ci.B.y = newBi.y;
+
+      cj.B.x = newBj.x;
+      cj.B.y = newBj.y;
     }
   }
 }
 
 /**
  * Project maximum basal junction distance constraints.
- * Prevents basal points from separating too far.
+ * Prevents basal points from separating too far along the arc length.
  */
 export function projectMaxBasalDistanceConstraints(
   state: SimulationState,
@@ -81,18 +139,35 @@ export function projectMaxBasalDistanceConstraints(
 ): void {
   const cells = state.cells;
   const baLinks = state.ba_links;
+  const curvature = params.general.curvature;
   const maxDist = params.cell_prop.max_basal_junction_dist;
 
   for (const link of baLinks) {
     const ci = cells[link.l];
     const cj = cells[link.r];
 
-    const bij = cj.B.x - ci.B.x;
+    const Bi = Vector2.from(ci.B);
+    const Bj = Vector2.from(cj.B);
 
-    if (bij > maxDist) {
-      const excess = bij - maxDist;
-      ci.B.x += excess / 2;
-      cj.B.x -= excess / 2;
+    const li = basalArcLength(Bi, curvature);
+    const lj = basalArcLength(Bj, curvature);
+
+    // Arc length distance between basal points
+    const deltaL = lj - li;
+
+    if (deltaL > maxDist) {
+      // Exceeds max distance - pull points closer along the curve
+      const excess = deltaL - maxDist;
+      const newLi = li + excess / 2;
+      const newLj = lj - excess / 2;
+
+      const newBi = basalCurveParam(newLi, curvature);
+      const newBj = basalCurveParam(newLj, curvature);
+
+      ci.B.x = newBi.x;
+      ci.B.y = newBi.y;
+      cj.B.x = newBj.x;
+      cj.B.y = newBj.y;
     }
   }
 }

@@ -174,7 +174,7 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
             className="flex-1"
           >
             <Upload className="h-4 w-4 mr-2" />
-            Load TOML (params + ranges + sampling)
+            Load TOML
           </Button>
           <Button
             variant="outline"
