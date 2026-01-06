@@ -3,6 +3,7 @@
  * Each worker runs a single simulation and posts back snapshots.
  */
 
+import { cloneDeep } from 'lodash-es';
 import { SimulationEngine } from '../simulation';
 import { setNestedValue } from '../params';
 import type { SimulationParams, SimulationState, ApicalLink, BasalLink } from '../types';
@@ -103,8 +104,8 @@ function createBatchSnapshot(
 function runSimulation(request: WorkerRequest): BatchSnapshot[] {
   const { baseParams, overrides, seed, timeSamples, runIndex } = request;
 
-  // Apply parameter overrides
-  const params = JSON.parse(JSON.stringify(baseParams)) as SimulationParams;
+  // Apply parameter overrides (use cloneDeep to preserve Infinity values)
+  const params = cloneDeep(baseParams);
   for (const [path, value] of Object.entries(overrides)) {
     setNestedValue(params, path, value);
   }

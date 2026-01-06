@@ -106,9 +106,10 @@ export const DEFAULT_PARAMS: SimulationParams = {
 /**
  * Create a deep copy of the default parameters.
  * Useful for creating a fresh parameter set to modify.
+ * Note: Uses cloneDeep instead of JSON to preserve Infinity values.
  */
 export function createDefaultParams(): SimulationParams {
-  return JSON.parse(JSON.stringify(DEFAULT_PARAMS));
+  return cloneDeep(DEFAULT_PARAMS);
 }
 
 /**

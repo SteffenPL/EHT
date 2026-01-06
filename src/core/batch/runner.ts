@@ -4,6 +4,7 @@
  * Supports both sequential and parallel (Web Worker) execution.
  */
 
+import { cloneDeep } from 'lodash-es';
 import { SimulationEngine } from '../simulation';
 import { setNestedValue } from '../params';
 import type { SimulationParams, SimulationState, ApicalLink, BasalLink } from '../types';
@@ -113,8 +114,8 @@ function runSingleSimulation(
   runIndex: number,
   callbacks?: BatchRunnerCallbacks
 ): BatchSnapshot[] {
-  // Apply parameter overrides
-  const params = JSON.parse(JSON.stringify(baseParams)) as SimulationParams;
+  // Apply parameter overrides (use cloneDeep to preserve Infinity values)
+  const params = cloneDeep(baseParams);
   for (const [path, value] of Object.entries(overrides)) {
     setNestedValue(params, path, value);
   }
