@@ -1,15 +1,16 @@
 /**
  * Simulation canvas component with Pixi.js rendering.
+ * Automatically resizes to fill its container.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { SimulationRenderer } from '../../rendering';
 import type { SimulationState, SimulationParams } from '../../core/types';
 
 export interface SimulationCanvasProps {
   state: SimulationState | null;
   params: SimulationParams;
-  width?: number;
-  height?: number;
+  /** Minimum height in pixels. Default: 350 */
+  minHeight?: number;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -17,14 +18,51 @@ export interface SimulationCanvasProps {
 export function SimulationCanvas({
   state,
   params,
-  width = 800,
-  height = 400,
+  minHeight = 350,
   className,
   style,
 }: SimulationCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<SimulationRenderer | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [size, setSize] = useState({ width: 800, height: minHeight });
+
+  // Measure container size
+  const updateSize = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const newWidth = Math.floor(rect.width);
+      const newHeight = Math.max(minHeight, Math.floor(rect.height));
+
+      if (newWidth > 0 && newHeight > 0) {
+        setSize({ width: newWidth, height: newHeight });
+      }
+    }
+  }, [minHeight]);
+
+  // Observe container size changes
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Initial size
+    updateSize();
+
+    // ResizeObserver for dynamic resizing
+    const resizeObserver = new ResizeObserver(() => {
+      updateSize();
+    });
+    resizeObserver.observe(container);
+
+    // Also listen to window resize as a fallback
+    window.addEventListener('resize', updateSize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
+  }, [updateSize]);
 
   // Initialize renderer
   useEffect(() => {
@@ -34,7 +72,7 @@ export function SimulationCanvas({
     let mounted = true;
 
     const initRenderer = async () => {
-      const renderer = new SimulationRenderer({ width, height });
+      const renderer = new SimulationRenderer({ width: size.width, height: size.height });
       await renderer.init(canvas);
 
       if (mounted) {
@@ -54,21 +92,31 @@ export function SimulationCanvas({
       }
       setIsReady(false);
     };
+    // Only reinitialize on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Update params when they change
   useEffect(() => {
     if (rendererRef.current && isReady) {
       rendererRef.current.setParams(params);
+      // Re-render after params change
+      if (state) {
+        rendererRef.current.render(state);
+      }
     }
-  }, [params, isReady]);
+  }, [params, isReady, state]);
 
   // Handle resize
   useEffect(() => {
-    if (rendererRef.current && isReady) {
-      rendererRef.current.resize(width, height);
+    if (rendererRef.current && isReady && size.width > 0 && size.height > 0) {
+      rendererRef.current.resize(size.width, size.height);
+      // Re-render after resize
+      if (state) {
+        rendererRef.current.render(state);
+      }
     }
-  }, [width, height, isReady]);
+  }, [size.width, size.height, isReady, state]);
 
   // Render state when it changes
   useEffect(() => {
@@ -78,15 +126,25 @@ export function SimulationCanvas({
   }, [state, isReady]);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={width}
-      height={height}
+    <div
+      ref={containerRef}
       className={className}
       style={{
-        display: 'block',
+        width: '100%',
+        minHeight: `${minHeight}px`,
         ...style,
       }}
-    />
+    >
+      <canvas
+        ref={canvasRef}
+        width={size.width}
+        height={size.height}
+        style={{
+          display: 'block',
+          width: '100%',
+          height: '100%',
+        }}
+      />
+    </div>
   );
 }

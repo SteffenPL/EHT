@@ -33,9 +33,7 @@ export function SingleSimulationTab({ params }: SingleSimulationTabProps) {
         <SimulationCanvas
           state={state}
           params={params}
-          width={900}
-          height={350}
-          className="w-full"
+          minHeight={350}
         />
       </Card>
 

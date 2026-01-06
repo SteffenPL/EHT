@@ -4,6 +4,7 @@
  */
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import type { SimulationState, SimulationParams } from '../core/types';
+import { shapeCenter } from '../core/math/geometry';
 import { defaultTheme, type ColorTheme, rgbToHex } from './themes';
 
 export interface RendererConfig {
@@ -11,6 +12,41 @@ export interface RendererConfig {
   height: number;
   theme?: ColorTheme;
   showScaleBar?: boolean;
+}
+
+/**
+ * Compute the bounding box for the basal curve (ellipse or line).
+ * Returns { minX, maxX, minY, maxY } in simulation coordinates.
+ */
+function getBasalCurveBounds(
+  curvature_1: number,
+  curvature_2: number,
+  h_init: number
+): { minX: number; maxX: number; minY: number; maxY: number } {
+  if (curvature_1 === 0 && curvature_2 === 0) {
+    // Straight line case - use a default width
+    return { minX: -20, maxX: 20, minY: 0, maxY: h_init };
+  }
+
+  const center = shapeCenter(curvature_1, curvature_2);
+  const a = curvature_1 !== 0 ? Math.abs(1 / curvature_1) : 20;
+  const b = curvature_2 !== 0 ? Math.abs(1 / curvature_2) : 20;
+
+  // Ellipse bounds
+  const minX = center.x - a;
+  const maxX = center.x + a;
+
+  // For the Y bounds, include space above the ellipse for cells
+  // The ellipse bottom is at center.y - b (if curvature_2 > 0)
+  // Cells extend upward by h_init
+  const ellipseBottom = center.y - b;
+  const ellipseTop = center.y + b;
+
+  // We want to show from below the ellipse to above where cells might be
+  const minY = Math.min(ellipseBottom, 0) - 2;
+  const maxY = Math.max(ellipseTop, h_init) + 2;
+
+  return { minX, maxX, minY, maxY };
 }
 
 /**
@@ -22,6 +58,7 @@ export class SimulationRenderer {
   private cellsContainer: Container;
   private linksContainer: Container;
   private overlayContainer: Container;
+  private uiContainer: Container; // Non-transformed container for UI elements
 
   private theme: ColorTheme;
   private showScaleBar: boolean;
@@ -29,10 +66,9 @@ export class SimulationRenderer {
   private params: SimulationParams | null = null;
 
   // Viewport transform
-  private scaleX = 1;
-  private scaleY = 1;
-  private translateX = 0;
-  private translateY = 0;
+  private scale = 1;
+  private centerX = 0;
+  private centerY = 0;
 
   constructor(config: RendererConfig) {
     this.theme = config.theme ?? defaultTheme;
@@ -46,6 +82,7 @@ export class SimulationRenderer {
     this.cellsContainer = new Container();
     this.overlayContainer = new Container();
     this.mainContainer = new Container();
+    this.uiContainer = new Container(); // For scale bar, text, etc.
 
     this.mainContainer.addChild(this.linksContainer);
     this.mainContainer.addChild(this.cellsContainer);
@@ -67,6 +104,7 @@ export class SimulationRenderer {
     });
 
     this.app.stage.addChild(this.mainContainer);
+    this.app.stage.addChild(this.uiContainer);
   }
 
   /**
@@ -86,7 +124,8 @@ export class SimulationRenderer {
   }
 
   /**
-   * Update viewport transform based on params and canvas size.
+   * Update viewport transform based on basal curve geometry.
+   * Centers view on the shape with 10% padding on each side.
    */
   private updateViewport(): void {
     if (!this.params) return;
@@ -95,27 +134,30 @@ export class SimulationRenderer {
     const canvasWidth = this.app.renderer.width;
     const canvasHeight = this.app.renderer.height;
 
-    const simAspect = pg.w_screen / pg.h_screen;
-    const canvasAspect = canvasWidth / canvasHeight;
+    // Get bounds of the basal curve
+    const bounds = getBasalCurveBounds(pg.curvature_1, pg.curvature_2, pg.h_init);
 
-    // Scale to fit simulation in canvas
-    if (canvasAspect > simAspect) {
-      // Canvas is wider - fit by height
-      this.scaleY = -canvasHeight / pg.h_screen;
-      this.scaleX = -this.scaleY;
-    } else {
-      // Canvas is taller - fit by width
-      this.scaleX = canvasWidth / pg.w_screen;
-      this.scaleY = -this.scaleX;
-    }
+    // Add 10% padding
+    const padding = 0.1;
+    const simWidth = (bounds.maxX - bounds.minX) * (1 + 2 * padding);
+    const simHeight = (bounds.maxY - bounds.minY) * (1 + 2 * padding);
 
-    // Center the simulation
-    this.translateX = canvasWidth / 2;
-    this.translateY = canvasHeight - (pg.h_screen - pg.h_init) * 0.25 * Math.abs(this.scaleY);
+    // Center of the simulation view
+    this.centerX = (bounds.minX + bounds.maxX) / 2;
+    this.centerY = (bounds.minY + bounds.maxY) / 2;
 
-    // Apply transform to main container
-    this.mainContainer.scale.set(this.scaleX, this.scaleY);
-    this.mainContainer.position.set(this.translateX, this.translateY);
+    // Calculate scale to fit the simulation in the canvas
+    const scaleX = canvasWidth / simWidth;
+    const scaleY = canvasHeight / simHeight;
+    this.scale = Math.min(scaleX, scaleY);
+
+    // Apply transform: scale and center
+    // We flip Y because canvas Y goes down, simulation Y goes up
+    this.mainContainer.scale.set(this.scale, -this.scale);
+    this.mainContainer.position.set(
+      canvasWidth / 2 - this.centerX * this.scale,
+      canvasHeight / 2 + this.centerY * this.scale
+    );
   }
 
   /**
@@ -128,6 +170,10 @@ export class SimulationRenderer {
     this.cellsContainer.removeChildren();
     this.linksContainer.removeChildren();
     this.overlayContainer.removeChildren();
+    this.uiContainer.removeChildren();
+
+    // Draw basal curve
+    this.drawBasalCurve();
 
     // Draw links first (behind cells)
     this.drawBasalLinks(state);
@@ -136,10 +182,37 @@ export class SimulationRenderer {
     // Draw cells
     this.drawCells(state);
 
-    // Draw overlays
+    // Draw UI overlays (in screen space)
     if (this.showScaleBar) {
       this.drawScaleBar();
     }
+  }
+
+  /**
+   * Draw the basal curve (ellipse or line).
+   */
+  private drawBasalCurve(): void {
+    if (!this.params) return;
+
+    const pg = this.params.general;
+    const graphics = new Graphics();
+
+    if (pg.curvature_1 === 0 && pg.curvature_2 === 0) {
+      // Straight line
+      graphics.moveTo(-50, 0);
+      graphics.lineTo(50, 0);
+      graphics.stroke({ color: 0xcccccc, alpha: 0.5, width: 0.05 });
+    } else {
+      // Ellipse
+      const center = shapeCenter(pg.curvature_1, pg.curvature_2);
+      const a = pg.curvature_1 !== 0 ? Math.abs(1 / pg.curvature_1) : 20;
+      const b = pg.curvature_2 !== 0 ? Math.abs(1 / pg.curvature_2) : 20;
+
+      graphics.ellipse(center.x, center.y, a, b);
+      graphics.stroke({ color: 0xcccccc, alpha: 0.5, width: 0.05 });
+    }
+
+    this.linksContainer.addChild(graphics);
   }
 
   /**
@@ -153,7 +226,6 @@ export class SimulationRenderer {
       const color = cellType.color;
 
       // Draw soft radius (semi-transparent ellipse)
-      // For simplicity, draw as circle - could add velocity-based deformation later
       graphics.circle(cell.pos.x, cell.pos.y, cell.R_soft);
       graphics.fill({ color: rgbToHex(color.r, color.g, color.b), alpha: 0.4 });
 
@@ -220,44 +292,49 @@ export class SimulationRenderer {
   }
 
   /**
-   * Draw scale bar overlay.
+   * Draw scale bar in the bottom-right corner (in screen space).
    */
   private drawScaleBar(): void {
-    if (!this.params) return;
+    const canvasWidth = this.app.renderer.width;
+    const canvasHeight = this.app.renderer.height;
 
-    const pg = this.params.general;
+    // Scale bar: 10 μm = 2 simulation units
+    const barLengthSim = 2; // simulation units
+    const barLengthScreen = barLengthSim * this.scale;
 
-    // Scale bar in simulation units (2 units = 10 μm)
-    const barLength = 2;
-    const barX = pg.w_screen / 2 - 6;
-    const barY = -0.05 * pg.h_screen;
+    // Position in bottom-right corner with padding
+    const padding = 20;
+    const barX = canvasWidth - padding - barLengthScreen;
+    const barY = canvasHeight - padding - 10;
 
     const graphics = new Graphics();
+
+    // Draw the bar
     graphics.moveTo(barX, barY);
-    graphics.lineTo(barX + barLength, barY);
-    graphics.stroke({ color: this.theme.scaleBar, alpha: 1, width: 0.1 });
+    graphics.lineTo(barX + barLengthScreen, barY);
+    graphics.stroke({ color: this.theme.scaleBar, alpha: 1, width: 2 });
 
-    this.overlayContainer.addChild(graphics);
+    // Draw end caps
+    graphics.moveTo(barX, barY - 5);
+    graphics.lineTo(barX, barY + 5);
+    graphics.moveTo(barX + barLengthScreen, barY - 5);
+    graphics.lineTo(barX + barLengthScreen, barY + 5);
+    graphics.stroke({ color: this.theme.scaleBar, alpha: 1, width: 2 });
 
-    // Text label - rendered in screen space
+    this.uiContainer.addChild(graphics);
+
+    // Text label
     const textStyle = new TextStyle({
       fontFamily: 'monospace',
-      fontSize: 14,
+      fontSize: 12,
       fill: this.theme.text,
     });
 
     const text = new Text({ text: '10 μm', style: textStyle });
+    text.anchor.set(0.5, 0);
+    text.position.set(barX + barLengthScreen / 2, barY + 8);
 
-    // Convert simulation coords to screen coords for text
-    const screenX = barX * this.scaleX + this.translateX;
-    const screenY = barY * this.scaleY + this.translateY;
-
-    // Text needs to be in stage coords, not in transformed container
-    text.position.set(screenX, screenY + 15);
-    text.scale.set(1 / Math.abs(this.scaleX), 1 / Math.abs(this.scaleY));
-
-    // Actually, let's add it to a separate non-transformed container
-    // For simplicity, skip text for now - can add later
+    this.uiContainer.addChild(text);
   }
 
   /**
