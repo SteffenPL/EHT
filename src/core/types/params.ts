@@ -68,7 +68,8 @@ export interface GeneralParams {
   w_screen: number;         // Screen width (visualization)
   h_screen: number;         // Screen height (visualization)
   p_div_out: number;        // Probability of division producing one offspring
-  curvature: number;        // Basal membrane curvature
+  curvature_1: number;      // Basal membrane curvature (horizontal, a = 1/curvature_1)
+  curvature_2: number;      // Basal membrane curvature (vertical, b = 1/curvature_2)
 }
 
 /** Cell property parameters (shared properties) */

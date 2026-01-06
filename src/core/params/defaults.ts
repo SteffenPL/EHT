@@ -87,7 +87,8 @@ export const DEFAULT_PARAMS: SimulationParams = {
     w_screen: 70,
     h_screen: (70 * 1),
     p_div_out: 1.0,
-    curvature: 0.06,
+    curvature_1: 0.06,
+    curvature_2: 0.06,
   },
   cell_prop: {
     apical_junction_init: 0.0,
@@ -130,7 +131,8 @@ export const PARAM_PRESETS: Array<{
     label: 'Straight',
     create: () => {
       const params = createDefaultParams();
-      params.general.curvature = 0;
+      params.general.curvature_1 = 0;
+      params.general.curvature_2 = 0;
       params.general.full_circle = false;
       return params;
     },
@@ -140,7 +142,8 @@ export const PARAM_PRESETS: Array<{
     label: 'Full Circle',
     create: () => {
       const params = createDefaultParams();
-      params.general.curvature = 0.2;
+      params.general.curvature_1 = 0.2;
+      params.general.curvature_2 = 0.2;
       params.general.full_circle = true;
       return params;
     },

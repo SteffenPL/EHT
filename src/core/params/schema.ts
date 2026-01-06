@@ -69,7 +69,8 @@ export const generalParamsSchema = z.object({
   w_screen: z.number().positive(),
   h_screen: z.number().positive(),
   p_div_out: z.number().min(0).max(1),
-  curvature: z.number(),
+  curvature_1: z.number(),
+  curvature_2: z.number(),
 });
 
 /** Cell property params schema */

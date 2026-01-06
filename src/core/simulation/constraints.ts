@@ -57,7 +57,8 @@ export function projectBasalOrderingConstraints(
 ): void {
   const cells = state.cells;
   const baLinks = state.ba_links;
-  const curvature = params.general.curvature;
+  const curvature_1 = params.general.curvature_1;
+  const curvature_2 = params.general.curvature_2;
 
   for (const link of baLinks) {
     const ci = cells[link.l];
@@ -66,8 +67,8 @@ export function projectBasalOrderingConstraints(
     const Bi = Vector2.from(ci.B);
     const Bj = Vector2.from(cj.B);
 
-    const li = basalArcLength(Bi, curvature);
-    const lj = basalArcLength(Bj, curvature);
+    const li = basalArcLength(Bi, curvature_1, curvature_2);
+    const lj = basalArcLength(Bj, curvature_1, curvature_2);
 
     
     
@@ -75,8 +76,8 @@ export function projectBasalOrderingConstraints(
     let deltaL = 0 ; // lj - li;
 
     // Compute modulo for periodic boundary if needed
-    if (params.general.full_circle && curvature !== 0) {
-      const circumference = 2 * Math.PI * Math.abs(1 / curvature);
+    if (params.general.full_circle && curvature_1 !== 0 && curvature_1 === curvature_2) {
+      const circumference = 2 * Math.PI * Math.abs(1 / curvature_1);
       while (deltaL > circumference / 2) {
         // j is too far ahead - wrap around
         deltaL -= circumference;
@@ -108,8 +109,8 @@ export function projectBasalOrderingConstraints(
       const newLi = li + correction;
       const newLj = lj - correction;
 
-      const newBi = basalCurveParam(newLi, curvature);
-      const newBj = basalCurveParam(newLj, curvature);
+      const newBi = basalCurveParam(newLi, curvature_1, curvature_2);
+      const newBj = basalCurveParam(newLj, curvature_1, curvature_2);
 
       console.log('[DEBUG] Correcting basal ordering violation:', {
         ci: ci.id,
@@ -139,7 +140,8 @@ export function projectMaxBasalDistanceConstraints(
 ): void {
   const cells = state.cells;
   const baLinks = state.ba_links;
-  const curvature = params.general.curvature;
+  const curvature_1 = params.general.curvature_1;
+  const curvature_2 = params.general.curvature_2;
   const maxDist = params.cell_prop.max_basal_junction_dist;
 
   for (const link of baLinks) {
@@ -149,8 +151,8 @@ export function projectMaxBasalDistanceConstraints(
     const Bi = Vector2.from(ci.B);
     const Bj = Vector2.from(cj.B);
 
-    const li = basalArcLength(Bi, curvature);
-    const lj = basalArcLength(Bj, curvature);
+    const li = basalArcLength(Bi, curvature_1, curvature_2);
+    const lj = basalArcLength(Bj, curvature_1, curvature_2);
 
     // Arc length distance between basal points
     const deltaL = lj - li;
@@ -161,8 +163,8 @@ export function projectMaxBasalDistanceConstraints(
       const newLi = li + excess / 2;
       const newLj = lj - excess / 2;
 
-      const newBi = basalCurveParam(newLi, curvature);
-      const newBj = basalCurveParam(newLj, curvature);
+      const newBi = basalCurveParam(newLi, curvature_1, curvature_2);
+      const newBj = basalCurveParam(newLj, curvature_1, curvature_2);
 
       ci.B.x = newBi.x;
       ci.B.y = newBi.y;
@@ -180,11 +182,12 @@ export function projectBasalCurveConstraints(
   params: SimulationParams
 ): void {
   const cells = state.cells;
-  const curvature = params.general.curvature;
+  const curvature_1 = params.general.curvature_1;
+  const curvature_2 = params.general.curvature_2;
 
   for (const cell of cells) {
     const B = Vector2.from(cell.B);
-    const projected = basalCurve(B, curvature);
+    const projected = basalCurve(B, curvature_1, curvature_2);
     cell.B.x = projected.x;
     cell.B.y = projected.y;
   }

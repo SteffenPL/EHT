@@ -33,7 +33,8 @@ function getNestedValue(obj: unknown, path: string): number | undefined {
 const AVAILABLE_PARAMS: Array<{ path: string; label: string; isInteger?: boolean }> = [
   { path: 'general.N_emt', label: 'N_emt (EMT cell count)', isInteger: true },
   { path: 'general.N_init', label: 'N_init (Initial cells)', isInteger: true },
-  { path: 'general.curvature', label: 'Curvature' },
+  { path: 'general.curvature_1', label: 'Curvature 1 (horizontal)' },
+  { path: 'general.curvature_2', label: 'Curvature 2 (vertical)' },
   { path: 'general.random_seed', label: 'Random seed', isInteger: true },
   { path: 'general.t_end', label: 't_end (End time)' },
   { path: 'cell_prop.apical_junction_init', label: 'Apical junction init' },
