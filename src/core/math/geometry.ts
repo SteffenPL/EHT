@@ -169,7 +169,7 @@ function ellipseArcLength(theta: number, a: number, b: number): number {
 
 /**
  * Find theta such that arc length from 0 to theta equals target length.
- * Uses Newton's method with numerical derivative.
+ * Uses forward integration with adaptive bisection refinement.
  * 
  * @param targetLength - Target arc length
  * @param a - Horizontal semi-axis
@@ -182,34 +182,72 @@ function ellipseThetaFromArcLength(targetLength: number, a: number, b: number): 
   }
   
   const sign = targetLength >= 0 ? 1 : -1;
-  const absLength = Math.abs(targetLength);
+  const absTarget = Math.abs(targetLength);
   
-  // Initial guess: assume roughly circular
+  // Arc length velocity at angle t: sqrt(a² sin²(t) + b² cos²(t))
+  const velocity = (t: number) => {
+    const s = Math.sin(t);
+    const c = Math.cos(t);
+    return Math.sqrt(a * a * s * s + b * b * c * c);
+  };
+  
+  // Start from theta = 0, arcLength = 0
+  let theta = 0;
+  let arcLength = 0;
+  
+  // Initial step size (estimate based on average radius)
   const avgRadius = (a + b) / 2;
-  let theta = absLength / avgRadius;
+  let dt = absTarget / avgRadius / 10; // Start with ~10 steps
   
-  const maxIter = 30;
   const tol = 1e-8;
+  const maxIter = 1000;
+  let direction = 1; // 1 for forward, -1 for backward
   
-  for (let i = 0; i < maxIter; i++) {
-    const currentLength = ellipseArcLength(theta, a, b);
-    const error = currentLength - absLength;
+  for (let iter = 0; iter < maxIter; iter++) {
+    // Check if we're close enough
+    const error = absTarget - arcLength;
     
     if (Math.abs(error) < tol) {
       break;
     }
     
-    // Numerical derivative: dL/dtheta ≈ integrand at theta
-    const s = Math.sin(theta);
-    const c = Math.cos(theta);
-    const derivative = Math.sqrt(a * a * s * s + b * b * c * c);
+    // Take a step
+    const newTheta = theta + direction * dt;
     
-    if (Math.abs(derivative) < 1e-10) {
-      break;
+    // Estimate arc length increment using trapezoidal rule
+    const v1 = velocity(theta);
+    const v2 = velocity(newTheta);
+    const deltaArc = Math.abs(dt) * (v1 + v2) / 2;
+    
+    const newArcLength = arcLength + direction * deltaArc;
+    
+    // Check if we've crossed the target
+    const wasBelow = arcLength < absTarget;
+    const isAbove = newArcLength > absTarget;
+    
+    if (wasBelow && isAbove) {
+      // We've crossed - use bisection
+      dt = dt / 2;
+      direction = -1;
+    } else if (!wasBelow && !isAbove) {
+      // We crossed back - reverse again
+      dt = dt / 2;
+      direction = 1;
+    } else {
+      // Haven't crossed yet, keep going in same direction
+      theta = newTheta;
+      arcLength = newArcLength;
+      
+      // If step is getting too small, we're converged
+      if (Math.abs(deltaArc) < tol) {
+        break;
+      }
     }
     
-    // Newton step
-    theta = theta - error / derivative;
+    // Safety check: if dt becomes too small, stop
+    if (Math.abs(dt) < 1e-12) {
+      break;
+    }
   }
   
   return sign * theta;
