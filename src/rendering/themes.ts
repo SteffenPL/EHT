@@ -40,20 +40,20 @@ export const defaultTheme: ColorTheme = {
   apicalLink: 0x640000,  // Dark red
   basalLink: 0x000000,   // Black
   scaleBar: 0x646464,    // Gray
-  text: 0x5050a0,        // Blue-gray
+ text: 0x5050a0,        // Blue-gray
 };
 
 /**
  * Dark theme for dark mode.
  */
 export const darkTheme: ColorTheme = {
-  background: 0x1a1a2e,
+  background: 0x111827,
   cellSoft: rgbaToHex,
   cellHard: rgbToHex,
-  apicalPoint: 0xff6b6b,
-  basalPoint: 0xeeeeee,
-  apicalLink: 0xff4444,
-  basalLink: 0xcccccc,
-  scaleBar: 0x888888,
-  text: 0x8888cc,
+  apicalPoint: 0xff8f8f,
+  basalPoint: 0xffffff,
+  apicalLink: 0xff6b6b,
+  basalLink: 0xeeeeee,
+  scaleBar: 0xb0b0d0,
+  text: 0xb0b8ff,
 };
