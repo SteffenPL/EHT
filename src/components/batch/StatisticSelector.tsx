@@ -4,7 +4,7 @@
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { ScrollArea } from '../ui/scroll-area';
-import { AVAILABLE_STATISTICS } from '@/core/batch';
+import { useModel } from '@/contexts';
 
 export interface StatisticSelectorProps {
   selected: string[];
@@ -13,6 +13,8 @@ export interface StatisticSelectorProps {
 }
 
 export function StatisticSelector({ selected, onChange, disabled }: StatisticSelectorProps) {
+  const { currentModel } = useModel();
+  const modelStatistics = currentModel.statistics;
   const selectedSet = new Set(selected);
 
   const handleToggle = (id: string, checked: boolean) => {
@@ -24,7 +26,7 @@ export function StatisticSelector({ selected, onChange, disabled }: StatisticSel
   };
 
   const handleSelectAll = () => {
-    onChange(AVAILABLE_STATISTICS.map((s) => s.id));
+    onChange(modelStatistics.map((s) => s.id));
   };
 
   const handleSelectNone = () => {
@@ -56,7 +58,7 @@ export function StatisticSelector({ selected, onChange, disabled }: StatisticSel
 
       <ScrollArea className="h-[200px] border rounded-md p-3">
         <div className="space-y-2">
-          {AVAILABLE_STATISTICS.map((stat) => (
+          {modelStatistics.map((stat) => (
             <div key={stat.id} className="flex items-start gap-2">
               <Checkbox
                 id={stat.id}
@@ -79,7 +81,7 @@ export function StatisticSelector({ selected, onChange, disabled }: StatisticSel
       </ScrollArea>
 
       <p className="text-xs text-muted-foreground">
-        {selected.length} of {AVAILABLE_STATISTICS.length} selected
+        {selected.length} of {modelStatistics.length} selected
       </p>
     </div>
   );

@@ -1,11 +1,12 @@
 /**
- * Constraint projections for the simulation.
+ * EHT model constraint projections.
  * Enforces hard constraints like collision, basal ordering, etc.
  */
-import { Vector2 } from '../math/vector2';
-import { basalCurve, basalArcLength } from '../math/geometry';
-import type { SimulationState } from '../types/state';
-import type { SimulationParams } from '../types/params';
+
+import { Vector2 } from '@/core/math/vector2';
+import { basalCurve, basalArcLength } from '@/core/math/geometry';
+import type { SimulationState } from '@/core/types/state';
+import type { EHTParams } from '../params/types';
 
 /**
  * Project hard sphere collision constraints.
@@ -13,7 +14,7 @@ import type { SimulationParams } from '../types/params';
  */
 export function projectHardSphereConstraints(
   state: SimulationState,
-  _params: SimulationParams
+  _params: EHTParams
 ): void {
   const cells = state.cells;
   const n = cells.length;
@@ -53,7 +54,7 @@ export function projectHardSphereConstraints(
  */
 export function projectBasalOrderingConstraints(
   state: SimulationState,
-  params: SimulationParams
+  params: EHTParams
 ): void {
   const cells = state.cells;
   const baLinks = state.ba_links;
@@ -110,7 +111,7 @@ export function projectBasalOrderingConstraints(
  */
 export function projectMaxBasalDistanceConstraints(
   state: SimulationState,
-  params: SimulationParams
+  params: EHTParams
 ): void {
   const cells = state.cells;
   const baLinks = state.ba_links;
@@ -145,7 +146,7 @@ export function projectMaxBasalDistanceConstraints(
  */
 export function projectBasalCurveConstraints(
   state: SimulationState,
-  params: SimulationParams
+  params: EHTParams
 ): void {
   const cells = state.cells;
   const curvature_1 = params.general.curvature_1;
@@ -160,11 +161,11 @@ export function projectBasalCurveConstraints(
 }
 
 /**
- * Apply all constraints in sequence.
+ * Apply all EHT constraints in sequence.
  */
 export function applyAllConstraints(
   state: SimulationState,
-  params: SimulationParams
+  params: EHTParams
 ): void {
   projectHardSphereConstraints(state, params);
   projectBasalOrderingConstraints(state, params);

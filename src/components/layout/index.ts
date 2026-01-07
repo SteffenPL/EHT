@@ -3,3 +3,5 @@ export type { HeaderProps } from './Header';
 
 export { AppLayout } from './AppLayout';
 export type { AppLayoutProps } from './AppLayout';
+
+export { ModelSelector } from './ModelSelector';

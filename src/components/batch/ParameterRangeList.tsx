@@ -8,6 +8,7 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { ParameterRange } from '@/core/batch';
 import type { SimulationParams } from '@/core/types';
+import { useModel } from '@/contexts';
 
 export interface ParameterRangeListProps {
   ranges: ParameterRange[];
@@ -29,33 +30,11 @@ function getNestedValue(obj: unknown, path: string): number | undefined {
   return typeof current === 'number' ? current : undefined;
 }
 
-/** Available parameters for batch sweeps */
-const AVAILABLE_PARAMS: Array<{ path: string; label: string; isInteger?: boolean }> = [
-  { path: 'general.N_emt', label: 'N_emt (EMT cell count)', isInteger: true },
-  { path: 'general.N_init', label: 'N_init (Initial cells)', isInteger: true },
-  { path: 'general.curvature_1', label: 'Curvature 1 (horizontal)' },
-  { path: 'general.curvature_2', label: 'Curvature 2 (vertical)' },
-  { path: 'general.random_seed', label: 'Random seed', isInteger: true },
-  { path: 'general.t_end', label: 't_end (End time)' },
-  { path: 'cell_prop.apical_junction_init', label: 'Apical junction init' },
-  { path: 'cell_prop.max_basal_junction_dist', label: 'Max basal junction dist' },
-  { path: 'cell_prop.diffusion', label: 'Diffusion' },
-  { path: 'cell_types.emt.k_apical_junction', label: 'EMT k_apical_junction' },
-  { path: 'cell_types.emt.stiffness_repulsion', label: 'EMT repulsion stiffness' },
-  { path: 'cell_types.emt.stiffness_straightness', label: 'EMT straightness stiffness' },
-  { path: 'cell_types.emt.running_speed', label: 'EMT Running speed' },
-  { path: 'cell_types.emt.events.time_A.min', label: 'EMT time_A min' },
-  { path: 'cell_types.emt.events.time_A.max', label: 'EMT time_A max' },
-  { path: 'cell_types.emt.events.time_B.min', label: 'EMT time_B min' },
-  { path: 'cell_types.emt.events.time_B.max', label: 'EMT time_B max' },
-  { path: 'cell_types.control.k_apical_junction', label: 'Control k_apical_junction' },
-  { path: 'cell_types.control.stiffness_repulsion', label: 'Control repulsion stiffness' },
-  { path: 'cell_types.control.stiffness_straightness', label: 'Control straightness stiffness' },
-];
-
 export function ParameterRangeList({ ranges, onChange, baseParams, disabled }: ParameterRangeListProps) {
+  const { currentModel } = useModel();
+  const modelBatchParams = currentModel.batchParameters;
   const usedPaths = new Set(ranges.map((r) => r.path));
-  const availableParams = AVAILABLE_PARAMS.filter((p) => !usedPaths.has(p.path));
+  const availableParams = modelBatchParams.filter((p) => !usedPaths.has(p.path));
 
   const handleAdd = (path: string) => {
     const baseValue = getNestedValue(baseParams, path) ?? 0;
@@ -102,7 +81,7 @@ export function ParameterRangeList({ ranges, onChange, baseParams, disabled }: P
       ) : (
         <div className="space-y-2">
           {ranges.map((range, index) => {
-            const paramInfo = AVAILABLE_PARAMS.find((p) => p.path === range.path);
+            const paramInfo = modelBatchParams.find((p) => p.path === range.path);
             const baseValue = getNestedValue(baseParams, range.path);
             const isInteger = paramInfo?.isInteger ?? false;
             const valueStep = isInteger ? 1 : 0.01;

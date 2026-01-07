@@ -1,8 +1,9 @@
 /**
- * Application header with title and theme toggle.
+ * Application header with title, model selector, and theme toggle.
  */
 import { Moon, Sun } from 'lucide-react';
 import { Button } from '../ui/button';
+import { ModelSelector } from './ModelSelector';
 
 export interface HeaderProps {
   isDark: boolean;
@@ -13,7 +14,10 @@ export function Header({ isDark, onToggleTheme }: HeaderProps) {
   return (
     <header className="border-b bg-card">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold">EHT Simulator</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold">EHT Simulator</h1>
+          <ModelSelector />
+        </div>
         <Button variant="ghost" size="icon" onClick={onToggleTheme} aria-label="Toggle theme">
           {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>

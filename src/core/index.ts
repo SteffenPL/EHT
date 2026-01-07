@@ -5,6 +5,9 @@
  * It has no rendering dependencies and can run in Node.js or browser.
  */
 
+// Model registry
+export * from './registry';
+
 // Types
 export * from './types';
 
