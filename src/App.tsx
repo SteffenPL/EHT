@@ -1,33 +1,63 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { AppLayout } from './components/layout';
 import { SingleSimulationTab } from './components/simulation';
 import { BatchTab } from './components/batch';
 import { ParameterConfigView } from './components/params';
-import { createDefaultSimulationConfig } from './core/params';
+import { DEFAULT_TIME_SAMPLES } from './core/params';
 import type { SimulationConfig } from './core/params';
-import { ModelProvider } from './contexts';
+import { ModelProvider, useModel } from './contexts';
 
 // Import models to register them
 import './models';
 
-function App() {
-  const [config, setConfig] = useState<SimulationConfig>(createDefaultSimulationConfig());
+function AppContent() {
+  const { currentParams, setParams } = useModel();
+
+  // Batch-related config (ranges, time samples, seeds) - separate from core params
+  const [batchConfig, setBatchConfig] = useState({
+    parameterRanges: [] as SimulationConfig['parameterRanges'],
+    timeSamples: { ...DEFAULT_TIME_SAMPLES },
+    seedsPerConfig: 1,
+  });
+
+  // Combine params from context with batch config
+  const config: SimulationConfig = useMemo(() => ({
+    params: currentParams as SimulationConfig['params'],
+    ...batchConfig,
+  }), [currentParams, batchConfig]);
+
+  const handleConfigChange = useCallback((newConfig: SimulationConfig) => {
+    // Update params via context (keeps model and params in sync)
+    setParams(newConfig.params);
+    // Update batch config locally
+    setBatchConfig({
+      parameterRanges: newConfig.parameterRanges,
+      timeSamples: newConfig.timeSamples,
+      seedsPerConfig: newConfig.seedsPerConfig,
+    });
+  }, [setParams]);
 
   return (
+    <AppLayout>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <section className="lg:col-span-7">
+          <SingleSimulationTab />
+        </section>
+        <section className="lg:col-span-5">
+          <ParameterConfigView config={config} onConfigChange={handleConfigChange} />
+        </section>
+        <section className="lg:col-span-12">
+          <BatchTab config={config} onConfigChange={handleConfigChange} />
+        </section>
+      </div>
+    </AppLayout>
+  );
+}
+
+function App() {
+  return (
     <ModelProvider>
-      <AppLayout>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <section className="lg:col-span-7">
-            <SingleSimulationTab params={config.params} />
-          </section>
-          <section className="lg:col-span-5">
-            <ParameterConfigView config={config} onConfigChange={setConfig} />
-          </section>
-          <section className="lg:col-span-12">
-            <BatchTab config={config} onConfigChange={setConfig} />
-          </section>
-        </div>
-      </AppLayout>
+      <AppContent />
     </ModelProvider>
   );
 }

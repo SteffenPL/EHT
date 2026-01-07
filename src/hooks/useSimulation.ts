@@ -1,14 +1,18 @@
 /**
  * React hook for managing simulation state.
+ * Uses the model-aware simulation engine.
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { SimulationEngine, type SimulationParams, type SimulationState, DEFAULT_PARAMS } from '../core';
+import { ModelSimulationEngine } from '../core/simulation/model-engine';
+import type { SimulationState } from '../core/types';
+import type { ModelDefinition, BaseSimulationParams } from '../core/registry';
 
 /** Behavior when parameters change */
 export type ParamChangeBehavior = 'init' | 'step' | 'run';
 
 export interface UseSimulationOptions {
-  params?: SimulationParams;
+  model: ModelDefinition<BaseSimulationParams>;
+  params: BaseSimulationParams;
   autoInit?: boolean;
   /** What to do when params change. Default: 'init' */
   paramChangeBehavior?: ParamChangeBehavior;
@@ -16,7 +20,7 @@ export interface UseSimulationOptions {
 
 export interface UseSimulationResult {
   state: SimulationState | null;
-  params: SimulationParams;
+  params: BaseSimulationParams;
   isRunning: boolean;
   isComplete: boolean;
   time: number;
@@ -25,17 +29,17 @@ export interface UseSimulationResult {
   pause: () => void;
   reset: () => void;
   step: () => void;
-  setParams: (params: SimulationParams) => void;
+  setParams: (params: BaseSimulationParams) => void;
 }
 
-export function useSimulation(options: UseSimulationOptions = {}): UseSimulationResult {
-  const { params: initialParams = DEFAULT_PARAMS, autoInit = true, paramChangeBehavior = 'init' } = options;
+export function useSimulation(options: UseSimulationOptions): UseSimulationResult {
+  const { model, params: initialParams, autoInit = true, paramChangeBehavior = 'init' } = options;
 
-  const [params, setParamsState] = useState<SimulationParams>(initialParams);
+  const [params, setParamsState] = useState<BaseSimulationParams>(initialParams);
   const [state, setState] = useState<SimulationState | null>(null);
   const [isRunning, setIsRunning] = useState(false);
 
-  const engineRef = useRef<SimulationEngine | null>(null);
+  const engineRef = useRef<ModelSimulationEngine | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isFirstRender = useRef(true);
 
@@ -47,7 +51,7 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
 
   // Initialize engine on first render
   useEffect(() => {
-    engineRef.current = new SimulationEngine({ params: initialParams });
+    engineRef.current = new ModelSimulationEngine({ model, params: initialParams });
     if (autoInit) {
       engineRef.current.init();
       setState(snapshotState());
@@ -62,7 +66,7 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle parameter changes based on behavior setting
+  // Handle parameter or model changes
   useEffect(() => {
     // Skip the first render - engine is initialized above
     if (isFirstRender.current) {
@@ -72,9 +76,9 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
 
     setParamsState(initialParams);
 
-    // Reinitialize the engine with new params
+    // Reinitialize the engine with new model/params
     setIsRunning(false);
-    engineRef.current = new SimulationEngine({ params: initialParams });
+    engineRef.current = new ModelSimulationEngine({ model, params: initialParams });
     engineRef.current.init();
     setState(snapshotState());
 
@@ -87,7 +91,7 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
       setIsRunning(true);
     }
     // 'init' just initializes (already done above)
-  }, [initialParams, paramChangeBehavior, snapshotState]);
+  }, [model, initialParams, paramChangeBehavior, snapshotState]);
 
   // Animation loop
   useEffect(() => {
@@ -148,7 +152,7 @@ export function useSimulation(options: UseSimulationOptions = {}): UseSimulation
     }
   }, [snapshotState]);
 
-  const setParams = useCallback((newParams: SimulationParams) => {
+  const setParams = useCallback((newParams: BaseSimulationParams) => {
     setIsRunning(false);
     setParamsState(newParams);
   }, []);

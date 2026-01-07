@@ -158,16 +158,56 @@ export interface ModelDefinition<TParams extends BaseSimulationParams = BaseSimu
     create: () => TParams;
   }>;
 
-  // Optional: Custom rendering configuration
-  renderConfig?: ModelRenderConfig;
+  // Model-specific renderer (required)
+  renderer: ModelRenderer<TParams>;
 }
 
-/** Custom rendering configuration for model-specific visuals */
-export interface ModelRenderConfig {
-  // Whether the model uses a basal membrane curve
-  hasBasalMembrane?: boolean;
-  // Custom basal curve parameters (if applicable)
-  basalCurveParams?: string[];  // paths to curvature params
+/** Bounding box for viewport calculation */
+export interface BoundingBox {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+/** Rendering context provided to model renderers */
+export interface ModelRenderContext {
+  /** Pixi.js Graphics instance for drawing */
+  graphics: {
+    cells: unknown;      // Graphics for cells layer
+    links: unknown;      // Graphics for links/connections layer
+    overlay: unknown;    // Graphics for overlay layer
+  };
+  /** Whether dark theme is active */
+  isDark: boolean;
+  /** Scale factor (pixels per simulation unit) */
+  scale: number;
+}
+
+/**
+ * Model renderer interface - each model implements this for custom rendering.
+ */
+export interface ModelRenderer<TParams extends BaseSimulationParams = BaseSimulationParams> {
+  /**
+   * Get the bounding box for the simulation view.
+   * Used to calculate viewport transform.
+   */
+  getBoundingBox: (params: TParams, state: SimulationState) => BoundingBox;
+
+  /**
+   * Render the simulation state.
+   * Called each frame with fresh Graphics containers.
+   */
+  render: (
+    ctx: ModelRenderContext,
+    state: SimulationState,
+    params: TParams
+  ) => void;
+
+  /**
+   * Get background color based on theme.
+   */
+  getBackgroundColor: (isDark: boolean) => number;
 }
 
 /** Deep partial type for user input - allows partial specification of nested objects */

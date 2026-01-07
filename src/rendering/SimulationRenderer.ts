@@ -1,56 +1,26 @@
 /**
  * Main Pixi.js renderer for the simulation.
- * Handles all visual rendering of cells, links, and overlays.
+ * Delegates model-specific rendering to the model's renderer.
  */
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
-import type { SimulationState, SimulationParams } from '../core/types';
-import { shapeCenter } from '../core/math/geometry';
-import { defaultTheme, type ColorTheme, rgbToHex } from './themes';
+import type { SimulationState } from '../core/types';
+import type {
+  ModelDefinition,
+  BaseSimulationParams,
+  ModelRenderContext,
+  BoundingBox,
+} from '../core/registry';
 
 export interface RendererConfig {
   width: number;
   height: number;
-  theme?: ColorTheme;
+  isDark?: boolean;
   showScaleBar?: boolean;
 }
 
 /**
- * Compute the bounding box for the basal curve (ellipse or line).
- * Returns { minX, maxX, minY, maxY } in simulation coordinates.
- */
-function getBasalCurveBounds(
-  curvature_1: number,
-  curvature_2: number,
-  h_init: number
-): { minX: number; maxX: number; minY: number; maxY: number } {
-  if (curvature_1 === 0 && curvature_2 === 0) {
-    // Straight line case - use a default width
-    return { minX: -20, maxX: 20, minY: 0, maxY: h_init };
-  }
-
-  const center = shapeCenter(curvature_1, curvature_2);
-  const a = curvature_1 !== 0 ? Math.abs(1 / curvature_1) : 20;
-  const b = curvature_2 !== 0 ? Math.abs(1 / curvature_2) : 20;
-
-  // Ellipse bounds
-  const minX = center.x - a;
-  const maxX = center.x + a;
-
-  // For the Y bounds, include space above the ellipse for cells
-  // The ellipse bottom is at center.y - b (if curvature_2 > 0)
-  // Cells extend upward by h_init
-  const ellipseBottom = center.y - b;
-  const ellipseTop = center.y + b;
-
-  // We want to show from below the ellipse to above where cells might be
-  const minY = Math.min(ellipseBottom, 0) - 2;
-  const maxY = Math.max(ellipseTop, h_init) + 2;
-
-  return { minX, maxX, minY, maxY };
-}
-
-/**
  * Simulation renderer using Pixi.js.
+ * Provides the rendering framework and delegates model-specific rendering.
  */
 export class SimulationRenderer {
   private app: Application;
@@ -58,12 +28,13 @@ export class SimulationRenderer {
   private cellsContainer: Container;
   private linksContainer: Container;
   private overlayContainer: Container;
-  private uiContainer: Container; // Non-transformed container for UI elements
+  private uiContainer: Container;
 
-  private theme: ColorTheme;
+  private isDark: boolean;
   private showScaleBar: boolean;
 
-  private params: SimulationParams | null = null;
+  private model: ModelDefinition<BaseSimulationParams> | null = null;
+  private params: BaseSimulationParams | null = null;
 
   // Viewport transform
   private scale = 1;
@@ -71,7 +42,7 @@ export class SimulationRenderer {
   private centerY = 0;
 
   constructor(config: RendererConfig) {
-    this.theme = config.theme ?? defaultTheme;
+    this.isDark = config.isDark ?? false;
     this.showScaleBar = config.showScaleBar ?? true;
 
     // Create Pixi application
@@ -82,7 +53,7 @@ export class SimulationRenderer {
     this.cellsContainer = new Container();
     this.overlayContainer = new Container();
     this.mainContainer = new Container();
-    this.uiContainer = new Container(); // For scale bar, text, etc.
+    this.uiContainer = new Container();
 
     this.mainContainer.addChild(this.linksContainer);
     this.mainContainer.addChild(this.cellsContainer);
@@ -93,11 +64,13 @@ export class SimulationRenderer {
    * Initialize the renderer asynchronously.
    */
   async init(canvas: HTMLCanvasElement): Promise<void> {
+    const backgroundColor = this.model?.renderer.getBackgroundColor(this.isDark) ?? 0xffffff;
+
     await this.app.init({
       canvas,
       width: canvas.width,
       height: canvas.height,
-      backgroundColor: this.theme.background,
+      backgroundColor,
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
@@ -108,20 +81,32 @@ export class SimulationRenderer {
   }
 
   /**
+   * Set the current model.
+   */
+  setModel(model: ModelDefinition<BaseSimulationParams>): void {
+    this.model = model;
+    // Update background color for the model
+    const backgroundColor = model.renderer.getBackgroundColor(this.isDark);
+    this.app.renderer.background.color = backgroundColor;
+  }
+
+  /**
    * Set simulation parameters (for viewport calculation).
    */
-  setParams(params: SimulationParams): void {
+  setParams(params: BaseSimulationParams): void {
     this.params = params;
     this.updateViewport();
   }
 
   /**
-   * Set the color theme.
+   * Set dark mode.
    */
-  setTheme(theme: ColorTheme): void {
-    this.theme = theme;
-    // Update background color
-    this.app.renderer.background.color = theme.background;
+  setDarkMode(isDark: boolean): void {
+    this.isDark = isDark;
+    if (this.model) {
+      const backgroundColor = this.model.renderer.getBackgroundColor(isDark);
+      this.app.renderer.background.color = backgroundColor;
+    }
   }
 
   /**
@@ -133,18 +118,18 @@ export class SimulationRenderer {
   }
 
   /**
-   * Update viewport transform based on basal curve geometry.
-   * Centers view on the shape with 10% padding on each side.
+   * Update viewport transform based on model's bounding box.
+   * Centers view with 10% padding on each side.
    */
   private updateViewport(): void {
-    if (!this.params) return;
+    if (!this.model || !this.params) return;
 
-    const pg = this.params.general;
     const canvasWidth = this.app.renderer.width;
     const canvasHeight = this.app.renderer.height;
 
-    // Get bounds of the basal curve
-    const bounds = getBasalCurveBounds(pg.curvature_1, pg.curvature_2, pg.h_init);
+    // Get bounds from the model's renderer
+    const emptyState: SimulationState = { cells: [], ap_links: [], ba_links: [], t: 0, step_count: 0 };
+    const bounds: BoundingBox = this.model.renderer.getBoundingBox(this.params, emptyState);
 
     // Add 10% padding
     const padding = 0.1;
@@ -173,7 +158,7 @@ export class SimulationRenderer {
    * Render the current simulation state.
    */
   render(state: SimulationState): void {
-    if (!this.params) return;
+    if (!this.model || !this.params) return;
 
     // Clear previous frame
     this.cellsContainer.removeChildren();
@@ -181,123 +166,33 @@ export class SimulationRenderer {
     this.overlayContainer.removeChildren();
     this.uiContainer.removeChildren();
 
-    // Draw basal curve
-    this.drawBasalCurve();
+    // Create fresh Graphics objects for the model renderer
+    const cellsGraphics = new Graphics();
+    const linksGraphics = new Graphics();
+    const overlayGraphics = new Graphics();
 
-    // Draw links first (behind cells)
-    this.drawBasalLinks(state);
-    this.drawApicalLinks(state);
+    this.cellsContainer.addChild(cellsGraphics);
+    this.linksContainer.addChild(linksGraphics);
+    this.overlayContainer.addChild(overlayGraphics);
 
-    // Draw cells
-    this.drawCells(state);
+    // Create render context
+    const ctx: ModelRenderContext = {
+      graphics: {
+        cells: cellsGraphics,
+        links: linksGraphics,
+        overlay: overlayGraphics,
+      },
+      isDark: this.isDark,
+      scale: this.scale,
+    };
+
+    // Delegate rendering to the model
+    this.model.renderer.render(ctx, state, this.params);
 
     // Draw UI overlays (in screen space)
     if (this.showScaleBar) {
       this.drawScaleBar();
     }
-  }
-
-  /**
-   * Draw the basal curve (ellipse or line).
-   */
-  private drawBasalCurve(): void {
-    if (!this.params) return;
-
-    const pg = this.params.general;
-    const graphics = new Graphics();
-
-    if (pg.curvature_1 === 0 && pg.curvature_2 === 0) {
-      // Straight line
-      graphics.moveTo(-50, 0);
-      graphics.lineTo(50, 0);
-      graphics.stroke({ color: 0xcccccc, alpha: 0.5, width: 0.05 });
-    } else {
-      // Ellipse
-      const center = shapeCenter(pg.curvature_1, pg.curvature_2);
-      const a = pg.curvature_1 !== 0 ? Math.abs(1 / pg.curvature_1) : 20;
-      const b = pg.curvature_2 !== 0 ? Math.abs(1 / pg.curvature_2) : 20;
-
-      graphics.ellipse(center.x, center.y, a, b);
-      graphics.stroke({ color: 0xcccccc, alpha: 0.5, width: 0.05 });
-    }
-
-    this.linksContainer.addChild(graphics);
-  }
-
-  /**
-   * Draw all cells.
-   */
-  private drawCells(state: SimulationState): void {
-    const graphics = new Graphics();
-
-    for (const cell of state.cells) {
-      const cellType = this.params!.cell_types[cell.typeIndex] ?? this.params!.cell_types.control;
-      const color = cellType.color;
-
-      // Draw soft radius (semi-transparent ellipse)
-      graphics.circle(cell.pos.x, cell.pos.y, cell.R_soft);
-      graphics.fill({ color: rgbToHex(color.r, color.g, color.b), alpha: 0.4 });
-
-      // Draw hard radius (solid circle)
-      graphics.circle(cell.pos.x, cell.pos.y, cell.R_hard);
-      graphics.fill({ color: rgbToHex(color.r, color.g, color.b), alpha: 1 });
-
-      // Draw apical point
-      graphics.circle(cell.A.x, cell.A.y, 0.1);
-      graphics.fill({ color: this.theme.apicalPoint, alpha: 1 });
-
-      // Draw basal point
-      graphics.circle(cell.B.x, cell.B.y, 0.1);
-      graphics.fill({ color: this.theme.basalPoint, alpha: 1 });
-
-      // Draw cytoskeleton lines (A to pos, B to pos)
-      graphics.moveTo(cell.A.x, cell.A.y);
-      graphics.lineTo(cell.pos.x, cell.pos.y);
-      graphics.lineTo(cell.B.x, cell.B.y);
-      graphics.stroke({ color: 0x643200, alpha: 0.5, width: 0.05 });
-    }
-
-    this.cellsContainer.addChild(graphics);
-  }
-
-  /**
-   * Draw apical links between cells.
-   */
-  private drawApicalLinks(state: SimulationState): void {
-    const graphics = new Graphics();
-
-    for (const link of state.ap_links) {
-      const cellI = state.cells[link.l];
-      const cellJ = state.cells[link.r];
-
-      if (cellI && cellJ) {
-        graphics.moveTo(cellI.A.x, cellI.A.y);
-        graphics.lineTo(cellJ.A.x, cellJ.A.y);
-      }
-    }
-
-    graphics.stroke({ color: this.theme.apicalLink, alpha: 1, width: 0.05 });
-    this.linksContainer.addChild(graphics);
-  }
-
-  /**
-   * Draw basal links between cells.
-   */
-  private drawBasalLinks(state: SimulationState): void {
-    const graphics = new Graphics();
-
-    for (const link of state.ba_links) {
-      const cellI = state.cells[link.l];
-      const cellJ = state.cells[link.r];
-
-      if (cellI && cellJ) {
-        graphics.moveTo(cellI.B.x, cellI.B.y);
-        graphics.lineTo(cellJ.B.x, cellJ.B.y);
-      }
-    }
-
-    graphics.stroke({ color: this.theme.basalLink, alpha: 1, width: 0.05 });
-    this.linksContainer.addChild(graphics);
   }
 
   /**
@@ -308,7 +203,7 @@ export class SimulationRenderer {
     const canvasHeight = this.app.renderer.height;
 
     // Scale bar: 10 μm = 2 simulation units
-    const barLengthSim = 2; // simulation units
+    const barLengthSim = 2;
     const barLengthScreen = barLengthSim * this.scale;
 
     // Position in bottom-right corner with padding
@@ -316,19 +211,22 @@ export class SimulationRenderer {
     const barX = canvasWidth - padding - barLengthScreen;
     const barY = canvasHeight - padding - 10;
 
+    const scaleBarColor = this.isDark ? 0xb0b0d0 : 0x646464;
+    const textColor = this.isDark ? 0xb0b8ff : 0x5050a0;
+
     const graphics = new Graphics();
 
     // Draw the bar
     graphics.moveTo(barX, barY);
     graphics.lineTo(barX + barLengthScreen, barY);
-    graphics.stroke({ color: this.theme.scaleBar, alpha: 1, width: 2 });
+    graphics.stroke({ color: scaleBarColor, alpha: 1, width: 2 });
 
     // Draw end caps
     graphics.moveTo(barX, barY - 5);
     graphics.lineTo(barX, barY + 5);
     graphics.moveTo(barX + barLengthScreen, barY - 5);
     graphics.lineTo(barX + barLengthScreen, barY + 5);
-    graphics.stroke({ color: this.theme.scaleBar, alpha: 1, width: 2 });
+    graphics.stroke({ color: scaleBarColor, alpha: 1, width: 2 });
 
     this.uiContainer.addChild(graphics);
 
@@ -336,7 +234,7 @@ export class SimulationRenderer {
     const textStyle = new TextStyle({
       fontFamily: 'monospace',
       fontSize: 12,
-      fill: this.theme.text,
+      fill: textColor,
     });
 
     const text = new Text({ text: '10 μm', style: textStyle });

@@ -3,13 +3,14 @@
  * Automatically resizes to fill its container.
  */
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { SimulationRenderer, defaultTheme, darkTheme } from '../../rendering';
-import { useTheme } from '@/contexts';
-import type { SimulationState, SimulationParams } from '../../core/types';
+import { SimulationRenderer } from '../../rendering';
+import { useTheme, useModel } from '@/contexts';
+import type { SimulationState } from '../../core/types';
+import type { BaseSimulationParams } from '../../core/registry';
 
 export interface SimulationCanvasProps {
   state: SimulationState | null;
-  params: SimulationParams;
+  params: BaseSimulationParams;
   /** Minimum height in pixels. Default: 350 */
   minHeight?: number;
   className?: string;
@@ -29,6 +30,7 @@ export function SimulationCanvas({
   const [isReady, setIsReady] = useState(false);
   const [size, setSize] = useState({ width: 800, height: minHeight });
   const { isDark } = useTheme();
+  const { currentModel } = useModel();
 
   // Measure container size
   const updateSize = useCallback(() => {
@@ -74,11 +76,12 @@ export function SimulationCanvas({
     let mounted = true;
 
     const initRenderer = async () => {
-      const renderer = new SimulationRenderer({ width: size.width, height: size.height });
+      const renderer = new SimulationRenderer({ width: size.width, height: size.height, isDark });
       await renderer.init(canvas);
 
       if (mounted) {
         rendererRef.current = renderer;
+        renderer.setModel(currentModel);
         renderer.setParams(params);
         setIsReady(true);
       }
@@ -130,13 +133,25 @@ export function SimulationCanvas({
   // Update theme when dark mode changes
   useEffect(() => {
     if (rendererRef.current && isReady) {
-      rendererRef.current.setTheme(isDark ? darkTheme : defaultTheme);
+      rendererRef.current.setDarkMode(isDark);
       // Re-render with new theme
       if (state) {
         rendererRef.current.render(state);
       }
     }
   }, [isDark, isReady, state]);
+
+  // Update model when it changes
+  useEffect(() => {
+    if (rendererRef.current && isReady) {
+      rendererRef.current.setModel(currentModel);
+      rendererRef.current.setParams(params);
+      // Re-render with new model
+      if (state) {
+        rendererRef.current.render(state);
+      }
+    }
+  }, [currentModel, isReady, state, params]);
 
   return (
     <div

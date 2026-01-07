@@ -25,7 +25,9 @@ export {
   type BatchParameterDefinition,
   type StatisticDefinition,
   type ModelDefinition,
-  type ModelRenderConfig,
+  type BoundingBox,
+  type ModelRenderContext,
+  type ModelRenderer,
   type DeepPartial,
   type PartialParams,
 } from './types';

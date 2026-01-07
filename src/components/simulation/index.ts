@@ -12,4 +12,3 @@ export { StatsPanel } from './StatsPanel';
 export type { StatsPanelProps } from './StatsPanel';
 
 export { SingleSimulationTab } from './SingleSimulationTab';
-export type { SingleSimulationTabProps } from './SingleSimulationTab';

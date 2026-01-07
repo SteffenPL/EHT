@@ -24,6 +24,7 @@ import {
   processCellDivisions as ehtProcessDivisions,
   initializeEHTSimulation,
 } from './simulation';
+import { ehtRenderer } from './renderer';
 
 /**
  * EHT Model Definition
@@ -104,11 +105,8 @@ export const EHTModel: ModelDefinition<EHTParams> = {
   // Presets
   presets: EHT_PRESETS,
 
-  // Render configuration
-  renderConfig: {
-    hasBasalMembrane: true,
-    basalCurveParams: ['general.curvature_1', 'general.curvature_2'],
-  },
+  // Model-specific renderer
+  renderer: ehtRenderer,
 };
 
 // Register the EHT model

@@ -5,6 +5,8 @@
 
 // Import models to trigger their registration
 import './eht';
+import './toy';
 
 // Re-export for convenience
 export { EHTModel } from './eht';
+export { ToyModel } from './toy';

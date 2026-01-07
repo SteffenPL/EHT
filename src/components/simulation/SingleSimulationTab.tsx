@@ -3,17 +3,25 @@
  */
 import { useState } from 'react';
 import { useSimulation, type ParamChangeBehavior } from '@/hooks';
+import { useModel } from '@/contexts';
 import { SimulationCanvas } from './SimulationCanvas';
 import { SimulationControls } from './SimulationControls';
 import { Card } from '../ui/card';
-import type { SimulationParams } from '@/core/types';
 
-export interface SingleSimulationTabProps {
-  params: SimulationParams;
+/**
+ * Wrapper that provides a key to force remount on model change.
+ * This ensures all state (renderer, simulation engine) is recreated with correct params.
+ */
+export function SingleSimulationTab() {
+  const { currentModel } = useModel();
+
+  // Key forces complete remount when model changes
+  return <SingleSimulationTabInner key={currentModel.name} />;
 }
 
-export function SingleSimulationTab({ params }: SingleSimulationTabProps) {
+function SingleSimulationTabInner() {
   const [paramChangeBehavior, setParamChangeBehavior] = useState<ParamChangeBehavior>('init');
+  const { currentModel, currentParams } = useModel();
 
   const {
     state,
@@ -24,7 +32,7 @@ export function SingleSimulationTab({ params }: SingleSimulationTabProps) {
     pause,
     reset,
     step,
-  } = useSimulation({ params, paramChangeBehavior });
+  } = useSimulation({ model: currentModel, params: currentParams, paramChangeBehavior });
 
   return (
     <div className="space-y-4">
@@ -32,7 +40,7 @@ export function SingleSimulationTab({ params }: SingleSimulationTabProps) {
       <Card className="overflow-hidden">
         <SimulationCanvas
           state={state}
-          params={params}
+          params={currentParams}
           minHeight={350}
         />
       </Card>
@@ -42,7 +50,7 @@ export function SingleSimulationTab({ params }: SingleSimulationTabProps) {
         isRunning={isRunning}
         isComplete={isComplete}
         time={time}
-        endTime={params.general.t_end}
+        endTime={currentParams.general.t_end}
         onStart={start}
         onPause={pause}
         onReset={reset}

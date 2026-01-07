@@ -1,5 +1,6 @@
 /**
  * Model context for managing the current simulation model across the app.
+ * Manages both model and params together to ensure they stay in sync.
  */
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { modelRegistry, type ModelDefinition, type BaseSimulationParams } from '@/core/registry';
@@ -7,8 +8,12 @@ import { modelRegistry, type ModelDefinition, type BaseSimulationParams } from '
 interface ModelContextType {
   /** The currently selected model */
   currentModel: ModelDefinition<BaseSimulationParams>;
-  /** Set the current model by name */
+  /** Current params for the model */
+  currentParams: BaseSimulationParams;
+  /** Set the current model by name (resets params to model defaults) */
   setModel: (modelName: string) => void;
+  /** Update current params */
+  setParams: (params: BaseSimulationParams) => void;
   /** List of all available model names */
   availableModels: string[];
 }
@@ -26,18 +31,27 @@ export function ModelProvider({ children }: { children: ReactNode }) {
   const [currentModel, setCurrentModel] = useState<ModelDefinition<BaseSimulationParams>>(
     defaultModel
   );
+  const [currentParams, setCurrentParams] = useState<BaseSimulationParams>(
+    defaultModel.defaultParams
+  );
 
   const setModel = useCallback((modelName: string) => {
     const model = modelRegistry.get(modelName);
     if (model) {
+      // Update both model and params together in the same render cycle
       setCurrentModel(model);
+      setCurrentParams(model.defaultParams);
     } else {
       console.warn(`Model "${modelName}" not found in registry`);
     }
   }, []);
 
+  const setParams = useCallback((params: BaseSimulationParams) => {
+    setCurrentParams(params);
+  }, []);
+
   return (
-    <ModelContext.Provider value={{ currentModel, setModel, availableModels }}>
+    <ModelContext.Provider value={{ currentModel, currentParams, setModel, setParams, availableModels }}>
       {children}
     </ModelContext.Provider>
   );

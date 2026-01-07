@@ -1,270 +1,245 @@
-import { useEffect, useRef } from 'react';
+/**
+ * Model-aware parameter panel using Leva.
+ * Dynamically generates controls based on the current model's parameterGroups.
+ */
+import { useEffect, useRef, useMemo } from 'react';
 import { useControls, folder, LevaPanel, useCreateStore } from 'leva';
-import { cloneDeep, isEqual } from 'lodash-es';
-import type { SimulationParams } from '@/core/types';
-import { useTheme } from '@/contexts';
+import { cloneDeep, isEqual, get, set } from 'lodash-es';
+import { useTheme, useModel } from '@/contexts';
+import type { BaseSimulationParams, ParameterGroupDefinition } from '@/core/registry';
 
 export interface LevaParameterPanelProps {
-    params: SimulationParams;
-    onChange: (params: SimulationParams) => void;
+  params: BaseSimulationParams;
+  onChange: (params: BaseSimulationParams) => void;
+}
+
+/**
+ * Get a value from a nested object using a dot-notation path.
+ */
+function getPath(obj: unknown, path: string): unknown {
+  return get(obj, path);
+}
+
+/**
+ * Set a value in a nested object using a dot-notation path.
+ */
+function setPath(obj: unknown, path: string, value: unknown): void {
+  set(obj as object, path, value);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LevaSchema = any;
+
+/**
+ * Build Leva schema from parameter groups.
+ */
+function buildLevaSchema(
+  groups: ParameterGroupDefinition[],
+  params: BaseSimulationParams
+): LevaSchema {
+  const schema: LevaSchema = {};
+
+  for (const group of groups) {
+    const groupSchema: LevaSchema = {};
+
+    for (const field of group.fields) {
+      const value = getPath(params, field.path);
+
+      if (field.type === 'range') {
+        // Flatten range into min/max fields
+        const rangeValue = value as { min: number; max: number } | undefined;
+        if (rangeValue) {
+          groupSchema[`${field.path.replace(/\./g, '_')}_min`] = {
+            value: rangeValue.min,
+            step: field.step ?? 0.1,
+            label: `${field.label} Min`,
+          };
+          groupSchema[`${field.path.replace(/\./g, '_')}_max`] = {
+            value: rangeValue.max,
+            step: field.step ?? 0.1,
+            label: `${field.label} Max`,
+          };
+        }
+      } else {
+        const spec: LevaSchema = {
+          value,
+          label: field.label,
+        };
+
+        if (field.type === 'number') {
+          if (field.step !== undefined) spec.step = field.step;
+          if (field.min !== undefined) spec.min = field.min;
+          if (field.max !== undefined) spec.max = field.max;
+        }
+
+        groupSchema[field.path.replace(/\./g, '_')] = spec;
+      }
+    }
+
+    schema[group.label] = folder(groupSchema, { collapsed: group.collapsed ?? false });
+  }
+
+  return schema;
+}
+
+/**
+ * Extract values from Leva controls back to params structure.
+ */
+function levaValuesToParams(
+  levaValues: Record<string, unknown>,
+  groups: ParameterGroupDefinition[],
+  baseParams: BaseSimulationParams
+): BaseSimulationParams {
+  const newParams = cloneDeep(baseParams);
+
+  for (const group of groups) {
+    for (const field of group.fields) {
+      const levaKey = field.path.replace(/\./g, '_');
+
+      if (field.type === 'range') {
+        // Reconstruct range from min/max
+        const minKey = `${levaKey}_min`;
+        const maxKey = `${levaKey}_max`;
+        if (minKey in levaValues && maxKey in levaValues) {
+          setPath(newParams, field.path, {
+            min: levaValues[minKey],
+            max: levaValues[maxKey],
+          });
+        }
+      } else if (levaKey in levaValues) {
+        setPath(newParams, field.path, levaValues[levaKey]);
+      }
+    }
+  }
+
+  return newParams;
+}
+
+/**
+ * Extract initial values from params for Leva.
+ */
+function paramsToLevaValues(
+  groups: ParameterGroupDefinition[],
+  params: BaseSimulationParams
+): Record<string, unknown> {
+  const values: Record<string, unknown> = {};
+
+  for (const group of groups) {
+    for (const field of group.fields) {
+      const value = getPath(params, field.path);
+      const levaKey = field.path.replace(/\./g, '_');
+
+      if (field.type === 'range') {
+        const rangeValue = value as { min: number; max: number } | undefined;
+        if (rangeValue) {
+          values[`${levaKey}_min`] = rangeValue.min;
+          values[`${levaKey}_max`] = rangeValue.max;
+        }
+      } else {
+        values[levaKey] = value;
+      }
+    }
+  }
+
+  return values;
 }
 
 export function LevaParameterPanel({ params, onChange }: LevaParameterPanelProps) {
-    const store = useCreateStore();
-    const { isDark } = useTheme();
+  const store = useCreateStore();
+  const { isDark } = useTheme();
+  const { currentModel } = useModel();
 
-    // Track if the update is coming from Leva (internal) or Parent (external)
-    // to avoid infinite loops or overwriting fresh user input with old props.
-    const isInternalUpdate = useRef(false);
+  // Get parameter groups from the current model
+  const parameterGroups = currentModel.parameterGroups;
 
-    // -------------------------------------------------------------------------
-    // 1. General Parameters
-    // -------------------------------------------------------------------------
-    const [generalValues, setGeneral] = useControls(
-        'General',
-        () => ({
-            t_end: { value: params.general.t_end, step: 1, label: 'End Time' },
-            dt: { value: params.general.dt, step: 0.01, label: 'Time Step' },
-            random_seed: { value: params.general.random_seed, step: 1, label: 'Random Seed' },
-            full_circle: { value: params.general.full_circle, label: 'Full Circle' },
-            N_init: { value: params.general.N_init, step: 1, label: 'Initial Cells' },
-            N_max: { value: params.general.N_max, step: 1, label: 'Max Cells' },
-            N_emt: { value: params.general.N_emt, step: 1, label: 'EMT Cells' },
-            w_init: { value: params.general.w_init, step: 1, label: 'Initial Width' },
-            h_init: { value: params.general.h_init, step: 0.1, label: 'Initial Height' },
-            mu: { value: params.general.mu, step: 0.01, label: 'Friction' },
-            n_substeps: { value: params.general.n_substeps, step: 1, label: 'Substeps' },
-            alg_dt: { value: params.general.alg_dt, step: 0.001, label: 'Algo Time Step' },
-            w_screen: { value: params.general.w_screen, step: 10, label: 'Screen Width' },
-            h_screen: { value: params.general.h_screen, step: 10, label: 'Screen Height' },
-            p_div_out: { value: params.general.p_div_out, step: 0.01, label: 'Division Prob.' },
-            curvature_1: { value: params.general.curvature_1, step: 0.001, label: 'Curvature 1' },
-            curvature_2: { value: params.general.curvature_2, step: 0.001, label: 'Curvature 2' },
-        }),
-        { store }
-    );
+  // Build schema once when model changes
+  const schema = useMemo(
+    () => buildLevaSchema(parameterGroups, params),
+    // Only rebuild when model changes, not when params change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentModel.name]
+  );
 
-    // -------------------------------------------------------------------------
-    // 2. Cell Properties (Shared)
-    // -------------------------------------------------------------------------
-    const [cellPropValues, setCellProp] = useControls(
-        'Cell Properties',
-        () => ({
-            apical_junction_init: { value: params.cell_prop.apical_junction_init, step: 0.1, label: 'Apical Junc Init' },
-            max_basal_junction_dist: { value: params.cell_prop.max_basal_junction_dist, step: 0.1, label: 'Max Basal Dist' },
-            basal_daming_ratio: { value: params.cell_prop.basal_daming_ratio, step: 0.1, label: 'Basal Damping' },
-            basal_membrane_repulsion: { value: params.cell_prop.basal_membrane_repulsion, step: 0.1, label: 'Basal Repulsion' },
-            cytos_init: { value: params.cell_prop.cytos_init, step: 0.1, label: 'Cytos Init' },
-            diffusion: { value: params.cell_prop.diffusion, step: 0.01, label: 'Diffusion' },
-        }),
-        { store, collapsed: true }
-    );
+  // Track external vs internal updates
+  const externalParamsRef = useRef(params);
+  const isInternalUpdate = useRef(false);
 
-    // -------------------------------------------------------------------------
-    // 3. Control Cells
-    // -------------------------------------------------------------------------
-    const [controlValues, setControl] = useControls(
-        'Control Cells',
-        () => createCellTypeSchema(params.cell_types.control),
-        { store }
-    );
+  // Use controls with the dynamic schema
+  const [values, setValues] = useControls(() => schema, { store }, [currentModel.name]);
 
-    // -------------------------------------------------------------------------
-    // 4. EMT Cells
-    // -------------------------------------------------------------------------
-    const [emtValues, setEmt] = useControls(
-        'EMT Cells',
-        () => createCellTypeSchema(params.cell_types.emt, true),
-        { store }
-    );
+  // Sync: Params -> Leva (External Input)
+  useEffect(() => {
+    if (!isEqual(params, externalParamsRef.current)) {
+      isInternalUpdate.current = false;
 
-    function createCellTypeSchema(cellParams: any, isEmt = false) {
-        return {
-            R_hard: { value: cellParams.R_hard, step: 0.1, label: 'R Hard' },
-            R_soft: { value: cellParams.R_soft, step: 0.1, label: 'R Soft' },
-            color: { value: cellParams.color, label: 'Color' },
-            k_apical_junction: { value: cellParams.k_apical_junction, step: 0.1, label: 'k Apical' },
-            k_cytos: { value: cellParams.k_cytos, step: 0.1, label: 'k Cytos' },
-            stiffness_apical_apical: { value: cellParams.stiffness_apical_apical, step: 0.1, label: 'Stiff AA' },
-            stiffness_nuclei_apical: { value: cellParams.stiffness_nuclei_apical, step: 0.1, label: 'Stiff NA' },
-            stiffness_nuclei_basal: { value: cellParams.stiffness_nuclei_basal, step: 0.1, label: 'Stiff NB' },
-            stiffness_repulsion: { value: cellParams.stiffness_repulsion, step: 0.1, label: 'Stiff Repulsion' },
-            stiffness_straightness: { value: cellParams.stiffness_straightness, step: 0.1, label: 'Stiff Straight' },
+      const newLevaValues = paramsToLevaValues(parameterGroups, params);
+      setValues(newLevaValues);
 
-            // Flattened ranges
-            lifespan_min: { value: cellParams.lifespan.min, step: 0.5, label: 'Lifespan Min' },
-            lifespan_max: { value: cellParams.lifespan.max, step: 0.5, label: 'Lifespan Max' },
-
-            // EMT specific events
-            ...(isEmt ? {
-                'EMT Events': folder({
-                    time_A_min: { value: cellParams.events.time_A.min, step: 0.5, label: 'Time A Min' },
-                    time_A_max: { value: cellParams.events.time_A.max, step: 0.5, label: 'Time A Max' },
-                    time_B_min: { value: cellParams.events.time_B.min, step: 0.5, label: 'Time B Min' },
-                    time_B_max: { value: cellParams.events.time_B.max, step: 0.5, label: 'Time B Max' },
-                    time_S_min: { value: cellParams.events.time_S.min, step: 0.5, label: 'Time S Min' },
-                    time_S_max: { value: cellParams.events.time_S.max, step: 0.5, label: 'Time S Max' },
-                    time_P_min: { value: cellParams.events.time_P.min, step: 0.5, label: 'Time P Min' },
-                    time_P_max: { value: cellParams.events.time_P.max, step: 0.5, label: 'Time P Max' },
-                })
-            } : {})
-        };
+      externalParamsRef.current = params;
+      setTimeout(() => {
+        isInternalUpdate.current = true;
+      }, 0);
     }
+  }, [params, parameterGroups, setValues]);
 
-    // -------------------------------------------------------------------------
-    // Sync: Params -> Leva (External Input)
-    // -------------------------------------------------------------------------
-    // We use a ref to store the 'current' params as known by Leva to avoid loops
-    const externalParamsRef = useRef(params);
+  // Sync: Leva -> Params (Internal Output)
+  useEffect(() => {
+    const newParams = levaValuesToParams(values, parameterGroups, params);
 
-    useEffect(() => {
-        // If params changed externally (not by us), update Leva
-        if (!isEqual(params, externalParamsRef.current)) {
-            isInternalUpdate.current = false;
+    if (!isEqual(newParams, externalParamsRef.current)) {
+      externalParamsRef.current = newParams;
+      onChange(newParams);
+    }
+  }, [values, parameterGroups, params, onChange]);
 
-            setGeneral({ ...params.general });
-            setCellProp({ ...params.cell_prop });
-
-            // Control
-            setControl({
-                R_hard: params.cell_types.control.R_hard,
-                R_soft: params.cell_types.control.R_soft,
-                color: params.cell_types.control.color,
-                k_apical_junction: params.cell_types.control.k_apical_junction,
-                k_cytos: params.cell_types.control.k_cytos,
-                stiffness_apical_apical: params.cell_types.control.stiffness_apical_apical,
-                stiffness_nuclei_apical: params.cell_types.control.stiffness_nuclei_apical,
-                stiffness_nuclei_basal: params.cell_types.control.stiffness_nuclei_basal,
-                stiffness_repulsion: params.cell_types.control.stiffness_repulsion,
-                stiffness_straightness: params.cell_types.control.stiffness_straightness,
-                lifespan_min: params.cell_types.control.lifespan.min,
-                lifespan_max: params.cell_types.control.lifespan.max,
-            });
-
-            // EMT
-            setEmt({
-                R_hard: params.cell_types.emt.R_hard,
-                R_soft: params.cell_types.emt.R_soft,
-                color: params.cell_types.emt.color,
-                k_apical_junction: params.cell_types.emt.k_apical_junction,
-                k_cytos: params.cell_types.emt.k_cytos,
-                stiffness_apical_apical: params.cell_types.emt.stiffness_apical_apical,
-                stiffness_nuclei_apical: params.cell_types.emt.stiffness_nuclei_apical,
-                stiffness_nuclei_basal: params.cell_types.emt.stiffness_nuclei_basal,
-                stiffness_repulsion: params.cell_types.emt.stiffness_repulsion,
-                stiffness_straightness: params.cell_types.emt.stiffness_straightness,
-                lifespan_min: params.cell_types.emt.lifespan.min,
-                lifespan_max: params.cell_types.emt.lifespan.max,
-                time_A_min: params.cell_types.emt.events.time_A.min,
-                time_A_max: params.cell_types.emt.events.time_A.max,
-                time_B_min: params.cell_types.emt.events.time_B.min,
-                time_B_max: params.cell_types.emt.events.time_B.max,
-                time_S_min: params.cell_types.emt.events.time_S.min,
-                time_S_max: params.cell_types.emt.events.time_S.max,
-                time_P_min: params.cell_types.emt.events.time_P.min,
-                time_P_max: params.cell_types.emt.events.time_P.max,
-            });
-
-            externalParamsRef.current = params;
-            // Re-enable internal updates after this cycle
-            setTimeout(() => { isInternalUpdate.current = true; }, 0);
-        }
-    }, [params, setGeneral, setCellProp, setControl, setEmt]);
-
-
-    // -------------------------------------------------------------------------
-    // Sync: Leva -> Params (Internal Output)
-    // -------------------------------------------------------------------------
-    useEffect(() => {
-        // Only trigger if this is an internal update (user interaction)
-        // However, checking isInternalUpdate.current is tricky because useControls fires on mount too.
-        // For now, let's just construct the new params and check equality before calling onChange.
-
-        const newParams = cloneDeep(params);
-
-        // 1. General
-        Object.assign(newParams.general, generalValues);
-
-        // 2. Cell Prop
-        Object.assign(newParams.cell_prop, cellPropValues);
-
-        // 3. Control
-        const c = newParams.cell_types.control;
-        Object.assign(c, controlValues);
-        // Reconstruct lifespan
-        c.lifespan = { min: (controlValues as any).lifespan_min, max: (controlValues as any).lifespan_max };
-        // Cleanup flattened keys if needed (cloneDeep handles it effectively if we overwrite)
-
-        // 4. EMT
-        const e = newParams.cell_types.emt;
-        Object.assign(e, emtValues);
-        e.lifespan = { min: (emtValues as any).lifespan_min, max: (emtValues as any).lifespan_max };
-
-        // Reconstruct events
-        e.events.time_A = { min: (emtValues as any).time_A_min, max: (emtValues as any).time_A_max };
-        e.events.time_B = { min: (emtValues as any).time_B_min, max: (emtValues as any).time_B_max };
-        e.events.time_S = { min: (emtValues as any).time_S_min, max: (emtValues as any).time_S_max };
-        e.events.time_P = { min: (emtValues as any).time_P_min, max: (emtValues as any).time_P_max };
-
-        if (!isEqual(newParams, externalParamsRef.current)) {
-            externalParamsRef.current = newParams; // Update our ref so we don't trigger the reverse sync
-            onChange(newParams);
-        }
-
-    }, [generalValues, cellPropValues, controlValues, emtValues, onChange]);
-
-    // Clean, minimal color scheme for Leva
-    const themeParams = isDark ? {
+  // Theme configuration
+  const themeParams = isDark
+    ? {
         colors: {
-            elevation1: '#1a1a2e',
-            elevation2: '#16213e',
-            elevation3: '#0f3460',
-            accent1: '#e94560',
-            accent2: '#e94560',
-            accent3: '#e94560',
-            highlight1: '#2a2a4a',
-            highlight2: '#8892b0',
-            highlight3: '#ccd6f6',
-            vivid1: '#e94560',
-            folderWidgetColor: '#8892b0',
-            folderTextColor: '#ccd6f6',
-            toolTipBackground: '#1a1a2e',
-            toolTipText: '#ccd6f6',
+          elevation1: '#1a1a2e',
+          elevation2: '#16213e',
+          elevation3: '#0f3460',
+          accent1: '#e94560',
+          accent2: '#e94560',
+          accent3: '#e94560',
+          highlight1: '#2a2a4a',
+          highlight2: '#8892b0',
+          highlight3: '#ccd6f6',
+          vivid1: '#e94560',
+          folderWidgetColor: '#8892b0',
+          folderTextColor: '#ccd6f6',
+          toolTipBackground: '#1a1a2e',
+          toolTipText: '#ccd6f6',
         },
         fontSizes: {
-            root: '11px',
+          root: '11px',
         },
-    } : {
+      }
+    : {
         colors: {
-            elevation1: '#fafbfc',
-            elevation2: '#f0f2f5',
-            elevation3: '#e4e8ed',
-            accent1: '#0066cc',
-            accent2: '#0066cc',
-            accent3: '#0066cc',
-            highlight1: '#e4e8ed',
-            highlight2: '#6b7280',
-            highlight3: '#1f2937',
-            vivid1: '#0066cc',
-            folderWidgetColor: '#6b7280',
-            folderTextColor: '#1f2937',
-            toolTipBackground: '#1f2937',
-            toolTipText: '#f9fafb',
+          elevation1: '#fafbfc',
+          elevation2: '#f0f2f5',
+          elevation3: '#e4e8ed',
+          accent1: '#0066cc',
+          accent2: '#0066cc',
+          accent3: '#0066cc',
+          highlight1: '#e4e8ed',
+          highlight2: '#6b7280',
+          highlight3: '#1f2937',
+          vivid1: '#0066cc',
+          folderWidgetColor: '#6b7280',
+          folderTextColor: '#1f2937',
+          toolTipBackground: '#1f2937',
+          toolTipText: '#f9fafb',
         },
         fontSizes: {
-            root: '11px',
+          root: '11px',
         },
-    };
+      };
 
-    return (
-        <div className="relative w-full h-full min-h-[500px] overflow-y-auto custom-scrollbar" style={{ zIndex: 0 }}>
-            <LevaPanel
-                fill
-                flat
-                store={store}
-                titleBar={false}
-                theme={themeParams}
-            />
-        </div>
-    );
+  return (
+    <div className="relative w-full h-full min-h-[500px] overflow-y-auto custom-scrollbar" style={{ zIndex: 0 }}>
+      <LevaPanel fill flat store={store} titleBar={false} theme={themeParams} />
+    </div>
+  );
 }

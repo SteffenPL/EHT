@@ -3,22 +3,26 @@
  */
 import { useRef, useEffect, useCallback } from 'react';
 import { SimulationRenderer } from '../rendering';
-import type { SimulationState, SimulationParams } from '../core/types';
+import type { SimulationState } from '../core/types';
+import type { ModelDefinition, BaseSimulationParams } from '../core/registry';
 
 export interface UseRendererOptions {
   width?: number;
   height?: number;
+  isDark?: boolean;
 }
 
 export interface UseRendererResult {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   render: (state: SimulationState) => void;
-  setParams: (params: SimulationParams) => void;
+  setParams: (params: BaseSimulationParams) => void;
+  setModel: (model: ModelDefinition<BaseSimulationParams>) => void;
+  setDarkMode: (isDark: boolean) => void;
   resize: (width: number, height: number) => void;
 }
 
 export function useRenderer(options: UseRendererOptions = {}): UseRendererResult {
-  const { width = 800, height = 400 } = options;
+  const { width = 800, height = 400, isDark = false } = options;
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const rendererRef = useRef<SimulationRenderer | null>(null);
@@ -30,7 +34,7 @@ export function useRenderer(options: UseRendererOptions = {}): UseRendererResult
     if (!canvas || initializedRef.current) return;
 
     const initRenderer = async () => {
-      const renderer = new SimulationRenderer({ width, height });
+      const renderer = new SimulationRenderer({ width, height, isDark });
       await renderer.init(canvas);
       rendererRef.current = renderer;
       initializedRef.current = true;
@@ -45,7 +49,7 @@ export function useRenderer(options: UseRendererOptions = {}): UseRendererResult
         initializedRef.current = false;
       }
     };
-  }, [width, height]);
+  }, [width, height, isDark]);
 
   const render = useCallback((state: SimulationState) => {
     if (rendererRef.current) {
@@ -53,9 +57,21 @@ export function useRenderer(options: UseRendererOptions = {}): UseRendererResult
     }
   }, []);
 
-  const setParams = useCallback((params: SimulationParams) => {
+  const setParams = useCallback((params: BaseSimulationParams) => {
     if (rendererRef.current) {
       rendererRef.current.setParams(params);
+    }
+  }, []);
+
+  const setModel = useCallback((model: ModelDefinition<BaseSimulationParams>) => {
+    if (rendererRef.current) {
+      rendererRef.current.setModel(model);
+    }
+  }, []);
+
+  const setDarkMode = useCallback((dark: boolean) => {
+    if (rendererRef.current) {
+      rendererRef.current.setDarkMode(dark);
     }
   }, []);
 
@@ -69,6 +85,8 @@ export function useRenderer(options: UseRendererOptions = {}): UseRendererResult
     canvasRef,
     render,
     setParams,
+    setModel,
+    setDarkMode,
     resize,
   };
 }

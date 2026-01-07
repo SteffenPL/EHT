@@ -20,6 +20,7 @@ import { LevaParameterPanel } from './LevaParameterPanel';
 import { ParameterRangeList } from '../batch/ParameterRangeList';
 import { TimeSampleConfig } from '../batch/TimeSampleConfig';
 import type { SimulationConfig } from '@/core/params';
+import type { BaseSimulationParams } from '@/core/registry';
 import { PARAM_PRESETS, parseSimulationConfigToml, toSimulationConfigToml } from '@/core/params';
 
 export interface ParameterConfigViewProps {
@@ -42,8 +43,8 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
     });
   };
 
-  const handleParamsChange = (params: SimulationConfig['params']) => {
-    onConfigChange({ ...config, params });
+  const handleParamsChange = (params: BaseSimulationParams) => {
+    onConfigChange({ ...config, params: params as SimulationConfig['params'] });
   };
 
   const handleRangesChange = (parameterRanges: SimulationConfig['parameterRanges']) => {

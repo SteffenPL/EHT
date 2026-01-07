@@ -5,6 +5,9 @@
 export { SimulationEngine } from './engine';
 export type { SimulationEngineConfig } from './engine';
 
+export { ModelSimulationEngine } from './model-engine';
+export type { ModelEngineConfig } from './model-engine';
+
 export { createCell, getCellType, updateCellPhase } from './cell';
 
 export {
