@@ -23,23 +23,23 @@ export function LevaParameterPanel({ params, onChange }: LevaParameterPanelProps
     const [generalValues, setGeneral] = useControls(
         'General',
         () => ({
-            t_end: { value: params.general.t_end, min: 0, max: 200, step: 1, label: 'End Time' },
-            dt: { value: params.general.dt, min: 0.01, max: 1.0, step: 0.01, label: 'Time Step' },
+            t_end: { value: params.general.t_end, step: 1, label: 'End Time' },
+            dt: { value: params.general.dt, step: 0.01, label: 'Time Step' },
             random_seed: { value: params.general.random_seed, step: 1, label: 'Random Seed' },
             full_circle: { value: params.general.full_circle, label: 'Full Circle' },
-            N_init: { value: params.general.N_init, min: 1, max: 200, step: 1, label: 'Initial Cells' },
-            N_max: { value: params.general.N_max, min: 1, max: 500, step: 1, label: 'Max Cells' },
-            N_emt: { value: params.general.N_emt, min: 0, max: 50, step: 1, label: 'EMT Cells' },
-            w_init: { value: params.general.w_init, min: 10, max: 500, label: 'Initial Width' },
-            h_init: { value: params.general.h_init, min: 1, max: 100, label: 'Initial Height' },
-            mu: { value: params.general.mu, min: 0, max: 1, step: 0.01, label: 'Friction' },
-            n_substeps: { value: params.general.n_substeps, min: 1, max: 100, step: 1, label: 'Substeps' },
-            alg_dt: { value: params.general.alg_dt, min: 0.001, max: 0.1, step: 0.001, label: 'Algo Time Step' },
-            w_screen: { value: params.general.w_screen, min: 100, max: 2000, label: 'Screen Width' },
-            h_screen: { value: params.general.h_screen, min: 100, max: 2000, label: 'Screen Height' },
-            p_div_out: { value: params.general.p_div_out, min: 0, max: 1, label: 'Division Prob.' },
-            curvature_1: { value: params.general.curvature_1, min: 0, max: 1, step: 0.001, label: 'Curvature 1' },
-            curvature_2: { value: params.general.curvature_2, min: 0, max: 1, step: 0.001, label: 'Curvature 2' },
+            N_init: { value: params.general.N_init, step: 1, label: 'Initial Cells' },
+            N_max: { value: params.general.N_max, step: 1, label: 'Max Cells' },
+            N_emt: { value: params.general.N_emt, step: 1, label: 'EMT Cells' },
+            w_init: { value: params.general.w_init, step: 1, label: 'Initial Width' },
+            h_init: { value: params.general.h_init, step: 0.1, label: 'Initial Height' },
+            mu: { value: params.general.mu, step: 0.01, label: 'Friction' },
+            n_substeps: { value: params.general.n_substeps, step: 1, label: 'Substeps' },
+            alg_dt: { value: params.general.alg_dt, step: 0.001, label: 'Algo Time Step' },
+            w_screen: { value: params.general.w_screen, step: 10, label: 'Screen Width' },
+            h_screen: { value: params.general.h_screen, step: 10, label: 'Screen Height' },
+            p_div_out: { value: params.general.p_div_out, step: 0.01, label: 'Division Prob.' },
+            curvature_1: { value: params.general.curvature_1, step: 0.001, label: 'Curvature 1' },
+            curvature_2: { value: params.general.curvature_2, step: 0.001, label: 'Curvature 2' },
         }),
         { store }
     );
@@ -50,12 +50,12 @@ export function LevaParameterPanel({ params, onChange }: LevaParameterPanelProps
     const [cellPropValues, setCellProp] = useControls(
         'Cell Properties',
         () => ({
-            apical_junction_init: { value: params.cell_prop.apical_junction_init, min: 0, max: 5, label: 'Apical Junc Init' },
-            max_basal_junction_dist: { value: params.cell_prop.max_basal_junction_dist, min: 0, max: 10, label: 'Max Basal Dist' },
-            basal_daming_ratio: { value: params.cell_prop.basal_daming_ratio, min: 0, max: 5, label: 'Basal Damping' },
-            basal_membrane_repulsion: { value: params.cell_prop.basal_membrane_repulsion, min: 0, max: 10, label: 'Basal Repulsion' },
-            cytos_init: { value: params.cell_prop.cytos_init, min: 0, max: 5, label: 'Cytos Init' },
-            diffusion: { value: params.cell_prop.diffusion, min: 0, max: 2, step: 0.01, label: 'Diffusion' },
+            apical_junction_init: { value: params.cell_prop.apical_junction_init, step: 0.1, label: 'Apical Junc Init' },
+            max_basal_junction_dist: { value: params.cell_prop.max_basal_junction_dist, step: 0.1, label: 'Max Basal Dist' },
+            basal_daming_ratio: { value: params.cell_prop.basal_daming_ratio, step: 0.1, label: 'Basal Damping' },
+            basal_membrane_repulsion: { value: params.cell_prop.basal_membrane_repulsion, step: 0.1, label: 'Basal Repulsion' },
+            cytos_init: { value: params.cell_prop.cytos_init, step: 0.1, label: 'Cytos Init' },
+            diffusion: { value: params.cell_prop.diffusion, step: 0.01, label: 'Diffusion' },
         }),
         { store, collapsed: true }
     );
@@ -80,32 +80,32 @@ export function LevaParameterPanel({ params, onChange }: LevaParameterPanelProps
 
     function createCellTypeSchema(cellParams: any, isEmt = false) {
         return {
-            R_hard: { value: cellParams.R_hard, min: 0.1, max: 5, label: 'R Hard' },
-            R_soft: { value: cellParams.R_soft, min: 0.1, max: 5, label: 'R Soft' },
+            R_hard: { value: cellParams.R_hard, step: 0.1, label: 'R Hard' },
+            R_soft: { value: cellParams.R_soft, step: 0.1, label: 'R Soft' },
             color: { value: cellParams.color, label: 'Color' },
-            k_apical_junction: { value: cellParams.k_apical_junction, min: 0, max: 20, label: 'k Apical' },
-            k_cytos: { value: cellParams.k_cytos, min: 0, max: 20, label: 'k Cytos' },
-            stiffness_apical_apical: { value: cellParams.stiffness_apical_apical, min: 0, max: 20, label: 'Stiff AA' },
-            stiffness_nuclei_apical: { value: cellParams.stiffness_nuclei_apical, min: 0, max: 20, label: 'Stiff NA' },
-            stiffness_nuclei_basal: { value: cellParams.stiffness_nuclei_basal, min: 0, max: 20, label: 'Stiff NB' },
-            stiffness_repulsion: { value: cellParams.stiffness_repulsion, min: 0, max: 20, label: 'Stiff Repulsion' },
-            stiffness_straightness: { value: cellParams.stiffness_straightness, min: 0, max: 20, label: 'Stiff Straight' },
+            k_apical_junction: { value: cellParams.k_apical_junction, step: 0.1, label: 'k Apical' },
+            k_cytos: { value: cellParams.k_cytos, step: 0.1, label: 'k Cytos' },
+            stiffness_apical_apical: { value: cellParams.stiffness_apical_apical, step: 0.1, label: 'Stiff AA' },
+            stiffness_nuclei_apical: { value: cellParams.stiffness_nuclei_apical, step: 0.1, label: 'Stiff NA' },
+            stiffness_nuclei_basal: { value: cellParams.stiffness_nuclei_basal, step: 0.1, label: 'Stiff NB' },
+            stiffness_repulsion: { value: cellParams.stiffness_repulsion, step: 0.1, label: 'Stiff Repulsion' },
+            stiffness_straightness: { value: cellParams.stiffness_straightness, step: 0.1, label: 'Stiff Straight' },
 
             // Flattened ranges
-            lifespan_min: { value: cellParams.lifespan.min, min: 0, max: 100, label: 'Lifespan Min' },
-            lifespan_max: { value: cellParams.lifespan.max, min: 0, max: 100, label: 'Lifespan Max' },
+            lifespan_min: { value: cellParams.lifespan.min, step: 0.5, label: 'Lifespan Min' },
+            lifespan_max: { value: cellParams.lifespan.max, step: 0.5, label: 'Lifespan Max' },
 
             // EMT specific events
             ...(isEmt ? {
                 'EMT Events': folder({
-                    time_A_min: { value: cellParams.events.time_A.min, min: 0, max: 100, label: 'Time A Min' },
-                    time_A_max: { value: cellParams.events.time_A.max, min: 0, max: 100, label: 'Time A Max' },
-                    time_B_min: { value: cellParams.events.time_B.min, min: 0, max: 100, label: 'Time B Min' },
-                    time_B_max: { value: cellParams.events.time_B.max, min: 0, max: 100, label: 'Time B Max' },
-                    time_S_min: { value: cellParams.events.time_S.min, min: 0, max: 100, label: 'Time S Min' },
-                    time_S_max: { value: cellParams.events.time_S.max, min: 0, max: 100, label: 'Time S Max' },
-                    time_P_min: { value: cellParams.events.time_P.min, min: 0, max: 100, label: 'Time P Min' },
-                    time_P_max: { value: cellParams.events.time_P.max, min: 0, max: 100, label: 'Time P Max' },
+                    time_A_min: { value: cellParams.events.time_A.min, step: 0.5, label: 'Time A Min' },
+                    time_A_max: { value: cellParams.events.time_A.max, step: 0.5, label: 'Time A Max' },
+                    time_B_min: { value: cellParams.events.time_B.min, step: 0.5, label: 'Time B Min' },
+                    time_B_max: { value: cellParams.events.time_B.max, step: 0.5, label: 'Time B Max' },
+                    time_S_min: { value: cellParams.events.time_S.min, step: 0.5, label: 'Time S Min' },
+                    time_S_max: { value: cellParams.events.time_S.max, step: 0.5, label: 'Time S Max' },
+                    time_P_min: { value: cellParams.events.time_P.min, step: 0.5, label: 'Time P Min' },
+                    time_P_max: { value: cellParams.events.time_P.max, step: 0.5, label: 'Time P Max' },
                 })
             } : {})
         };
@@ -213,42 +213,47 @@ export function LevaParameterPanel({ params, onChange }: LevaParameterPanelProps
 
     }, [generalValues, cellPropValues, controlValues, emtValues, onChange]);
 
-    // Define colors for light/dark mode using CSS variables
-    // Leva accepts valid CSS color strings, so we can use hsl(var(...))
+    // Clean, minimal color scheme for Leva
     const themeParams = isDark ? {
         colors: {
-            elevation1: 'hsl(var(--card))',
-            elevation2: 'hsl(var(--secondary))',
-            elevation3: 'hsl(var(--muted))',
-            accent1: 'hsl(var(--primary))',
-            accent2: 'hsl(var(--primary))',
-            accent3: 'hsl(var(--ring))',
-            highlight1: 'hsl(var(--muted))',
-            highlight2: 'hsl(var(--muted-foreground))',
-            highlight3: 'hsl(var(--primary))',
-            vivid1: 'hsl(var(--warn))',
-            folderWidgetColor: 'hsl(var(--muted-foreground))',
-            folderTextColor: 'hsl(var(--foreground))',
-            toolTipBackground: 'hsl(var(--popover))',
-            toolTipText: 'hsl(var(--popover-foreground))',
-        }
+            elevation1: '#1a1a2e',
+            elevation2: '#16213e',
+            elevation3: '#0f3460',
+            accent1: '#e94560',
+            accent2: '#e94560',
+            accent3: '#e94560',
+            highlight1: '#2a2a4a',
+            highlight2: '#8892b0',
+            highlight3: '#ccd6f6',
+            vivid1: '#e94560',
+            folderWidgetColor: '#8892b0',
+            folderTextColor: '#ccd6f6',
+            toolTipBackground: '#1a1a2e',
+            toolTipText: '#ccd6f6',
+        },
+        fontSizes: {
+            root: '11px',
+        },
     } : {
         colors: {
-            elevation1: 'hsl(var(--card))',
-            elevation2: 'hsl(var(--secondary))',
-            elevation3: 'hsl(var(--muted))',
-            accent1: 'hsl(var(--primary))',
-            accent2: 'hsl(var(--primary))',
-            accent3: 'hsl(var(--ring))',
-            highlight1: 'hsl(var(--secondary))',
-            highlight2: 'hsl(var(--muted-foreground))',
-            highlight3: 'hsl(var(--primary))',
-            vivid1: 'hsl(var(--warn))',
-            folderWidgetColor: 'hsl(var(--muted-foreground))',
-            folderTextColor: 'hsl(var(--foreground))',
-            toolTipBackground: 'hsl(var(--popover))',
-            toolTipText: 'hsl(var(--popover-foreground))',
-        }
+            elevation1: '#fafbfc',
+            elevation2: '#f0f2f5',
+            elevation3: '#e4e8ed',
+            accent1: '#0066cc',
+            accent2: '#0066cc',
+            accent3: '#0066cc',
+            highlight1: '#e4e8ed',
+            highlight2: '#6b7280',
+            highlight3: '#1f2937',
+            vivid1: '#0066cc',
+            folderWidgetColor: '#6b7280',
+            folderTextColor: '#1f2937',
+            toolTipBackground: '#1f2937',
+            toolTipText: '#f9fafb',
+        },
+        fontSizes: {
+            root: '11px',
+        },
     };
 
     return (

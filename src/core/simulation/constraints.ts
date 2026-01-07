@@ -55,7 +55,6 @@ export function projectBasalOrderingConstraints(
   state: SimulationState,
   params: SimulationParams
 ): void {
-
   const cells = state.cells;
   const baLinks = state.ba_links;
   const curvature_1 = params.general.curvature_1;
@@ -71,10 +70,8 @@ export function projectBasalOrderingConstraints(
     const li = basalArcLength(Bi, curvature_1, curvature_2);
     const lj = basalArcLength(Bj, curvature_1, curvature_2);
 
-    
-    
     // Arc length delta: positive means j is "ahead" of i (correct ordering)
-    let deltaL = 0 ; // lj - li;
+    let deltaL = lj - li;
 
     // Compute modulo for periodic boundary if needed
     if (params.general.full_circle && curvature_1 !== 0 && curvature_1 === curvature_2) {
@@ -82,25 +79,11 @@ export function projectBasalOrderingConstraints(
       while (deltaL > circumference / 2) {
         // j is too far ahead - wrap around
         deltaL -= circumference;
-        console.log('[DEBUG] Adjusting deltaL for periodicity:', {
-          ci: ci.id,
-          cj: cj.id,
-          li,
-          lj,
-          deltaL,
-        });
-      } 
-      
+      }
+
       while (deltaL < -circumference / 2) {
         // j is too far behind - wrap around
         deltaL += circumference;
-        console.log('[DEBUG] Adjusting deltaL for periodicity:', {
-          ci: ci.id,
-          cj: cj.id,
-          li,
-          lj,
-          deltaL,
-        });
       }
     }
 
@@ -113,20 +96,11 @@ export function projectBasalOrderingConstraints(
       const newBi = basalCurveParam(newLi, curvature_1, curvature_2);
       const newBj = basalCurveParam(newLj, curvature_1, curvature_2);
 
-      console.log('[DEBUG] Correcting basal ordering violation:', {
-        ci: ci.id,
-        cj: cj.id,
-        li,
-        lj,
-        newLi,
-        newLj,
-      });
+      // ci.B.x = newBi.x;
+      // ci.B.y = newBi.y;
 
-      ci.B.x = newBi.x;
-      ci.B.y = newBi.y;
-
-      cj.B.x = newBj.x;
-      cj.B.y = newBj.y;
+      // cj.B.x = newBj.x;
+      // cj.B.y = newBj.y;
     }
   }
 }
