@@ -38,6 +38,9 @@ export interface BatchTabProps {
 }
 
 export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabProps) {
+  // Get current model for statistics
+  const { currentModel } = useModel();
+
   // Batch data and progress
   const [batchData, setBatchData] = useState<BatchData | null>(null);
   const [progress, setProgress] = useState<BatchProgress | null>(null);
@@ -45,13 +48,10 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const [startTime, setStartTime] = useState<number | null>(null);
   const abortRef = useRef(false);
 
-  // Statistics
-  const [selectedStats, setSelectedStats] = useState<string[]>([
-    'n_cells_total',
-    'n_cells_emt',
-    'avg_y_all',
-    'avg_y_emt',
-  ]);
+  // Statistics - default to all available statistics
+  const [selectedStats, setSelectedStats] = useState<string[]>(() => {
+    return (currentModel?.statistics || []).map(s => s.id);
+  });
   const [outputMode, setOutputMode] = useState<'time_series' | 'terminal'>('time_series');
   const [resultsColumns, setResultsColumns] = useState<string[]>([]);
   const [resultsRows, setResultsRows] = useState<(string | number)[][]>([]);
@@ -152,8 +152,6 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   // Load TOML (params + optional parameter ranges)
 
   // Compute statistics
-  const { currentModel } = useModel(); // Need model context
-
   const handleComputeStats = () => {
     if (!batchData || selectedStats.length === 0 || !currentModel) return;
 

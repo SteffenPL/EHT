@@ -15,8 +15,8 @@ import { ehtParamsSchema } from './eht/params/schema';
 import { toyParamsSchema } from './toy/params/schema';
 import { DEFAULT_EHT_PARAMS } from './eht/params/defaults';
 import { DEFAULT_TOY_PARAMS } from './toy/params/defaults';
-import { computeEHTStatistics } from './eht/statistics';
-import { computeToyStatistics } from './toy/statistics';
+import { computeEHTStatistics, generateEHTStatistics } from './eht/statistics';
+import { computeToyStatistics, TOY_STATISTICS } from './toy/statistics';
 import { EHT_BATCH_PARAMETERS, generateEHTBatchParameters } from './eht/ui/availableParams';
 import { initializeEHTSimulation } from './eht/simulation/init';
 import { performTimestep as ehtPerformTimestep } from './eht/simulation/step';
@@ -76,6 +76,7 @@ const EHTModelWorker: SimulationModel<EHTParams, EHTSimulationState> = {
 
   // Statistics
   computeStats: (state: EHTSimulationState) => computeEHTStatistics(state),
+  statistics: generateEHTStatistics(DEFAULT_EHT_PARAMS),
 
   // Batch parameters
   generateBatchParameters: (params: EHTParams) => generateEHTBatchParameters(params),
@@ -265,6 +266,7 @@ const ToyModelWorker: SimulationModel<ToyParams, ToySimulationState> = {
 
   // Statistics
   computeStats: (state: ToySimulationState) => computeToyStatistics(state),
+  statistics: TOY_STATISTICS,
 
   // Batch parameters
   generateBatchParameters: (_params: ToyParams) => TOY_BATCH_PARAMETERS,

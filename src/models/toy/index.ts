@@ -12,7 +12,7 @@ import { SeededRandom } from '@/core/math/random';
 import type { ToyParams } from './params/types';
 import { toyParamsSchema } from './params/schema';
 import { DEFAULT_TOY_PARAMS } from './params/defaults';
-import { computeToyStatistics } from './statistics';
+import { computeToyStatistics, TOY_STATISTICS } from './statistics';
 import { TOY_BATCH_PARAMETERS, toyUI } from './ui';
 import { toyRenderer } from './renderer';
 
@@ -200,6 +200,7 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
 
   // Statistics
   computeStats: (state: ToySimulationState) => computeToyStatistics(state),
+  statistics: TOY_STATISTICS,
 
   // Model-specific renderer
   renderer: toyRenderer,

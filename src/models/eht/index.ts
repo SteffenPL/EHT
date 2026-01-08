@@ -11,7 +11,7 @@ import { createInitialEHTState } from './types';
 import type { EHTParams } from './params/types';
 import { ehtParamsSchema } from './params/schema';
 import { DEFAULT_EHT_PARAMS, EHT_PRESETS } from './params/defaults';
-import { computeEHTStatistics } from './statistics';
+import { computeEHTStatistics, generateEHTStatistics } from './statistics';
 import { EHT_BATCH_PARAMETERS, generateEHTBatchParameters } from './ui/availableParams';
 import { ehtUI } from './ui';
 import { initializeEHTSimulation } from './simulation/init';
@@ -93,6 +93,7 @@ export const EHTModel: SimulationModel<EHTParams, EHTSimulationState> = {
 
   // Statistics
   computeStats: (state: EHTSimulationState) => computeEHTStatistics(state),
+  statistics: generateEHTStatistics(DEFAULT_EHT_PARAMS),
 
   // Batch parameters - dynamic generation
   generateBatchParameters: (params: EHTParams) => generateEHTBatchParameters(params),
