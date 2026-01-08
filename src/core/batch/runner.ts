@@ -5,10 +5,12 @@
  */
 
 import { cloneDeep } from 'lodash-es';
-import { SimulationEngine } from '../simulation';
+import { ModelSimulationEngine } from '../simulation/model-engine';
 import { setNestedValue } from '../params';
 import { createSnapshot } from '../snapshot';
-import type { SimulationParams, SimulationState } from '../types';
+import { modelRegistry } from '../registry';
+import type { ModelDefinition, BaseSimulationParams } from '../registry';
+import type { SimulationState } from '../types';
 import type {
   BatchConfig,
   BatchSnapshot,
@@ -30,13 +32,16 @@ export interface BatchRunnerOptions {
   parallel?: boolean;
   /** Number of workers for parallel execution. Default: navigator.hardwareConcurrency. */
   workerCount?: number;
+  /** Model name to use. If not specified, uses the model from params.metadata.model */
+  modelName?: string;
 }
 
 /**
  * Run a single simulation and collect snapshots at specified times.
  */
 function runSingleSimulation(
-  baseParams: SimulationParams,
+  model: ModelDefinition<BaseSimulationParams>,
+  baseParams: BaseSimulationParams,
   overrides: Record<string, number>,
   seed: number,
   timeSamples: number[],
@@ -50,8 +55,8 @@ function runSingleSimulation(
   }
   params.general.random_seed = seed;
 
-  // Create engine
-  const engine = new SimulationEngine({ params });
+  // Create model-aware engine
+  const engine = new ModelSimulationEngine({ model, params });
   engine.init();
 
   const snapshots: BatchSnapshot[] = [];
@@ -104,7 +109,8 @@ function yieldToUI(): Promise<void> {
  * Run batch simulations sequentially (single-threaded).
  */
 async function runBatchSequential(
-  baseParams: SimulationParams,
+  model: ModelDefinition<BaseSimulationParams>,
+  baseParams: BaseSimulationParams,
   config: BatchConfig,
   callbacks?: BatchRunnerCallbacks
 ): Promise<BatchData> {
@@ -138,6 +144,7 @@ async function runBatchSequential(
 
       // Run simulation
       const snapshots = runSingleSimulation(
+        model,
         baseParams,
         paramConfig,
         seed,
@@ -173,9 +180,12 @@ async function runBatchSequential(
 
 /**
  * Run batch simulations in parallel using Web Workers.
+ * Note: Parallel mode requires workers to have the model registered.
+ * For now, falls back to sequential if model-aware parallel is not supported.
  */
 async function runBatchParallel(
-  baseParams: SimulationParams,
+  model: ModelDefinition<BaseSimulationParams>,
+  baseParams: BaseSimulationParams,
   config: BatchConfig,
   callbacks?: BatchRunnerCallbacks,
   workerCount?: number
@@ -222,8 +232,10 @@ async function runBatchParallel(
     });
 
     // Submit all tasks and collect results
+    // Pass the model name so workers can look it up from their registry
     const promises = tasks.map(async (task) => {
       const snapshots = await pool.submit(
+        model.name,
         baseParams,
         task.paramConfig,
         task.seed,
@@ -292,17 +304,28 @@ async function runBatchParallel(
  * Uses Web Workers for parallel execution if available, falls back to sequential.
  */
 export async function runBatch(
-  baseParams: SimulationParams,
+  baseParams: BaseSimulationParams,
   config: BatchConfig,
   callbacks?: BatchRunnerCallbacks,
   options?: BatchRunnerOptions
 ): Promise<BatchData> {
+  // Resolve the model from params metadata or explicit option
+  const modelName = options?.modelName ?? baseParams.metadata?.model;
+  if (!modelName) {
+    throw new Error('Model name not specified. Provide options.modelName or ensure params.metadata.model is set.');
+  }
+
+  const model = modelRegistry.get(modelName);
+  if (!model) {
+    throw new Error(`Model "${modelName}" not found in registry.`);
+  }
+
   const useParallel = options?.parallel ?? WorkerPool.isSupported();
 
   if (useParallel && WorkerPool.isSupported()) {
-    return runBatchParallel(baseParams, config, callbacks, options?.workerCount);
+    return runBatchParallel(model, baseParams, config, callbacks, options?.workerCount);
   } else {
-    return runBatchSequential(baseParams, config, callbacks);
+    return runBatchSequential(model, baseParams, config, callbacks);
   }
 }
 

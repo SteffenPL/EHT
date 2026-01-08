@@ -2,7 +2,7 @@
  * Worker pool for parallel batch simulations.
  */
 
-import type { SimulationParams } from '../types';
+import type { BaseSimulationParams } from '../registry';
 import type { BatchSnapshot } from './types';
 import type { WorkerRequest, WorkerResponse } from './simulation.worker';
 
@@ -54,7 +54,8 @@ export class WorkerPool {
    * Returns a promise that resolves with the snapshots.
    */
   submit(
-    baseParams: SimulationParams,
+    modelName: string,
+    baseParams: BaseSimulationParams,
     overrides: Record<string, number>,
     seed: number,
     timeSamples: number[],
@@ -63,6 +64,7 @@ export class WorkerPool {
     return new Promise((resolve, reject) => {
       const request: WorkerRequest = {
         type: 'run',
+        modelName,
         baseParams,
         overrides,
         seed,

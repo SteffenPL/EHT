@@ -4,15 +4,21 @@
  */
 
 import { cloneDeep } from 'lodash-es';
-import { SimulationEngine } from '../simulation';
+import { ModelSimulationEngine } from '../simulation/model-engine';
+import { modelRegistry } from '../registry';
 import { setNestedValue } from '../params';
-import type { SimulationParams, SimulationState, ApicalLink, BasalLink } from '../types';
+import type { BaseSimulationParams } from '../registry';
+import type { SimulationState, ApicalLink, BasalLink } from '../types';
 import type { BatchSnapshot, CellSnapshotMinimal } from './types';
+
+// Import models to register them in the worker context
+import '@/models';
 
 /** Message sent to worker to start a simulation */
 export interface WorkerRequest {
   type: 'run';
-  baseParams: SimulationParams;
+  modelName: string;
+  baseParams: BaseSimulationParams;
   overrides: Record<string, number>;
   seed: number;
   timeSamples: number[];
@@ -102,7 +108,13 @@ function createBatchSnapshot(
  * Run a single simulation and collect snapshots.
  */
 function runSimulation(request: WorkerRequest): BatchSnapshot[] {
-  const { baseParams, overrides, seed, timeSamples, runIndex } = request;
+  const { modelName, baseParams, overrides, seed, timeSamples, runIndex } = request;
+
+  // Get the model from the registry
+  const model = modelRegistry.get(modelName);
+  if (!model) {
+    throw new Error(`Model "${modelName}" not found in worker registry.`);
+  }
 
   // Apply parameter overrides (use cloneDeep to preserve Infinity values)
   const params = cloneDeep(baseParams);
@@ -111,8 +123,8 @@ function runSimulation(request: WorkerRequest): BatchSnapshot[] {
   }
   params.general.random_seed = seed;
 
-  // Create engine
-  const engine = new SimulationEngine({ params });
+  // Create model-aware engine
+  const engine = new ModelSimulationEngine({ model, params });
   engine.init();
 
   const snapshots: BatchSnapshot[] = [];
