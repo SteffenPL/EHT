@@ -235,10 +235,10 @@ async function runBatchParallel(
     });
 
     // Submit all tasks and collect results
-    // Pass the model name so workers can look it up from their registry
+    // Pass the model ID so workers can look it up from their registry
     const promises = tasks.map(async (task) => {
       const snapshots = await pool.submit(
-        model.name,
+        model.id,
         baseParams,
         task.paramConfig,
         task.seed,

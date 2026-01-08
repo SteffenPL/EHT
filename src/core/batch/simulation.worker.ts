@@ -10,8 +10,8 @@ import { setNestedValue } from '../params';
 import type { BaseSimulationParams } from '../registry';
 import type { BatchSnapshot } from './types';
 
-// Import models to register them in the worker context
-import '@/models';
+// Import worker-safe models (no UI/renderer code)
+import '@/models/index.worker';
 
 /** Message sent to worker to start a simulation */
 export interface WorkerRequest {
