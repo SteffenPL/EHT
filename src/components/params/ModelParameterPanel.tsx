@@ -24,6 +24,7 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
   const { currentModel } = useModel();
 
   // Get model-specific UI components
+  const WarningBanner = currentModel.ui?.WarningBanner;
   const ParametersTab = currentModel.ui?.ParametersTab;
   const CellTypesTab = currentModel.ui?.CellTypesTab;
   const SimulationTab = currentModel.ui?.SimulationTab;
@@ -33,8 +34,16 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
   const hasSimulation = !!SimulationTab;
 
   return (
-    <Tabs defaultValue="parameters" className="h-full flex flex-col">
-      <TabsList className="w-full justify-start shrink-0">
+    <div className="h-full flex flex-col">
+      {/* Warning banner - always visible above tabs */}
+      {WarningBanner && (
+        <div className="shrink-0 p-2">
+          <WarningBanner params={params} />
+        </div>
+      )}
+
+      <Tabs defaultValue="parameters" className="flex-1 flex flex-col min-h-0">
+        <TabsList className="w-full justify-start shrink-0">
         <TabsTrigger value="parameters">Parameters</TabsTrigger>
         {hasCellTypes && <TabsTrigger value="celltypes">Cell Types</TabsTrigger>}
         {hasSimulation && <TabsTrigger value="simulation">Simulation</TabsTrigger>}
@@ -73,6 +82,7 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
           </ScrollArea>
         </TabsContent>
       )}
-    </Tabs>
+      </Tabs>
+    </div>
   );
 }

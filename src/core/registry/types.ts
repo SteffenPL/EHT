@@ -2,13 +2,13 @@
  * Model definition types for the multi-model architecture.
  */
 
-import type { SimulationModel, ModelUI, ModelUITabProps } from '../interfaces/model';
+import type { SimulationModel, ModelUI, ModelUITabProps, ModelWarningProps } from '../interfaces/model';
 import type { ModelRenderer, ModelRenderContext, BoundingBox } from '../interfaces/renderer';
 
 import type { Vector2 } from '../math/vector2';
 
 // Re-export interface types
-export type { SimulationModel, ModelUI, ModelUITabProps };
+export type { SimulationModel, ModelUI, ModelUITabProps, ModelWarningProps };
 export type { ModelRenderer, ModelRenderContext, BoundingBox };
 
 // Alias for backward compatibility (if needed) or clarity

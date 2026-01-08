@@ -28,10 +28,19 @@ export interface ModelUITabProps<Params = any> {
 }
 
 /**
+ * Props for warning banner component.
+ */
+export interface ModelWarningProps<Params = any> {
+    params: Params;
+}
+
+/**
  * Model-specific UI components for parameter editing.
  * Each model can provide its own React components for the parameter panel tabs.
  */
 export interface ModelUI<Params = any> {
+    /** Warning banner - shown above the tabs, always visible */
+    WarningBanner?: ComponentType<ModelWarningProps<Params>>;
     /** Parameters tab - general model parameters (T_end, N_init, etc.) */
     ParametersTab?: ComponentType<ModelUITabProps<Params>>;
     /** Cell Types tab - table with rows per parameter, columns per cell type */

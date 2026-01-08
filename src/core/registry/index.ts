@@ -33,6 +33,7 @@ export {
   type SimulationModel,
   type ModelUI,
   type ModelUITabProps,
+  type ModelWarningProps,
 } from './types';
 
 // Registry
