@@ -8,7 +8,6 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Label } from '../ui/label';
 import { Progress } from '../ui/progress';
 import { Separator } from '../ui/separator';
-import { StatisticSelector } from './StatisticSelector';
 import { ResultsTable } from './ResultsTable';
 import { BatchPlot } from './BatchPlot';
 import { aggregateByTime, aggregateByTimeWithCI, checkLinePlotCompatibility } from './plotUtils';
@@ -48,17 +47,15 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const [startTime, setStartTime] = useState<number | null>(null);
   const abortRef = useRef(false);
 
-  // Statistics - default to all available statistics
-  const [selectedStats, setSelectedStats] = useState<string[]>(() => {
-    return (currentModel?.statistics || []).map(s => s.id);
-  });
+  // Statistics - always use all available statistics
+  const selectedStats = (currentModel?.statistics || []).map(s => s.id);
   const [outputMode, setOutputMode] = useState<'time_series' | 'terminal'>('time_series');
   const [resultsColumns, setResultsColumns] = useState<string[]>([]);
   const [resultsRows, setResultsRows] = useState<(string | number)[][]>([]);
 
   // Plot configuration
   const [plotStatistic, setPlotStatistic] = useState<string>('');
-  const [plotType, setPlotType] = useState<'line' | 'line_ci'>('line');
+  const plotType = 'line_ci'; // Always use line + CI plot
 
   // Parallel execution
   const [useParallel, setUseParallel] = useState(WorkerPool.isSupported());
@@ -164,14 +161,6 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
     }
     const sortedPaths = Array.from(paramPaths).sort();
 
-    // Build columns
-    const columns = [
-      ...sortedPaths,
-      'seed',
-      'time_h',
-      ...selectedStats,
-    ];
-
     // Filter snapshots based on output mode
     let snapshots: BatchSnapshot[];
     if (outputMode === 'terminal') {
@@ -189,37 +178,67 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
       snapshots = batchData.snapshots;
     }
 
-    // Build rows
+    // Extract cell groups from available statistics
+    // Statistics are named like "ab_distance_all", "AX_control", "bx_control+emt"
+    // We need to extract unique groups and base stat names
+    const cellGroups = new Set<string>();
+    const baseStatNames = new Set<string>();
+
+    for (const statId of selectedStats) {
+      // Find last underscore to split stat_name from group
+      const lastUnderscoreIdx = statId.lastIndexOf('_');
+      if (lastUnderscoreIdx > 0) {
+        const baseName = statId.substring(0, lastUnderscoreIdx);
+        const group = statId.substring(lastUnderscoreIdx + 1);
+        baseStatNames.add(baseName);
+        cellGroups.add(group);
+      }
+    }
+
+    const sortedGroups = Array.from(cellGroups).sort();
+    const sortedBaseStats = Array.from(baseStatNames).sort();
+
+    // Build columns: param paths, run_index, seed, time_h, cell_group, then base stat names
+    const columns = [
+      ...sortedPaths,
+      'run_index',
+      'seed',
+      'time_h',
+      'cell_group',
+      ...sortedBaseStats,
+    ];
+
+    // Build rows - one row per (snapshot, cell_group)
     const rows: (string | number)[][] = [];
     for (const snapshot of snapshots) {
       // Reconstruct state to compute stats
-      // This might be slow for large datasets
-      // BUT for now it is the only generic way.
-      // We assume params are mostly static defaults + sampled_params overrides?
-      // Actually we need valid params to load snapshot.
-      // We can use config.params and overlay sampled_params.
-      const snapshotParams = { ...config.params }; // Shallow copy
-      // Apply sampled params if possible (deep merge or overrides)
-      // For now ignore deeper merge issues, assume flat or handled logic elsewhere
-      // Actually loadSnapshot signature: loadSnapshot(rows, params)
+      const snapshotParams = { ...config.params };
       const state = currentModel.loadSnapshot(snapshot.data, snapshotParams);
       const allStats = currentModel.computeStats(state);
 
-      const row: (string | number)[] = [
-        ...sortedPaths.map((p) => snapshot.sampled_params[p] ?? ''),
-        snapshot.seed,
-        snapshot.time_h,
-        ...selectedStats.map((id) => allStats[id] ?? 0),
-      ];
-      rows.push(row);
+      // Create one row per cell group
+      for (const group of sortedGroups) {
+        const row: (string | number)[] = [
+          ...sortedPaths.map((p) => snapshot.sampled_params[p] ?? ''),
+          snapshot.run_index,
+          snapshot.seed,
+          snapshot.time_h,
+          group,
+          ...sortedBaseStats.map((baseName) => {
+            const fullStatId = `${baseName}_${group}`;
+            return allStats[fullStatId] ?? 0;
+          }),
+        ];
+        rows.push(row);
+      }
     }
 
     setResultsColumns(columns);
     setResultsRows(rows);
 
-    // Set default plot statistic if not set
-    if (!plotStatistic && selectedStats.length > 0) {
-      setPlotStatistic(selectedStats[0]);
+    // Set default plot statistic if not set (use first base stat name)
+    if (!plotStatistic && sortedBaseStats.length > 0) {
+      setPlotStatistic(sortedBaseStats[0]);
     }
   };
 
@@ -228,6 +247,84 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
     if (resultsColumns.length === 0 || resultsRows.length === 0) return;
     const csv = statisticsToCSV(resultsColumns, resultsRows);
     downloadCSV(csv, 'batch_statistics.csv');
+  };
+
+  // Export full per-cell CSV
+  const handleExportFullCSV = () => {
+    if (!batchData || !currentModel) return;
+
+    // Get parameter paths
+    const paramPaths = new Set<string>();
+    for (const s of batchData.snapshots) {
+      for (const path of Object.keys(s.sampled_params)) {
+        paramPaths.add(path);
+      }
+    }
+    const sortedPaths = Array.from(paramPaths).sort();
+
+    // Filter snapshots based on output mode
+    let snapshots: BatchSnapshot[];
+    if (outputMode === 'terminal') {
+      const terminalSnapshots = new Map<string, BatchSnapshot>();
+      for (const s of batchData.snapshots) {
+        const key = `${s.run_index}-${s.seed}`;
+        const existing = terminalSnapshots.get(key);
+        if (!existing || s.time_h > existing.time_h) {
+          terminalSnapshots.set(key, s);
+        }
+      }
+      snapshots = Array.from(terminalSnapshots.values());
+    } else {
+      snapshots = batchData.snapshots;
+    }
+
+    // Build columns for per-cell data
+    const columns = [
+      ...sortedPaths,
+      'run_index',
+      'seed',
+      'time_h',
+      'cell_id',
+      'cell_type',
+      'X_x', 'X_y',
+      'A_x', 'A_y',
+      'B_x', 'B_y',
+      'a_x', 'a_y',
+      'b_x', 'b_y',
+      'ab_distance',
+      'AX', 'BX', 'ax', 'bx', 'x',
+      'below_basal', 'above_apical', 'below_neighbours',
+    ];
+
+    // Build rows - one row per cell
+    const rows: (string | number)[][] = [];
+    for (const snapshot of snapshots) {
+      // NOTE: For full per-cell data export, we would need to call a model-specific
+      // function like exportCellMetrics(state, params) that returns per-cell data.
+      // For now, this is a placeholder that exports basic snapshot data.
+      // The EHT model has exportCellMetrics in statistics.ts, but it's not exposed
+      // through the model interface yet.
+
+      // Export basic snapshot data (raw cell positions from snapshot)
+      for (let i = 0; i < snapshot.data.length; i++) {
+        const cellData = snapshot.data[i];
+        const row: (string | number)[] = [
+          ...sortedPaths.map((p) => snapshot.sampled_params[p] ?? ''),
+          snapshot.run_index,
+          snapshot.seed,
+          snapshot.time_h,
+          i, // cell_id
+          cellData.typeIndex || '', // cell_type
+          0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Placeholder for position/geometry data
+          0, 0, 0, 0, 0, 0, // Placeholder for distance metrics
+          0, 0, 0, // Placeholder for boolean metrics
+        ];
+        rows.push(row);
+      }
+    }
+
+    const csv = statisticsToCSV(columns, rows);
+    downloadCSV(csv, 'batch_full_cell_data.csv');
   };
 
   const progressPercent = progress
@@ -256,6 +353,12 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   };
 
   const timeRemaining = getTimeRemaining();
+
+  // Extract available base statistics from results columns
+  // Columns are: [param paths, run_index, seed, time_h, cell_group, base stats...]
+  const availableBaseStats = resultsColumns.filter(
+    col => !['run_index', 'seed', 'time_h', 'cell_group'].includes(col) && !col.includes('.')
+  );
 
   // Prepare plot data
   const plotCompatibility = checkLinePlotCompatibility(resultsColumns);
@@ -403,11 +506,9 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
             <CardTitle className="text-base">Compute Statistics</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <StatisticSelector
-              selected={selectedStats}
-              onChange={setSelectedStats}
-              disabled={isRunning}
-            />
+            <p className="text-sm text-muted-foreground">
+              All available statistics will be computed for all cell groups.
+            </p>
 
             <div className="flex gap-4 items-center">
               <Label className="text-sm">Output:</Label>
@@ -436,7 +537,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
             <Button
               onClick={handleComputeStats}
               size="sm"
-              disabled={selectedStats.length === 0 || isRunning}
+              disabled={!currentModel || isRunning}
             >
               Compute
             </Button>
@@ -449,10 +550,16 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
         <Card>
           <CardHeader className="pb-3 flex-row items-center justify-between">
             <CardTitle className="text-base">Results</CardTitle>
-            <Button variant="outline" size="sm" onClick={handleExportStats}>
-              <FileSpreadsheet className="h-4 w-4 mr-1" />
-              Export CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleExportStats}>
+                <FileSpreadsheet className="h-4 w-4 mr-1" />
+                Export CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportFullCSV}>
+                <FileSpreadsheet className="h-4 w-4 mr-1" />
+                Export Full CSV
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -480,7 +587,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
                     className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
                   >
                     <option value="">Select a statistic...</option>
-                    {selectedStats.map((stat) => (
+                    {availableBaseStats.map((stat) => (
                       <option key={stat} value={stat}>
                         {stat}
                       </option>
@@ -489,18 +596,9 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="plot-type" className="text-sm">
-                    Plot Type
-                  </Label>
-                  <select
-                    id="plot-type"
-                    value={plotType}
-                    onChange={(e) => setPlotType(e.target.value as 'line' | 'line_ci')}
-                    className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
-                  >
-                    <option value="line">Line (Mean Only)</option>
-                    <option value="line_ci">Line + Confidence Band (95% CI)</option>
-                  </select>
+                  <p className="text-sm text-muted-foreground">
+                    Plot type: Line + Confidence Band (95% CI) by cell group
+                  </p>
                 </div>
               </div>
 
@@ -514,21 +612,18 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
               )}
 
               {/* Plot display */}
-              {plotCompatibility.isCompatible && plotStatistic && (
-                (plotType === 'line' && plotData.length > 0) ||
-                (plotType === 'line_ci' && plotDataWithCI.length > 0)
-              ) && (
-                  <div className="mt-4 border rounded-md p-4 bg-muted/30">
-                    <BatchPlot
-                      data={plotData}
-                      dataWithCI={plotDataWithCI}
-                      statisticName={plotStatistic}
-                      plotType={plotType}
-                      width={640}
-                      height={400}
-                    />
-                  </div>
-                )}
+              {plotCompatibility.isCompatible && plotStatistic && plotDataWithCI.length > 0 && (
+                <div className="mt-4 border rounded-md p-4 bg-muted/30">
+                  <BatchPlot
+                    data={plotData}
+                    dataWithCI={plotDataWithCI}
+                    statisticName={plotStatistic}
+                    plotType={plotType}
+                    width={640}
+                    height={400}
+                  />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

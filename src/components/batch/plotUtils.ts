@@ -5,6 +5,7 @@
 export interface AggregatedData {
   time: number;
   value: number;
+  cell_group?: string; // Optional for backwards compatibility
 }
 
 export interface AggregatedDataWithCI {
@@ -13,6 +14,7 @@ export interface AggregatedDataWithCI {
   lower: number;
   upper: number;
   n: number;
+  cell_group: string;
 }
 
 /**
@@ -65,12 +67,12 @@ export function aggregateByTime(
 }
 
 /**
- * Aggregates results data by time, computing mean and 95% confidence interval.
- * 
+ * Aggregates results data by time and cell_group, computing mean and 95% confidence interval.
+ *
  * @param columns - Column names from results table
  * @param rows - Data rows from results table
  * @param statisticId - The statistic to plot
- * @returns Array of {time, mean, lower, upper, n} points for plotting
+ * @returns Array of {time, mean, lower, upper, n, cell_group} points for plotting
  */
 export function aggregateByTimeWithCI(
   columns: string[],
@@ -80,50 +82,54 @@ export function aggregateByTimeWithCI(
   // Find column indices
   const timeIdx = columns.indexOf('time_h');
   const statIdx = columns.indexOf(statisticId);
+  const groupIdx = columns.indexOf('cell_group');
 
   if (timeIdx === -1 || statIdx === -1) {
     return [];
   }
 
-  // Group by time and collect values
-  const timeGroups = new Map<number, number[]>();
-  
+  // Group by (time, cell_group) and collect values
+  const groups = new Map<string, { time: number; cell_group: string; values: number[] }>();
+
   for (const row of rows) {
     const time = Number(row[timeIdx]);
     const value = Number(row[statIdx]);
-    
+    const cell_group = groupIdx !== -1 ? String(row[groupIdx]) : 'all';
+
     if (!isNaN(time) && !isNaN(value)) {
-      if (!timeGroups.has(time)) {
-        timeGroups.set(time, []);
+      const key = `${time}_${cell_group}`;
+      if (!groups.has(key)) {
+        groups.set(key, { time, cell_group, values: [] });
       }
-      timeGroups.get(time)!.push(value);
+      groups.get(key)!.values.push(value);
     }
   }
 
   // Compute means, standard errors, and confidence intervals
   const result: AggregatedDataWithCI[] = [];
-  
-  for (const [time, values] of timeGroups.entries()) {
+
+  for (const { time, cell_group, values } of groups.values()) {
     const n = values.length;
     const mean = values.reduce((sum, v) => sum + v, 0) / n;
-    
+
     if (n > 1) {
       // Compute standard deviation
       const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / (n - 1);
       const sd = Math.sqrt(variance);
-      
+
       // Compute standard error
       const se = sd / Math.sqrt(n);
-      
+
       // 95% confidence interval (±1.96 * SE)
       const margin = 1.96 * se;
-      
+
       result.push({
         time,
         mean,
         lower: mean - margin,
         upper: mean + margin,
         n,
+        cell_group,
       });
     } else {
       // Single observation - no confidence interval
@@ -133,12 +139,16 @@ export function aggregateByTimeWithCI(
         lower: mean,
         upper: mean,
         n,
+        cell_group,
       });
     }
   }
 
-  result.sort((a, b) => a.time - b.time);
-  
+  result.sort((a, b) => {
+    if (a.time !== b.time) return a.time - b.time;
+    return a.cell_group.localeCompare(b.cell_group);
+  });
+
   return result;
 }
 

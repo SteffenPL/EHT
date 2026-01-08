@@ -5,8 +5,8 @@ import { useEffect, useRef } from 'react';
 import * as Plot from '@observablehq/plot';
 
 export interface BatchPlotProps {
-  data: { time: number; value: number }[];
-  dataWithCI?: { time: number; mean: number; lower: number; upper: number; n: number }[];
+  data: { time: number; value: number; cell_group?: string }[];
+  dataWithCI?: { time: number; mean: number; lower: number; upper: number; n: number; cell_group: string }[];
   statisticName: string;
   plotType: 'line' | 'line_ci';
   width?: number;
@@ -29,49 +29,78 @@ export function BatchPlot({
     if (plotType === 'line_ci' && (!dataWithCI || dataWithCI.length === 0)) return;
 
     let marks: any[];
+    let colorScheme: any = { legend: true };
 
     if (plotType === 'line_ci' && dataWithCI) {
-      // Line plot with confidence interval
+      // Line plot with confidence interval - separate lines for each cell_group
       marks = [
-        // Confidence band
+        // Confidence bands by cell_group
         Plot.areaY(dataWithCI, {
           x: 'time',
           y1: 'lower',
           y2: 'upper',
-          fill: 'steelblue',
+          fill: 'cell_group',
           fillOpacity: 0.2,
         }),
-        // Mean line
+        // Mean lines by cell_group
         Plot.line(dataWithCI, {
           x: 'time',
           y: 'mean',
-          stroke: 'steelblue',
+          stroke: 'cell_group',
           strokeWidth: 2,
         }),
-        // Data points
+        // Data points by cell_group
         Plot.dot(dataWithCI, {
           x: 'time',
           y: 'mean',
-          fill: 'steelblue',
+          fill: 'cell_group',
           r: 3,
         }),
       ];
+
+      // Use categorical color scheme
+      colorScheme = {
+        color: { legend: true, label: 'Cell Group' }
+      };
     } else {
-      // Simple line plot
-      marks = [
-        Plot.line(data, {
-          x: 'time',
-          y: 'value',
-          stroke: 'steelblue',
-          strokeWidth: 2,
-        }),
-        Plot.dot(data, {
-          x: 'time',
-          y: 'value',
-          fill: 'steelblue',
-          r: 3,
-        }),
-      ];
+      // Simple line plot - check if we have cell_group data
+      const hasGroups = data.some(d => d.cell_group !== undefined);
+
+      if (hasGroups) {
+        marks = [
+          Plot.line(data, {
+            x: 'time',
+            y: 'value',
+            stroke: 'cell_group',
+            strokeWidth: 2,
+          }),
+          Plot.dot(data, {
+            x: 'time',
+            y: 'value',
+            fill: 'cell_group',
+            r: 3,
+          }),
+        ];
+        colorScheme = {
+          color: { legend: true, label: 'Cell Group' }
+        };
+      } else {
+        // Fallback to single color
+        marks = [
+          Plot.line(data, {
+            x: 'time',
+            y: 'value',
+            stroke: 'steelblue',
+            strokeWidth: 2,
+          }),
+          Plot.dot(data, {
+            x: 'time',
+            y: 'value',
+            fill: 'steelblue',
+            r: 3,
+          }),
+        ];
+      }
     }
 
     const plot = Plot.plot({
@@ -79,6 +108,7 @@ export function BatchPlot({
       height,
       marginLeft: 60,
       marginBottom: 40,
+      marginRight: 120, // Extra space for legend
       grid: true,
       x: {
         label: 'Time (h)',
@@ -86,6 +116,7 @@ export function BatchPlot({
       y: {
         label: statisticName,
       },
+      ...colorScheme,
       marks,
     });
 
