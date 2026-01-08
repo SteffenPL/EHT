@@ -37,6 +37,7 @@ export function processCellDivisions(
         rng,
         Vector2.from(cell.pos),
         cellType,
+        cell.typeIndex,
         cell
       );
       // Preserve the cell's ID
@@ -44,9 +45,7 @@ export function processCellDivisions(
       state.cells[i] = newCell;
     } else {
       // Control cells can divide
-      const shouldDivideOut =
-        rng.random() < params.general.p_div_out ||
-        state.cells.length >= params.general.N_max;
+      const shouldDivideOut = rng.random() < params.general.p_div_out;
 
       if (shouldDivideOut) {
         // One offspring - just reset the cell
@@ -56,6 +55,7 @@ export function processCellDivisions(
           rng,
           Vector2.from(cell.pos),
           cellType,
+          cell.typeIndex,
           cell
         );
         newCell.id = cell.id;
@@ -71,6 +71,7 @@ export function processCellDivisions(
           rng,
           Vector2.from(cell.pos),
           cellType,
+          cell.typeIndex,
           cell
         );
         cell1.id = cell.id;
@@ -83,6 +84,7 @@ export function processCellDivisions(
           rng,
           Vector2.from(cell.pos),
           cellType,
+          cell.typeIndex,
           cell1
         );
 

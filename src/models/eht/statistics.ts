@@ -2,223 +2,90 @@
 /**
  * EHT model statistics definitions.
  * Computes statistics directly from EHTSimulationState.
+ * Statistics are generated dynamically based on cell types in params.
  */
 
 import type { StatisticDefinition } from '@/core/registry/types';
-import type { EHTSimulationState, CellState, ApicalLink, BasalLink } from './types';
+import type { EHTSimulationState, CellState } from './types';
+import type { EHTParams } from './params/types';
 import { Vector2 } from '@/core/math/vector2';
 
-// Helper functions for filtering cells
-function controlCells(cells: CellState[]): CellState[] {
-  return cells.filter((c) => c.typeIndex === 'control' || c.typeIndex === undefined);
+/**
+ * Compute the apical-basal distance for a cell.
+ */
+function abDistance(cell: CellState): number {
+  return Vector2.from(cell.A).dist(Vector2.from(cell.B));
 }
 
-function emtCells(cells: CellState[]): CellState[] {
-  return cells.filter((c) => c.typeIndex === 'emt');
-}
-
+/**
+ * Compute mean of an array of numbers.
+ */
 function mean(values: number[]): number {
   if (values.length === 0) return 0;
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-// Helper to count neighbors from links
-function countNeighbors(cellIndex: number, links: (ApicalLink | BasalLink)[]): number {
-  let count = 0;
-  for (const link of links) {
-    if (link.l === cellIndex || link.r === cellIndex) {
-      count++;
-    }
+/**
+ * Generate statistics definitions dynamically based on cell types in params.
+ * Returns one AB distance stat for each cell type, plus one for all cells.
+ */
+export function generateEHTStatistics(params: EHTParams): StatisticDefinition<EHTSimulationState>[] {
+  const stats: StatisticDefinition<EHTSimulationState>[] = [];
+  const cellTypeKeys = Object.keys(params.cell_types);
+
+  // AB distance for all cells
+  stats.push({
+    id: 'ab_distance_all',
+    label: 'AB Distance (all)',
+    description: 'Average apical-basal distance for all cells',
+    compute: (s) => mean(s.cells.map(abDistance)),
+  });
+
+  // AB distance per cell type
+  for (const typeKey of cellTypeKeys) {
+    const cellType = params.cell_types[typeKey];
+    const displayName = cellType.name || typeKey;
+
+    stats.push({
+      id: `ab_distance_${typeKey}`,
+      label: `AB Distance (${displayName})`,
+      description: `Average apical-basal distance for ${displayName} cells`,
+      compute: (s) => mean(
+        s.cells
+          .filter((c) => c.typeIndex === typeKey)
+          .map(abDistance)
+      ),
+    });
   }
-  return count;
+
+  return stats;
 }
 
-/** All EHT-specific statistics */
-export const EHT_STATISTICS: StatisticDefinition<EHTSimulationState>[] = [
-  // Cell counts
-  {
-    id: 'n_cells_total',
-    label: 'Cell Count (total)',
-    description: 'Total number of cells',
-    compute: (s) => s.cells.length,
-  },
-  {
-    id: 'n_cells_control',
-    label: 'Cell Count (control)',
-    description: 'Number of control cells',
-    compute: (s) => controlCells(s.cells).length,
-  },
-  {
-    id: 'n_cells_emt',
-    label: 'Cell Count (EMT)',
-    description: 'Number of EMT cells',
-    compute: (s) => emtCells(s.cells).length,
-  },
+/**
+ * Get the list of all available statistic IDs for the current params.
+ */
+export function getEHTStatisticIds(params: EHTParams): string[] {
+  return generateEHTStatistics(params).map((s) => s.id);
+}
 
-  // Y positions
-  {
-    id: 'avg_y_all',
-    label: 'Avg Y Position (all)',
-    description: 'Average Y position of all cell nuclei',
-    compute: (s) => mean(s.cells.map((c) => c.pos.y)),
-  },
-  {
-    id: 'avg_y_control',
-    label: 'Avg Y Position (control)',
-    description: 'Average Y position of control cell nuclei',
-    compute: (s) => mean(controlCells(s.cells).map((c) => c.pos.y)),
-  },
-  {
-    id: 'avg_y_emt',
-    label: 'Avg Y Position (EMT)',
-    description: 'Average Y position of EMT cell nuclei',
-    compute: (s) => mean(emtCells(s.cells).map((c) => c.pos.y)),
-  },
-
-  // X positions
-  {
-    id: 'avg_x_all',
-    label: 'Avg X Position (all)',
-    description: 'Average X position of all cell nuclei',
-    compute: (s) => mean(s.cells.map((c) => c.pos.x)),
-  },
-  {
-    id: 'avg_x_emt',
-    label: 'Avg X Position (EMT)',
-    description: 'Average X position of EMT cell nuclei',
-    compute: (s) => mean(emtCells(s.cells).map((c) => c.pos.x)),
-  },
-
-  // Adhesion states
-  {
-    id: 'emt_with_apical',
-    label: 'EMT with Apical Adhesion',
-    description: 'Number of EMT cells that still have apical adhesion',
-    compute: (s) => emtCells(s.cells).filter((c) => c.has_A).length,
-  },
-  {
-    id: 'emt_with_basal',
-    label: 'EMT with Basal Adhesion',
-    description: 'Number of EMT cells that still have basal adhesion',
-    compute: (s) => emtCells(s.cells).filter((c) => c.has_B).length,
-  },
-  {
-    id: 'emt_escaped',
-    label: 'EMT Escaped',
-    description: 'Number of EMT cells that lost both apical and basal adhesion',
-    compute: (s) => emtCells(s.cells).filter((c) => !c.has_A && !c.has_B).length,
-  },
-  {
-    id: 'emt_fully_attached',
-    label: 'EMT Fully Attached',
-    description: 'Number of EMT cells with both apical and basal adhesion',
-    compute: (s) => emtCells(s.cells).filter((c) => c.has_A && c.has_B).length,
-  },
-
-  // Apical-basal distance
-  {
-    id: 'avg_ab_distance_all',
-    label: 'Avg Apical-Basal Distance (all)',
-    description: 'Average distance between apical and basal points',
-    compute: (s) =>
-      mean(
-        s.cells.map((c) =>
-          Vector2.from(c.A).dist(Vector2.from(c.B))
-        )
-      ),
-  },
-  {
-    id: 'avg_ab_distance_emt',
-    label: 'Avg Apical-Basal Distance (EMT)',
-    description: 'Average apical-basal distance for EMT cells',
-    compute: (s) =>
-      mean(
-        emtCells(s.cells).map((c) =>
-          Vector2.from(c.A).dist(Vector2.from(c.B))
-        )
-      ),
-  },
-
-  // Tissue dimensions
-  {
-    id: 'tissue_width',
-    label: 'Tissue Width',
-    description: 'Max X - Min X of all cell positions',
-    compute: (s) => {
-      if (s.cells.length === 0) return 0;
-      const xs = s.cells.map((c) => c.pos.x);
-      return Math.max(...xs) - Math.min(...xs);
-    },
-  },
-  {
-    id: 'tissue_height',
-    label: 'Tissue Height',
-    description: 'Max Y - Min Y of all cell positions',
-    compute: (s) => {
-      if (s.cells.length === 0) return 0;
-      const ys = s.cells.map((c) => c.pos.y);
-      return Math.max(...ys) - Math.min(...ys);
-    },
-  },
-
-  // Neighbor counts
-  {
-    id: 'avg_apical_neighbors',
-    label: 'Avg Apical Neighbors',
-    description: 'Average number of apical neighbors per cell',
-    compute: (s) =>
-      mean(s.cells.map((_c, i) => countNeighbors(i, s.ap_links))),
-  },
-  {
-    id: 'avg_basal_neighbors',
-    label: 'Avg Basal Neighbors',
-    description: 'Average number of basal neighbors per cell',
-    compute: (s) =>
-      mean(s.cells.map((_c, i) => countNeighbors(i, s.ba_links))),
-  },
-
-  // Age statistics
-  {
-    id: 'avg_age_all',
-    label: 'Avg Cell Age (all)',
-    description: 'Average age of all cells in hours',
-    compute: (s) => mean(s.cells.map((c) => s.t - c.birth_time)),
-  },
-  {
-    id: 'avg_age_emt',
-    label: 'Avg Cell Age (EMT)',
-    description: 'Average age of EMT cells in hours',
-    compute: (s) => mean(emtCells(s.cells).map((c) => s.t - c.birth_time)),
-  },
-
-  // Phase distribution
-  {
-    id: 'cells_in_g1',
-    label: 'Cells in G1 Phase',
-    description: 'Number of cells in G1 (growth) phase',
-    compute: (s) => s.cells.filter((c) => c.phase === 0).length,
-  },
-  {
-    id: 'cells_in_g2',
-    label: 'Cells in G2 Phase',
-    description: 'Number of cells in G2 (pre-mitosis) phase',
-    compute: (s) => s.cells.filter((c) => c.phase === 1).length,
-  },
-  {
-    id: 'cells_in_mitosis',
-    label: 'Cells in Mitosis',
-    description: 'Number of cells in mitosis phase',
-    compute: (s) => s.cells.filter((c) => c.phase === 2).length,
-  },
-];
-
-/** Compute statistics for current state */
+/**
+ * Compute statistics for current state using dynamically generated definitions.
+ */
 export function computeEHTStatistics(
-  state: EHTSimulationState
+  state: EHTSimulationState,
+  params?: EHTParams
 ): Record<string, number> {
   const result: Record<string, number> = {};
 
-  for (const stat of EHT_STATISTICS) {
+  // If params not provided, compute just the basic AB distance for all cells
+  if (!params) {
+    result['ab_distance_all'] = mean(state.cells.map(abDistance));
+    return result;
+  }
+
+  const stats = generateEHTStatistics(params);
+
+  for (const stat of stats) {
     try {
       result[stat.id] = stat.compute(state);
     } catch (e) {
@@ -229,3 +96,13 @@ export function computeEHTStatistics(
 
   return result;
 }
+
+/** Legacy export for backward compatibility */
+export const EHT_STATISTICS: StatisticDefinition<EHTSimulationState>[] = [
+  {
+    id: 'ab_distance_all',
+    label: 'AB Distance (all)',
+    description: 'Average apical-basal distance for all cells',
+    compute: (s) => mean(s.cells.map(abDistance)),
+  },
+];

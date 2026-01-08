@@ -19,6 +19,7 @@ export interface EMTEventTimes {
 /** Cell type definition - defines the properties of a cell type (e.g., control, emt) */
 export interface EHTCellTypeParams {
   name: string;
+  N_init: number;           // Initial number of cells of this type
   R_hard: number;           // Hard sphere radius
   R_hard_div: number;       // Hard sphere radius during division
   R_soft: number;           // Soft interaction radius
@@ -49,9 +50,6 @@ export interface EHTGeneralParams {
   dt: number;               // Time step
   random_seed: number;      // Random seed for reproducibility
   full_circle: boolean;     // If true: compute w_init from curvature and close initial connections
-  N_init: number;           // Initial number of cells
-  N_max: number;            // Maximum number of cells
-  N_emt: number;            // Number of EMT cells
   w_init: number;           // Initial tissue width
   h_init: number;           // Initial tissue height
   mu: number;               // Friction coefficient
@@ -74,12 +72,8 @@ export interface EHTCellPropertyParams {
   diffusion: number;
 }
 
-/** Cell types map - allows custom cell types */
-export interface EHTCellTypesMap {
-  control: EHTCellTypeParams;
-  emt: EHTCellTypeParams;
-  [key: string]: EHTCellTypeParams;
-}
+/** Cell types map - allows any cell types */
+export type EHTCellTypesMap = Record<string, EHTCellTypeParams>;
 
 /** Complete EHT simulation parameters */
 export interface EHTParams extends BaseSimulationParams {

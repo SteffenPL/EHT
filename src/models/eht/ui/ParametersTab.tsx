@@ -30,9 +30,6 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
         <Label className="text-sm font-medium">General</Label>
         <div className="space-y-2 pl-2">
           <NumberInput label="End Time (h)" value={g.t_end} onChange={(v) => update('t_end', v)} disabled={disabled} step={1} min={0} />
-          <IntegerInput label="Initial Cells" value={g.N_init} onChange={(v) => update('N_init', v)} disabled={disabled} min={1} />
-          <IntegerInput label="Max Cells" value={g.N_max} onChange={(v) => update('N_max', v)} disabled={disabled} min={1} />
-          <IntegerInput label="EMT Cells" value={g.N_emt} onChange={(v) => update('N_emt', v)} disabled={disabled} min={0} />
           <IntegerInput label="Random Seed" value={g.random_seed} onChange={(v) => update('random_seed', v)} disabled={disabled} />
         </div>
       </div>

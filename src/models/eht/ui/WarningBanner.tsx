@@ -9,16 +9,21 @@ export function EHTWarningBanner({ params }: ModelWarningProps<EHTParams>) {
   const g = params.general;
   const cp = params.cell_prop;
 
+  // Compute total N_init from all cell types
+  const totalNInit = useMemo(() => {
+    return Object.values(params.cell_types).reduce((sum, ct) => sum + ct.N_init, 0);
+  }, [params.cell_types]);
+
   // Check perimeter constraint for full circle mode
   const perimeterWarning = useMemo(() => {
     if (g.perimeter > 0 && g.full_circle) {
-      const maxCoverage = g.N_init * cp.max_basal_junction_dist;
+      const maxCoverage = totalNInit * cp.max_basal_junction_dist;
       if (maxCoverage <= g.perimeter) {
-        return `Perimeter constraint violated: N_init (${g.N_init}) × max_basal_junction_dist (${cp.max_basal_junction_dist.toFixed(1)}) = ${maxCoverage.toFixed(1)} ≤ perimeter (${g.perimeter.toFixed(1)}). Cells may not cover the membrane.`;
+        return `Perimeter constraint violated: total cells (${totalNInit}) × max_basal_junction_dist (${cp.max_basal_junction_dist.toFixed(1)}) = ${maxCoverage.toFixed(1)} ≤ perimeter (${g.perimeter.toFixed(1)}). Cells may not cover the membrane.`;
       }
     }
     return null;
-  }, [g.N_init, g.perimeter, g.full_circle, cp.max_basal_junction_dist]);
+  }, [totalNInit, g.perimeter, g.full_circle, cp.max_basal_junction_dist]);
 
   if (!perimeterWarning) {
     return null;
@@ -30,3 +35,4 @@ export function EHTWarningBanner({ params }: ModelWarningProps<EHTParams>) {
     </div>
   );
 }
+

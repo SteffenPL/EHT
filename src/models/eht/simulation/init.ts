@@ -31,50 +31,60 @@ export function initializeEHTSimulation(
 
   const { curvature_1, curvature_2 } = state.geometry;
 
-  const N = pg.N_init;
+  // Collect all cell type entries and compute total N
+  const cellTypeEntries = Object.entries(params.cell_types);
+  const totalN = cellTypeEntries.reduce((sum, [, ct]) => sum + ct.N_init, 0);
+
   const w = pg.full_circle && curvature_1 !== 0 && curvature_1 === curvature_2
     ? 2 * Math.PI * Math.abs(1 / curvature_1)
     : pg.w_init;
   const h = pg.h_init;
 
-  // Determine EMT cell indices (middle section)
-  const iEmt = Math.round((N - pg.N_emt) / 2);
-  const jEmt = iEmt + pg.N_emt;
-
-  // Generate initial positions
+  // Generate initial positions for all cells
   const positions: Vector2[] = [];
-  for (let i = 0; i < N; i++) {
+  for (let i = 0; i < totalN; i++) {
     const l = rng.random(-w, w);
     const height = rng.random(h / 3, (2 * h) / 3);
     const pos = curvedCoordsToPosition(l, height, curvature_1, curvature_2);
-
     positions.push(pos);
   }
 
-  // Sort by position along the basal curve (arc length), not by x coordinate.
-  // This preserves ordering for curved membranes.
+  // Sort by position along the basal curve (arc length)
   positions.sort((a, b) => {
     const la = basalArcLength(basalCurve(a, curvature_1, curvature_2), curvature_1, curvature_2);
     const lb = basalArcLength(basalCurve(b, curvature_1, curvature_2), curvature_1, curvature_2);
     return la - lb;
   });
 
+  // Build a list of cell type keys for each position
+  // Distribute cell types along the tissue (each type gets contiguous segment)
+  const typeAssignments: string[] = [];
+  for (const [typeKey, cellType] of cellTypeEntries) {
+    for (let i = 0; i < cellType.N_init; i++) {
+      typeAssignments.push(typeKey);
+    }
+  }
+
+  // Shuffle type assignments to distribute types, then sort positions
+  // Actually, keep contiguous for now (simpler, matches old behavior)
   // Create cells
-  for (let i = 0; i < N; i++) {
-    const cellType =
-      i >= iEmt && i < jEmt
-        ? params.cell_types.emt
-        : params.cell_types.control;
+  let positionIndex = 0;
+  for (const [typeKey, cellType] of cellTypeEntries) {
+    for (let i = 0; i < cellType.N_init; i++) {
+      if (positionIndex >= positions.length) break;
 
-    const cell = createCell(
-      params,
-      state,
-      rng,
-      positions[i],
-      cellType
-    );
+      const cell = createCell(
+        params,
+        state,
+        rng,
+        positions[positionIndex],
+        cellType,
+        typeKey
+      );
 
-    state.cells.push(cell);
+      state.cells.push(cell);
+      positionIndex++;
+    }
   }
 
   // Create initial links between adjacent cells

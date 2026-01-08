@@ -39,14 +39,14 @@ function AppContent() {
 
   return (
     <AppLayout>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <section className="lg:col-span-7">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <section>
           <SingleSimulationTab />
         </section>
-        <section className="lg:col-span-5">
+        <section>
           <ParameterConfigView config={config} onConfigChange={handleConfigChange} />
         </section>
-        <section className="lg:col-span-12">
+        <section className="lg:col-span-2">
           <BatchTab config={config} onConfigChange={handleConfigChange} />
         </section>
       </div>

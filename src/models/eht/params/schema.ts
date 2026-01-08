@@ -35,6 +35,7 @@ export const emtEventTimesSchema = z.object({
 /** Cell type schema */
 export const ehtCellTypeSchema = z.object({
   name: z.string(),
+  N_init: z.number().int().nonnegative(),
   R_hard: z.number().positive(),
   R_hard_div: z.number().positive(),
   R_soft: z.number().positive(),
@@ -65,9 +66,6 @@ export const ehtGeneralParamsSchema = z.object({
   dt: z.number().positive(),
   random_seed: z.number().int(),
   full_circle: z.boolean(),
-  N_init: z.number().int().positive(),
-  N_max: z.number().int().positive(),
-  N_emt: z.number().int().nonnegative(),
   w_init: z.number().positive(),
   h_init: z.number().positive(),
   mu: z.number().positive(),
@@ -90,11 +88,8 @@ export const ehtCellPropertyParamsSchema = z.object({
   diffusion: z.number().nonnegative(),
 });
 
-/** Cell types map schema */
-export const ehtCellTypesMapSchema = z.object({
-  control: ehtCellTypeSchema,
-  emt: ehtCellTypeSchema,
-}).catchall(ehtCellTypeSchema);
+/** Cell types map schema - any keys allowed */
+export const ehtCellTypesMapSchema = z.record(z.string(), ehtCellTypeSchema);
 
 /** Complete EHT simulation params schema */
 export const ehtParamsSchema = z.object({

@@ -39,7 +39,6 @@ export interface BaseGeneralParams {
   dt: number;               // Time step
   random_seed: number;      // Random seed for reproducibility
   n_substeps: number;       // Number of substeps per timestep
-  N_max: number;            // Maximum number of cells
   w_screen: number;         // Screen width (visualization)
   h_screen: number;         // Screen height (visualization)
   mu: number;               // Friction coefficient

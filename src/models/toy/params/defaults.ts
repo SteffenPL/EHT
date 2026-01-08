@@ -23,7 +23,6 @@ export const DEFAULT_TOY_GENERAL: ToyGeneralParams = {
   random_seed: 42,
   mu: 1,
   n_substeps: 1,
-  N_max: 100,
   w_screen: 100,
   h_screen: 100,
 };

@@ -12,6 +12,8 @@ export interface SimulationCanvasProps {
   params: BaseSimulationParams;
   /** Minimum height in pixels. Default: 350 */
   minHeight?: number;
+  /** Aspect ratio (width/height). Default: 1 for square */
+  aspectRatio?: number;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -20,6 +22,7 @@ export function SimulationCanvas({
   state,
   params,
   minHeight = 350,
+  aspectRatio = 1,
   className,
   style,
 }: SimulationCanvasProps) {
@@ -36,13 +39,15 @@ export function SimulationCanvas({
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const newWidth = Math.floor(rect.width);
-      const newHeight = Math.max(minHeight, Math.floor(rect.height));
+      // Enforce aspect ratio: height = width / aspectRatio
+      const targetHeight = Math.floor(newWidth / aspectRatio);
+      const newHeight = Math.max(minHeight, targetHeight);
 
       if (newWidth > 0 && newHeight > 0) {
         setSize({ width: newWidth, height: newHeight });
       }
     }
-  }, [minHeight]);
+  }, [minHeight, aspectRatio]);
 
   // Observe container size changes
   useEffect(() => {

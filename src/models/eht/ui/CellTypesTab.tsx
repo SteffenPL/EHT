@@ -4,8 +4,11 @@
 import { cloneDeep } from 'lodash-es';
 import type { ModelUITabProps } from '@/core/registry';
 import type { EHTParams, EHTCellTypeParams, Range } from '../params/types';
+import { DEFAULT_CONTROL_CELL } from '../params/defaults';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Button } from '@/components/ui/button';
+import { Plus, Trash2 } from 'lucide-react';
 import type { RGBColor } from '@/components/params/inputs/ColorInput';
 
 interface CellTypeRowProps {
@@ -227,23 +230,105 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     onChange(newParams);
   };
 
+  const addCellType = () => {
+    const newParams = cloneDeep(params);
+    // Generate unique key
+    let counter = 1;
+    let newKey = `type_${counter}`;
+    while (newParams.cell_types[newKey]) {
+      counter++;
+      newKey = `type_${counter}`;
+    }
+    // Create new cell type based on defaults
+    const newCellType: EHTCellTypeParams = {
+      ...cloneDeep(DEFAULT_CONTROL_CELL),
+      name: `New Type ${counter}`,
+      N_init: 0,
+      color: { r: Math.floor(Math.random() * 200) + 50, g: Math.floor(Math.random() * 200) + 50, b: Math.floor(Math.random() * 200) + 50 },
+    };
+    newParams.cell_types[newKey] = newCellType;
+    onChange(newParams);
+  };
+
+  const deleteCellType = (key: string) => {
+    if (cellTypeKeys.length <= 1) return; // Keep at least one cell type
+    const newParams = cloneDeep(params);
+    delete newParams.cell_types[key];
+    onChange(newParams);
+  };
+
+  const renameCellTypeKey = (oldKey: string, newName: string) => {
+    const newParams = cloneDeep(params);
+    (newParams.cell_types[oldKey] as EHTCellTypeParams).name = newName;
+    onChange(newParams);
+  };
+
   // Helper to get cell type params
   const getCellType = (key: string): EHTCellTypeParams => params.cell_types[key] as EHTCellTypeParams;
 
   return (
     <div className="overflow-x-auto">
+      <div className="flex justify-end mb-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={addCellType}
+          disabled={disabled}
+          className="gap-1"
+        >
+          <Plus className="h-4 w-4" />
+          New Cell Type
+        </Button>
+      </div>
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b-2 border-border">
             <th className="py-2 px-2 text-left font-semibold">Parameter</th>
             {cellTypeKeys.map((key) => (
-              <th key={key} className="py-2 px-1 text-left font-semibold capitalize">
-                {getCellType(key).name || key}
+              <th key={key} className="py-2 px-1 text-left">
+                <div className="flex items-center gap-1">
+                  <Input
+                    value={getCellType(key).name || key}
+                    onChange={(e) => renameCellTypeKey(key, e.target.value)}
+                    disabled={disabled}
+                    className="h-6 text-xs font-semibold w-24"
+                  />
+                  {cellTypeKeys.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteCellType(key)}
+                      disabled={disabled}
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
+          {/* Initial Count */}
+          <tr className="bg-muted/50">
+            <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">
+              Initial Setup
+            </td>
+          </tr>
+          <CellTypeRow label="N Init" tooltip="Initial number of cells of this type">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).N_init}
+                onChange={(v) => updateCellType(key, 'N_init', Math.round(v))}
+                disabled={disabled}
+                min={0}
+                step={1}
+              />
+            ))}
+          </CellTypeRow>
+
           {/* Geometry */}
           <tr className="bg-muted/50">
             <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">

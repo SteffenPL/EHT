@@ -8,6 +8,7 @@ import type { EHTParams, EHTCellTypeParams } from './types';
 /** Default control cell type */
 export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
   name: 'control',
+  N_init: 25,
   R_hard: 0.4,
   R_hard_div: 0.7,
   R_soft: 1.2,
@@ -40,6 +41,7 @@ export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
 /** Default EMT cell type */
 export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
   name: 'emt',
+  N_init: 5,
   R_hard: 0.4,
   R_hard_div: 0.7,
   R_soft: 1.2,
@@ -80,10 +82,7 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     dt: 0.1,
     random_seed: 0,
     full_circle: true,
-    N_init: 30,
-    N_max: 80,
-    N_emt: 5,
-    w_init: 80, // ~ N_init * 1.5
+    w_init: 80, // ~ total N_init * 1.5
     h_init: 5,
     mu: 0.2,
     n_substeps: 30,
@@ -125,34 +124,34 @@ export const EHT_PRESETS: Array<{
   label: string;
   create: () => EHTParams;
 }> = [
-  {
-    key: 'default',
-    label: 'Default',
-    create: () => cloneDeep(DEFAULT_EHT_PARAMS),
-  },
-  {
-    key: 'straight',
-    label: 'Straight',
-    create: () => {
-      const params = createDefaultEHTParams();
-      params.general.perimeter = 0;      // Straight line
-      params.general.aspect_ratio = 1;
-      params.general.full_circle = false;
-      return params;
+    {
+      key: 'default',
+      label: 'Default',
+      create: () => cloneDeep(DEFAULT_EHT_PARAMS),
     },
-  },
-  {
-    key: 'full_circle',
-    label: 'Full Circle',
-    create: () => {
-      const params = createDefaultEHTParams();
-      params.general.perimeter = 31.4;   // ≈ 2π × 5 (equivalent to curvature 0.2)
-      params.general.aspect_ratio = 1;
-      params.general.full_circle = true;
-      return params;
+    {
+      key: 'straight',
+      label: 'Straight',
+      create: () => {
+        const params = createDefaultEHTParams();
+        params.general.perimeter = 0;      // Straight line
+        params.general.aspect_ratio = 1;
+        params.general.full_circle = false;
+        return params;
+      },
     },
-  },
-];
+    {
+      key: 'full_circle',
+      label: 'Full Circle',
+      create: () => {
+        const params = createDefaultEHTParams();
+        params.general.perimeter = 31.4;   // ≈ 2π × 5 (equivalent to curvature 0.2)
+        params.general.aspect_ratio = 1;
+        params.general.full_circle = true;
+        return params;
+      },
+    },
+  ];
 
 // Legacy exports for backwards compatibility
 export const DEFAULT_PARAMS = DEFAULT_EHT_PARAMS;

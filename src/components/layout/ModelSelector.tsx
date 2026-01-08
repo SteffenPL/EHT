@@ -20,18 +20,18 @@ export function ModelSelector() {
   }
 
   return (
-    <Select value={currentModel.name} onValueChange={setModel}>
+    <Select value={currentModel.id} onValueChange={setModel}>
       <SelectTrigger className="w-[180px]">
         <SelectValue placeholder="Select model" />
       </SelectTrigger>
       <SelectContent>
-        {availableModels.map((modelName) => {
-          const model = modelRegistry.get(modelName);
+        {availableModels.map((modelId) => {
+          const model = modelRegistry.get(modelId);
           const version = model ? model.version : '';
-          const displayName = model?.displayName || modelName;
+          const displayName = model?.name || modelId;
 
           return (
-            <SelectItem key={modelName} value={modelName}>
+            <SelectItem key={modelId} value={modelId}>
               {displayName} {version && `v${version}`}
             </SelectItem>
           );
@@ -40,3 +40,4 @@ export function ModelSelector() {
     </Select>
   );
 }
+

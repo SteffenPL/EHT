@@ -18,6 +18,7 @@ import type { EHTParams, EHTCellTypeParams } from '../params/types';
  * @param rng - Seeded random number generator
  * @param position - Initial nucleus position
  * @param cellType - Cell type parameters
+ * @param typeKey - Key in cell_types map (used as typeIndex)
  * @param parent - Parent cell (for cell division)
  * @returns New cell state
  */
@@ -27,6 +28,7 @@ export function createCell(
   rng: SeededRandom,
   position: Vector2,
   cellType: EHTCellTypeParams,
+  typeKey?: string,
   parent?: CellState
 ): CellState {
   const h = params.general.h_init;
@@ -45,6 +47,9 @@ export function createCell(
   const id = state.cells.length > 0
     ? Math.max(...state.cells.map(c => c.id)) + 1
     : 0;
+
+  // Use typeKey if provided, otherwise use cellType.name
+  const cellTypeIndex = typeKey ?? cellType.name;
 
   if (parent === undefined) {
     // New cell (not from division)
@@ -67,7 +72,7 @@ export function createCell(
 
     return {
       id,
-      typeIndex: cellType.name,
+      typeIndex: cellTypeIndex,
       pos: position.toObject(),
       A: A.toObject(),
       B: B.toObject(),
@@ -96,7 +101,7 @@ export function createCell(
     // Cell from division - inherit properties from parent
     return {
       id,
-      typeIndex: cellType.name,
+      typeIndex: cellTypeIndex,
       pos: position.toObject(),
       A: { ...parent.A },
       B: { ...parent.B },

@@ -37,13 +37,6 @@ export function ToySimulationTab({ params, onChange, disabled }: ModelUITabProps
             disabled={disabled}
             min={1}
           />
-          <IntegerInput
-            label="Max Cells"
-            value={g.N_max}
-            onChange={(v) => update('N_max', v)}
-            disabled={disabled}
-            min={1}
-          />
         </div>
       </div>
 
@@ -53,7 +46,6 @@ export function ToySimulationTab({ params, onChange, disabled }: ModelUITabProps
         <ul className="list-disc list-inside space-y-0.5">
           <li><strong>dt</strong>: Time step for physics integration</li>
           <li><strong>n_substeps</strong>: Number of physics steps per output step</li>
-          <li><strong>N_max</strong>: Maximum number of cells (for memory allocation)</li>
         </ul>
       </div>
     </div>
