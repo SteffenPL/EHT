@@ -279,12 +279,13 @@ export function basalCurveParam(l: number, curvature_1: number, curvature_2: num
   const dir = -Math.sign(curvature_2);
   
   // For circular case, use direct formula
+  // Standard parameterization: x = a*cos(theta), y = b*sin(theta)
   if (Math.abs(curvature_1 - curvature_2) < 1e-10) {
     const radius = a;
     const theta = l / radius;
     return new Vector2(
-      center.x + dir * radius * Math.sin(theta),
-      center.y + dir * radius * Math.cos(theta)
+      center.x + dir * radius * Math.cos(theta),
+      center.y + dir * radius * Math.sin(theta)
     );
   }
   
