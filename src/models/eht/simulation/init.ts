@@ -60,9 +60,9 @@ export function initializeEHTSimulation(
       let locValue: number;
       // console.log("Assigning locations for cell type", typeKey, "with location", cellType.location);
       if(cellType.location === "top") {
-        locValue = -0.5;
+        locValue = 1;
       } else if(cellType.location === "bottom") {
-        locValue = 0.5;
+        locValue = 0;
       } else {
         locValue = parseFloat(cellType.location);
         if(isNaN(locValue) || locValue < -1 || locValue > 1) {
@@ -110,18 +110,22 @@ export function initializeEHTSimulation(
   // Sort locations back to original order
   locations.sort((a, b) => a[0] - b[0]);
 
-  const w = pg.full_circle
-    ? ramanujanPerimeter(Math.abs(1 / curvature_1), Math.abs(1 / curvature_2))
-    : pg.w_init;
+  const perimeter = ramanujanPerimeter(
+    Math.abs(1 / curvature_1),
+    Math.abs(1 / curvature_2)
+  );
+  const w = pg.full_circle ? perimeter : pg.w_init;
   const h = pg.h_init;
 
   // Generate initial positions for all cells
   const positions: Vector2[] = [];
   const typeAssignments: string[] = [];
   for (let i = 0; i < totalN; i++) {
-    // const l = rng.random(-w, w);
-    const l = locations[i][0] * (w / 2);
-    console.log("Cell", i, "location:", l, "assigned type:", locations[i][1]);
+    const l = locations[i][0] * (w / 2) + perimeter/4;
+    if( !pg.full_circle ) {
+
+    }
+    
     const height = rng.random(h / 3, (2 * h) / 3);
     const pos = state.basalGeometry.curvedToCartesian(l, height);
     positions.push(pos);
