@@ -228,7 +228,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
   };
 
   // Helper to get cell type params
-  const getCellType = (key: string): EHTCellTypeParams => getCellType(key) as EHTCellTypeParams;
+  const getCellType = (key: string): EHTCellTypeParams => params.cell_types[key] as EHTCellTypeParams;
 
   return (
     <div className="overflow-x-auto">
