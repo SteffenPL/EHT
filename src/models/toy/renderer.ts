@@ -5,7 +5,7 @@
 
 import { Graphics } from 'pixi.js';
 import type { ModelRenderer, ModelRenderContext, BoundingBox } from '@/core/registry/types';
-import type { SimulationState } from '@/core/types/state';
+import type { ToySimulationState } from './simulation/types';
 import type { ToyParams } from './params/types';
 
 /** Theme colors for Toy rendering */
@@ -43,6 +43,7 @@ function drawBoundary(graphics: Graphics, params: ToyParams, theme: ToyThemeColo
   if (boundary_type === 'none') return;
 
   // Draw domain rectangle
+  // graphics.rect instead of graphics.drawRect in Pixi v8
   graphics.rect(0, 0, width, height);
 
   if (boundary_type === 'periodic') {
@@ -57,32 +58,31 @@ function drawBoundary(graphics: Graphics, params: ToyParams, theme: ToyThemeColo
 /**
  * Draw all cells with polarity indicators.
  */
-function drawCells(graphics: Graphics, state: SimulationState, params: ToyParams, theme: ToyThemeColors): void {
+function drawCells(graphics: Graphics, state: ToySimulationState, params: ToyParams, theme: ToyThemeColors): void {
   const { soft_radius } = params.general;
 
   for (const cell of state.cells) {
-    // Determine if cell is running (has_A stores running state in Toy model)
-    const isRunning = cell.has_A;
+    // Determine if cell is running
+    const isRunning = cell.phase === 'running';
     const polarityColor = isRunning ? theme.polarityRunning : theme.polarityTumbling;
 
     // Draw cell body (soft radius)
-    graphics.circle(cell.pos.x, cell.pos.y, soft_radius);
+    graphics.circle(cell.position.x, cell.position.y, soft_radius);
     graphics.fill({ color: theme.cellFill, alpha: 0.6 });
     graphics.stroke({ color: theme.cellStroke, alpha: 1, width: 0.05 });
 
-    // Draw polarity indicator (arrow from center in direction of A)
-    // A stores the polarity direction in Toy model
+    // Draw polarity indicator (arrow from center in direction of polarity)
     const arrowLength = soft_radius * 0.8;
-    const arrowX = cell.pos.x + cell.A.x * arrowLength;
-    const arrowY = cell.pos.y + cell.A.y * arrowLength;
+    const arrowX = cell.position.x + cell.polarity.x * arrowLength;
+    const arrowY = cell.position.y + cell.polarity.y * arrowLength;
 
-    graphics.moveTo(cell.pos.x, cell.pos.y);
+    graphics.moveTo(cell.position.x, cell.position.y);
     graphics.lineTo(arrowX, arrowY);
     graphics.stroke({ color: polarityColor, alpha: 1, width: 0.1 });
 
     // Draw arrowhead
     const headSize = soft_radius * 0.3;
-    const angle = Math.atan2(cell.A.y, cell.A.x);
+    const angle = Math.atan2(cell.polarity.y, cell.polarity.x);
     const headAngle = Math.PI / 6;
 
     graphics.moveTo(arrowX, arrowY);
@@ -102,8 +102,8 @@ function drawCells(graphics: Graphics, state: SimulationState, params: ToyParams
 /**
  * Toy Model Renderer
  */
-export const toyRenderer: ModelRenderer<ToyParams> = {
-  getBoundingBox(params: ToyParams, _state: SimulationState): BoundingBox {
+export const toyRenderer: ModelRenderer<ToyParams, ToySimulationState> = {
+  getBoundingBox(params: ToyParams, _state?: ToySimulationState): BoundingBox {
     const [width, height] = params.general.domain_size;
     const padding = params.general.soft_radius * 2;
 
@@ -115,7 +115,7 @@ export const toyRenderer: ModelRenderer<ToyParams> = {
     };
   },
 
-  render(ctx: ModelRenderContext, state: SimulationState, params: ToyParams): void {
+  render(ctx: ModelRenderContext, state: ToySimulationState, params: ToyParams): void {
     const theme = ctx.isDark ? DARK_THEME : LIGHT_THEME;
     const cellsGraphics = ctx.graphics.cells as Graphics;
     const linksGraphics = ctx.graphics.links as Graphics;

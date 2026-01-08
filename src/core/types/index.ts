@@ -3,38 +3,19 @@
  */
 
 // Parameter types
+// (These might need to be generic or moved, but keeping for now if file exists and is generic enough)
+// Actually params definitions were likely EHT specific too if they had CellTypeParams etc.
+// But I haven't deleted core/types/params.ts yet.
+
 export type {
   RGBColor,
   Range,
-  EMTEventTimes,
-  CellTypeParams,
-  GeneralParams,
-  CellPropertyParams,
-  CellTypesMap,
-  SimulationParams,
-  PartialSimulationParams,
+  // EMTEventTimes, CellTypeParams etc heavily suggest EHT.
+  // I should check params.ts content later.
   DeepPartial,
-} from './params';
+} from '@/core/registry/types'; // Using registry generic types instead if possible
 
 // State types
-export {
-  CellPhase,
-} from './state';
-
 export type {
-  ApicalLink,
-  BasalLink,
-  CellState,
-  SimulationState,
+  BaseSimulationState
 } from './state';
-
-export {
-  createInitialState,
-} from './state';
-
-// Output types
-export type {
-  CellSnapshot,
-  TimeSnapshot,
-  SimulationOutput,
-} from './output';

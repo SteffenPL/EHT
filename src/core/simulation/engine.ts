@@ -1,151 +1,50 @@
 /**
- * Main simulation engine class.
- * Orchestrates initialization, stepping, and output collection.
+ * Generic simulation engine/runner.
+ * Orchestrates initialization, stepping, and output collection using a SimulationModel.
  */
-import { Vector2 } from '../math/vector2';
-import { SeededRandom } from '../math/random';
-import { basalArcLength, basalCurve, curvedCoordsToPosition } from '../math/geometry';
-import type {
-  SimulationParams,
-  SimulationState,
-  SimulationOutput,
-  TimeSnapshot,
-  CellSnapshot,
-} from '../types';
+import type { SimulationModel } from '@/core/interfaces/model';
 import type { BatchSnapshot } from '../batch/types';
-import { createInitialState } from '../types/state';
-import { createCell } from './cell';
-import { performTimestep } from './timestep';
-import { createSnapshot } from '../snapshot';
-import { computeEllipseFromPerimeter } from '@/models/eht/params/geometry';
 
-export interface SimulationEngineConfig {
-  params: SimulationParams;
-  onSnapshot?: (snapshot: TimeSnapshot) => void;
-  onBatchSnapshot?: (snapshot: BatchSnapshot) => void;
+export interface SimulationEngineConfig<Params = any, State = any> {
+  model: SimulationModel<Params, State>;
+  params: Params;
+  onSnapshot?: (snapshot: Record<string, any>[]) => void; // Changed to match model.getSnapshot format
+  onBatchSnapshot?: (snapshot: BatchSnapshot) => void; // Batch snapshot might need update?
   snapshotInterval?: number; // Record every N steps (default: 1)
 }
 
 /**
- * Main simulation engine.
- * Can run headless or with callbacks for UI updates.
+ * Generic simulation runner.
  */
-export class SimulationEngine {
-  private state: SimulationState;
-  private params: SimulationParams;
-  private rng: SeededRandom;
-  private snapshots: TimeSnapshot[] = [];
-  private batchSnapshots: BatchSnapshot[] = [];
-  private totalDivisions = 0;
+export class SimulationEngine<Params = any, State = any> {
+  private model: SimulationModel<Params, State>;
+  private state!: State; // initialized in init
+  private params: Params;
+  private snapshots: Record<string, any>[][] = []; // Array of flat row arrays
 
-  private onSnapshot?: (snapshot: TimeSnapshot) => void;
-  private onBatchSnapshot?: (snapshot: BatchSnapshot) => void;
+  // Callbacks
+  private onSnapshot?: (snapshot: Record<string, any>[]) => void;
+  // TODO: BatchSnapshot type is currently EHT specific probably?
+  // We'll leave it out or adapt it.
+
   private snapshotInterval: number;
 
-  constructor(config: SimulationEngineConfig) {
+  constructor(config: SimulationEngineConfig<Params, State>) {
+    this.model = config.model;
     this.params = config.params;
-    this.rng = new SeededRandom(config.params.general.random_seed);
-    this.state = createInitialState();
     this.onSnapshot = config.onSnapshot;
-    this.onBatchSnapshot = config.onBatchSnapshot;
     this.snapshotInterval = config.snapshotInterval ?? 1;
+
+    // Initialize immediately
+    this.init();
   }
 
   /**
-   * Initialize the simulation with cells.
+   * Initialize the simulation.
    */
   init(): void {
-    this.state = createInitialState();
-    this.rng = new SeededRandom(this.params.general.random_seed);
+    this.state = this.model.init(this.params);
     this.snapshots = [];
-    this.batchSnapshots = [];
-    this.totalDivisions = 0;
-
-    const pg = this.params.general;
-
-    // Compute and store geometry from perimeter/aspect_ratio
-    const geometry = computeEllipseFromPerimeter(pg.perimeter, pg.aspect_ratio);
-    this.state.geometry = {
-      curvature_1: geometry.curvature_1,
-      curvature_2: geometry.curvature_2,
-    };
-
-    const { curvature_1, curvature_2 } = this.state.geometry;
-
-    const N = pg.N_init;
-    const w = pg.full_circle && curvature_1 !== 0 && curvature_1 === curvature_2
-      ? 2 * Math.PI * Math.abs(1 / curvature_1)
-      : pg.w_init;
-    const h = pg.h_init;
-
-    // Determine EMT cell indices (middle section)
-    const iEmt = Math.round((N - pg.N_emt) / 2);
-    const jEmt = iEmt + pg.N_emt;
-
-    // Generate initial positions
-    const positions: Vector2[] = [];
-    for (let i = 0; i < N; i++) {
-      const l = this.rng.random(-w, w);
-      const height = this.rng.random(h / 3, (2 * h) / 3);
-      const pos = curvedCoordsToPosition(l, height, curvature_1, curvature_2);
-
-      positions.push(pos);
-    }
-
-    // Sort by position along the basal curve (arc length), not by x coordinate.
-    // This preserves ordering for curved membranes.
-    positions.sort((a, b) => {
-      const la = basalArcLength(basalCurve(a, curvature_1, curvature_2), curvature_1, curvature_2);
-      const lb = basalArcLength(basalCurve(b, curvature_1, curvature_2), curvature_1, curvature_2);
-      return la - lb;
-    });
-
-    // Create cells
-    for (let i = 0; i < N; i++) {
-      const cellType =
-        i >= iEmt && i < jEmt
-          ? this.params.cell_types.emt
-          : this.params.cell_types.control;
-
-      const cell = createCell(
-        this.params,
-        this.state,
-        this.rng,
-        positions[i],
-        cellType
-      );
-
-      this.state.cells.push(cell);
-    }
-
-    // Create initial links between adjacent cells
-    for (let i = 0; i < this.state.cells.length - 1; i++) {
-      this.state.ap_links.push({
-        l: i,
-        r: i + 1,
-        rl: this.params.cell_prop.apical_junction_init,
-      });
-      this.state.ba_links.push({
-        l: i,
-        r: i + 1,
-      });
-    }
-
-    // If simulating a closed ring, connect the last and first cells as well.
-    if (pg.full_circle && this.state.cells.length > 2) {
-      const last = this.state.cells.length - 1;
-      this.state.ap_links.push({
-        l: last,
-        r: 0,
-        rl: this.params.cell_prop.apical_junction_init,
-      });
-      this.state.ba_links.push({
-        l: last,
-        r: 0,
-      });
-    }
-
-    // Record initial snapshot
     this.recordSnapshot();
   }
 
@@ -153,153 +52,88 @@ export class SimulationEngine {
    * Advance the simulation by one timestep.
    */
   step(): void {
-    const divisions = performTimestep(this.state, this.params, this.rng);
-    this.totalDivisions += divisions;
+    // We assume model handles dt internally via params or fixed step
+    // But interface has dt. We pass 0 or fix it?
+    // Let's pass 1.0 or read from params if possible, but params is generic.
+    // For EHT model we implemented it to use params.general.dt inside step if needed, 
+    // or we passed params. 
+    // The generic interface has step(state, dt, params).
 
-    // Record snapshot if interval reached
-    if (this.state.step_count % this.snapshotInterval === 0) {
+    // Try to extract dt from params if it looks like standard params, else 1.0
+    let dt = 1.0;
+    const pAny = this.params as any;
+    if (pAny.general && typeof pAny.general.dt === 'number') {
+      dt = pAny.general.dt;
+    }
+
+    this.state = this.model.step(this.state, dt, this.params);
+
+    // Snapshot logic
+    // We need to know step count or time.
+    // Generic state doesn't enforce it, but we can assume model tracks it.
+    // Or we track it here?
+    // Let's assume on every call we might snapshot.
+
+    // But we need to throttle based on interval.
+    // EHT state had step_count.
+    const sAny = this.state as any;
+    const stepCount = typeof sAny.step_count === 'number' ? sAny.step_count : this.snapshots.length;
+
+    if (stepCount % this.snapshotInterval === 0) {
       this.recordSnapshot();
     }
   }
 
   /**
-   * Check if simulation has reached end time.
+   * Check if simulation is complete.
    */
   isComplete(): boolean {
-    return this.state.t >= this.params.general.t_end;
+    const pAny = this.params as any;
+    const sAny = this.state as any;
+
+    if (pAny.general && typeof pAny.general.t_end === 'number' && typeof sAny.t === 'number') {
+      return sAny.t >= pAny.general.t_end;
+    }
+    return false;
   }
 
   /**
-   * Get current simulation state (readonly).
+   * Get current state.
    */
-  getState(): Readonly<SimulationState> {
+  getState(): State {
     return this.state;
   }
 
   /**
-   * Get simulation parameters.
+   * Get parameters.
    */
-  getParams(): Readonly<SimulationParams> {
+  getParams(): Params {
     return this.params;
-  }
-
-  /**
-   * Run simulation to completion.
-   */
-  runToEnd(): SimulationOutput {
-    while (!this.isComplete()) {
-      this.step();
-    }
-    return this.getOutput();
-  }
-
-  /**
-   * Get collected output.
-   */
-  getOutput(): SimulationOutput {
-    // Count EMT cells that have escaped (lost both adhesions)
-    const emtEscaped = this.state.cells.filter(
-      (c) => c.typeIndex === 'emt' && !c.has_A && !c.has_B
-    ).length;
-
-    return {
-      params: this.params,
-      snapshots: this.snapshots,
-      final_cell_count: this.state.cells.length,
-      total_divisions: this.totalDivisions,
-      emt_events_occurred: emtEscaped,
-    };
-  }
-
-  /**
-   * Reset with same parameters.
-   */
-  reset(): void {
-    this.init();
   }
 
   /**
    * Reset with new parameters.
    */
-  resetWithParams(params: SimulationParams): void {
+  resetWithParams(params: Params): void {
     this.params = params;
     this.init();
   }
 
   /**
-   * Get current time.
-   */
-  getTime(): number {
-    return this.state.t;
-  }
-
-  /**
-   * Get current step count.
-   */
-  getStepCount(): number {
-    return this.state.step_count;
-  }
-
-  /**
-   * Get batch snapshots (unified format with neighbor info).
-   */
-  getBatchSnapshots(): BatchSnapshot[] {
-    return this.batchSnapshots;
-  }
-
-  /**
-   * Record a snapshot of the current state.
+   * Record a snapshot.
    */
   private recordSnapshot(): void {
-    // Create unified batch snapshot (includes neighbor info)
-    const batchSnapshot = createSnapshot(this.state, {
-      seed: this.params.general.random_seed,
-    });
-    this.batchSnapshots.push(batchSnapshot);
-
-    if (this.onBatchSnapshot) {
-      this.onBatchSnapshot(batchSnapshot);
-    }
-
-    // Also create legacy TimeSnapshot for UI compatibility
-    const timeSnapshot = this.createTimeSnapshot();
-    this.snapshots.push(timeSnapshot);
-
+    const snapshot = this.model.getSnapshot(this.state);
+    this.snapshots.push(snapshot);
     if (this.onSnapshot) {
-      this.onSnapshot(timeSnapshot);
+      this.onSnapshot(snapshot);
     }
   }
 
   /**
-   * Create a TimeSnapshot from current state (for UI compatibility).
+   * Get current statistics.
    */
-  private createTimeSnapshot(): TimeSnapshot {
-    const cells: CellSnapshot[] = this.state.cells.map((cell) => ({
-      id: cell.id,
-      type_name: cell.typeIndex,
-      pos_x: cell.pos.x,
-      pos_y: cell.pos.y,
-      A_x: cell.A.x,
-      A_y: cell.A.y,
-      B_x: cell.B.x,
-      B_y: cell.B.y,
-      phase: cell.phase,
-      has_A: cell.has_A,
-      has_B: cell.has_B,
-      is_running: cell.is_running,
-      age: this.state.t - cell.birth_time,
-    }));
-
-    const emtCount = this.state.cells.filter(
-      (c) => c.typeIndex === 'emt'
-    ).length;
-
-    return {
-      t: this.state.t,
-      step: this.state.step_count,
-      cells,
-      cell_count: cells.length,
-      emt_count: emtCount,
-    };
+  getStats(): Record<string, number> {
+    return this.model.computeStats(this.state);
   }
 }

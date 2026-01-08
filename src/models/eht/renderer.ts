@@ -4,8 +4,9 @@
  */
 
 import { Graphics } from 'pixi.js';
-import type { ModelRenderer, ModelRenderContext, BoundingBox } from '@/core/registry/types';
-import type { SimulationState, GeometryState } from '@/core/types/state';
+import type { ModelRenderContext, BoundingBox } from '@/core/registry/types';
+import type { ModelRenderer } from '@/core/interfaces/renderer';
+import type { EHTSimulationState, GeometryState } from './types';
 import type { EHTParams } from './params/types';
 import { shapeCenter } from '@/core/math/geometry';
 import { computeEllipseFromPerimeter } from './params/geometry';
@@ -13,8 +14,8 @@ import { computeEllipseFromPerimeter } from './params/geometry';
 /**
  * Get curvatures from state.geometry or compute from params as fallback.
  */
-function getCurvatures(state: SimulationState, params: EHTParams): GeometryState {
-  if (state.geometry) {
+function getCurvatures(state: EHTSimulationState | undefined, params: EHTParams): GeometryState {
+  if (state?.geometry) {
     return state.geometry;
   }
   // Fallback: compute from params (e.g., for initial render before simulation starts)
@@ -83,7 +84,7 @@ function drawBasalCurve(graphics: Graphics, curvature_1: number, curvature_2: nu
 /**
  * Draw all cells with their apical/basal points and cytoskeleton.
  */
-function drawCells(graphics: Graphics, state: SimulationState, params: EHTParams, theme: EHTThemeColors): void {
+function drawCells(graphics: Graphics, state: EHTSimulationState, params: EHTParams, theme: EHTThemeColors): void {
   for (const cell of state.cells) {
     const cellType = params.cell_types[cell.typeIndex] ?? params.cell_types.control;
     const color = cellType.color;
@@ -115,7 +116,7 @@ function drawCells(graphics: Graphics, state: SimulationState, params: EHTParams
 /**
  * Draw apical links between neighboring cells.
  */
-function drawApicalLinks(graphics: Graphics, state: SimulationState, theme: EHTThemeColors): void {
+function drawApicalLinks(graphics: Graphics, state: EHTSimulationState, theme: EHTThemeColors): void {
   for (const link of state.ap_links) {
     const cellI = state.cells[link.l];
     const cellJ = state.cells[link.r];
@@ -132,7 +133,7 @@ function drawApicalLinks(graphics: Graphics, state: SimulationState, theme: EHTT
 /**
  * Draw basal links between neighboring cells.
  */
-function drawBasalLinks(graphics: Graphics, state: SimulationState, theme: EHTThemeColors): void {
+function drawBasalLinks(graphics: Graphics, state: EHTSimulationState, theme: EHTThemeColors): void {
   for (const link of state.ba_links) {
     const cellI = state.cells[link.l];
     const cellJ = state.cells[link.r];
@@ -149,8 +150,8 @@ function drawBasalLinks(graphics: Graphics, state: SimulationState, theme: EHTTh
 /**
  * EHT Model Renderer
  */
-export const ehtRenderer: ModelRenderer<EHTParams> = {
-  getBoundingBox(params: EHTParams, state: SimulationState): BoundingBox {
+export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
+  getBoundingBox(params: EHTParams, state?: EHTSimulationState): BoundingBox {
     const { curvature_1, curvature_2 } = getCurvatures(state, params);
     const h_init = params.general.h_init;
 
@@ -175,7 +176,7 @@ export const ehtRenderer: ModelRenderer<EHTParams> = {
     return { minX, maxX, minY, maxY };
   },
 
-  render(ctx: ModelRenderContext, state: SimulationState, params: EHTParams): void {
+  render(ctx: ModelRenderContext, state: EHTSimulationState, params: EHTParams): void {
     const theme = ctx.isDark ? DARK_THEME : LIGHT_THEME;
     const cellsGraphics = ctx.graphics.cells as Graphics;
     const linksGraphics = ctx.graphics.links as Graphics;

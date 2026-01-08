@@ -3,7 +3,7 @@
  */
 import { useRef, useEffect, useCallback } from 'react';
 import { SimulationRenderer } from '../rendering';
-import type { SimulationState } from '../core/types';
+import type { BaseSimulationState as SimulationState } from '../core/types';
 import type { ModelDefinition, BaseSimulationParams } from '../core/registry';
 
 export interface UseRendererOptions {

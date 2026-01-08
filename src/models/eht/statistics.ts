@@ -1,18 +1,20 @@
+
 /**
- * EHT model batch statistics definitions.
- * Each statistic computes a single number from a BatchSnapshot.
+ * EHT model statistics definitions.
+ * Computes statistics directly from EHTSimulationState.
  */
 
-import type { BatchSnapshot, CellSnapshotMinimal } from '@/core/batch/types';
 import type { StatisticDefinition } from '@/core/registry/types';
+import type { EHTSimulationState, CellState, ApicalLink, BasalLink } from './types';
+import { Vector2 } from '@/core/math/vector2';
 
 // Helper functions for filtering cells
-function controlCells(cells: CellSnapshotMinimal[]): CellSnapshotMinimal[] {
-  return cells.filter((c) => c.type === 'control');
+function controlCells(cells: CellState[]): CellState[] {
+  return cells.filter((c) => c.typeIndex === 'control' || c.typeIndex === undefined);
 }
 
-function emtCells(cells: CellSnapshotMinimal[]): CellSnapshotMinimal[] {
-  return cells.filter((c) => c.type === 'emt');
+function emtCells(cells: CellState[]): CellState[] {
+  return cells.filter((c) => c.typeIndex === 'emt');
 }
 
 function mean(values: number[]): number {
@@ -20,13 +22,19 @@ function mean(values: number[]): number {
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-function parseNeighbors(s: string): number[] {
-  if (!s || s.trim() === '') return [];
-  return s.split(',').map((x) => parseInt(x.trim(), 10)).filter((x) => !isNaN(x));
+// Helper to count neighbors from links
+function countNeighbors(cellIndex: number, links: (ApicalLink | BasalLink)[]): number {
+  let count = 0;
+  for (const link of links) {
+    if (link.l === cellIndex || link.r === cellIndex) {
+      count++;
+    }
+  }
+  return count;
 }
 
 /** All EHT-specific statistics */
-export const EHT_STATISTICS: StatisticDefinition[] = [
+export const EHT_STATISTICS: StatisticDefinition<EHTSimulationState>[] = [
   // Cell counts
   {
     id: 'n_cells_total',
@@ -52,19 +60,19 @@ export const EHT_STATISTICS: StatisticDefinition[] = [
     id: 'avg_y_all',
     label: 'Avg Y Position (all)',
     description: 'Average Y position of all cell nuclei',
-    compute: (s) => mean(s.cells.map((c) => c.pos_y)),
+    compute: (s) => mean(s.cells.map((c) => c.pos.y)),
   },
   {
     id: 'avg_y_control',
     label: 'Avg Y Position (control)',
     description: 'Average Y position of control cell nuclei',
-    compute: (s) => mean(controlCells(s.cells).map((c) => c.pos_y)),
+    compute: (s) => mean(controlCells(s.cells).map((c) => c.pos.y)),
   },
   {
     id: 'avg_y_emt',
     label: 'Avg Y Position (EMT)',
     description: 'Average Y position of EMT cell nuclei',
-    compute: (s) => mean(emtCells(s.cells).map((c) => c.pos_y)),
+    compute: (s) => mean(emtCells(s.cells).map((c) => c.pos.y)),
   },
 
   // X positions
@@ -72,13 +80,13 @@ export const EHT_STATISTICS: StatisticDefinition[] = [
     id: 'avg_x_all',
     label: 'Avg X Position (all)',
     description: 'Average X position of all cell nuclei',
-    compute: (s) => mean(s.cells.map((c) => c.pos_x)),
+    compute: (s) => mean(s.cells.map((c) => c.pos.x)),
   },
   {
     id: 'avg_x_emt',
     label: 'Avg X Position (EMT)',
     description: 'Average X position of EMT cell nuclei',
-    compute: (s) => mean(emtCells(s.cells).map((c) => c.pos_x)),
+    compute: (s) => mean(emtCells(s.cells).map((c) => c.pos.x)),
   },
 
   // Adhesion states
@@ -115,7 +123,7 @@ export const EHT_STATISTICS: StatisticDefinition[] = [
     compute: (s) =>
       mean(
         s.cells.map((c) =>
-          Math.sqrt(Math.pow(c.A_x - c.B_x, 2) + Math.pow(c.A_y - c.B_y, 2))
+          Vector2.from(c.A).dist(Vector2.from(c.B))
         )
       ),
   },
@@ -126,7 +134,7 @@ export const EHT_STATISTICS: StatisticDefinition[] = [
     compute: (s) =>
       mean(
         emtCells(s.cells).map((c) =>
-          Math.sqrt(Math.pow(c.A_x - c.B_x, 2) + Math.pow(c.A_y - c.B_y, 2))
+          Vector2.from(c.A).dist(Vector2.from(c.B))
         )
       ),
   },
@@ -138,7 +146,7 @@ export const EHT_STATISTICS: StatisticDefinition[] = [
     description: 'Max X - Min X of all cell positions',
     compute: (s) => {
       if (s.cells.length === 0) return 0;
-      const xs = s.cells.map((c) => c.pos_x);
+      const xs = s.cells.map((c) => c.pos.x);
       return Math.max(...xs) - Math.min(...xs);
     },
   },
@@ -148,7 +156,7 @@ export const EHT_STATISTICS: StatisticDefinition[] = [
     description: 'Max Y - Min Y of all cell positions',
     compute: (s) => {
       if (s.cells.length === 0) return 0;
-      const ys = s.cells.map((c) => c.pos_y);
+      const ys = s.cells.map((c) => c.pos.y);
       return Math.max(...ys) - Math.min(...ys);
     },
   },
@@ -159,14 +167,14 @@ export const EHT_STATISTICS: StatisticDefinition[] = [
     label: 'Avg Apical Neighbors',
     description: 'Average number of apical neighbors per cell',
     compute: (s) =>
-      mean(s.cells.map((c) => parseNeighbors(c.apical_neighbors).length)),
+      mean(s.cells.map((_c, i) => countNeighbors(i, s.ap_links))),
   },
   {
     id: 'avg_basal_neighbors',
     label: 'Avg Basal Neighbors',
     description: 'Average number of basal neighbors per cell',
     compute: (s) =>
-      mean(s.cells.map((c) => parseNeighbors(c.basal_neighbors).length)),
+      mean(s.cells.map((_c, i) => countNeighbors(i, s.ba_links))),
   },
 
   // Age statistics
@@ -174,13 +182,13 @@ export const EHT_STATISTICS: StatisticDefinition[] = [
     id: 'avg_age_all',
     label: 'Avg Cell Age (all)',
     description: 'Average age of all cells in hours',
-    compute: (s) => mean(s.cells.map((c) => c.age)),
+    compute: (s) => mean(s.cells.map((c) => s.t - c.birth_time)),
   },
   {
     id: 'avg_age_emt',
     label: 'Avg Cell Age (EMT)',
     description: 'Average age of EMT cells in hours',
-    compute: (s) => mean(emtCells(s.cells).map((c) => c.age)),
+    compute: (s) => mean(emtCells(s.cells).map((c) => s.t - c.birth_time)),
   },
 
   // Phase distribution
@@ -204,45 +212,20 @@ export const EHT_STATISTICS: StatisticDefinition[] = [
   },
 ];
 
-/** Get EHT statistic by ID */
-export function getEHTStatistic(id: string): StatisticDefinition | undefined {
-  return EHT_STATISTICS.find((s) => s.id === id);
-}
-
-/** Get all EHT statistic IDs */
-export function getAllEHTStatisticIds(): string[] {
-  return EHT_STATISTICS.map((s) => s.id);
-}
-
-/** List all EHT statistics with their descriptions */
-export function listEHTStatistics(): Array<{ id: string; label: string; description: string }> {
-  return EHT_STATISTICS.map((s) => ({
-    id: s.id,
-    label: s.label,
-    description: s.description,
-  }));
-}
-
-/** Compute multiple EHT statistics for a snapshot */
+/** Compute statistics for current state */
 export function computeEHTStatistics(
-  snapshot: BatchSnapshot,
-  statisticIds: string[]
+  state: EHTSimulationState
 ): Record<string, number> {
   const result: Record<string, number> = {};
 
-  for (const id of statisticIds) {
-    const stat = getEHTStatistic(id);
-    if (stat) {
-      result[id] = stat.compute(snapshot);
+  for (const stat of EHT_STATISTICS) {
+    try {
+      result[stat.id] = stat.compute(state);
+    } catch (e) {
+      console.error(`Failed to compute stat ${stat.id}`, e);
+      result[stat.id] = NaN;
     }
   }
 
   return result;
 }
-
-// Legacy exports for backwards compatibility
-export const AVAILABLE_STATISTICS = EHT_STATISTICS;
-export const getStatistic = getEHTStatistic;
-export const getAllStatisticIds = getAllEHTStatisticIds;
-export const listStatistics = listEHTStatistics;
-export const computeStatistics = computeEHTStatistics;

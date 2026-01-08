@@ -6,7 +6,7 @@
 import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
 import { basalArcLength, basalCurve, curvedCoordsToPosition } from '@/core/math/geometry';
-import type { SimulationState } from '@/core/types/state';
+import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 import { computeEllipseFromPerimeter } from '../params/geometry';
 import { createCell } from './cell';
@@ -17,7 +17,7 @@ import { createCell } from './cell';
  */
 export function initializeEHTSimulation(
   params: EHTParams,
-  state: SimulationState,
+  state: EHTSimulationState,
   rng: SeededRandom
 ): void {
   const pg = params.general;

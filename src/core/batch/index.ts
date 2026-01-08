@@ -1,9 +1,8 @@
 /**
- * Batch module - public API exports
+ * Batch simulation module.
  */
 
 export type {
-  CellSnapshotMinimal,
   BatchSnapshot,
   ParameterRange,
   TimeSampleConfig,
@@ -18,26 +17,24 @@ export {
   generateParameterConfigs,
 } from './types';
 
-export type { StatisticDefinition } from './statistics';
+export {
+  runBatch,
+  computeTotalRuns,
+} from './runner';
+
+export { WorkerPool } from './workerPool';
 
 export {
-  AVAILABLE_STATISTICS,
-  getStatistic,
-  getAllStatisticIds,
-  listStatistics,
-  computeStatistics,
-} from './statistics';
-
-export {
+  createBatchDataFromSnapshots,
   batchSnapshotsToCSV,
   csvToBatchSnapshots,
-  createBatchDataFromSnapshots,
   statisticsToCSV,
   downloadCSV,
   readFileAsText,
 } from './serialization';
 
-export type { BatchRunnerCallbacks, BatchRunnerOptions } from './runner';
-export { runBatch, computeTotalRuns } from './runner';
-
-export { WorkerPool } from './workerPool';
+export {
+  getStatistic,
+  getAllStatisticIds,
+  listStatistics,
+} from './statistics';

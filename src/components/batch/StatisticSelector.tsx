@@ -14,7 +14,7 @@ export interface StatisticSelectorProps {
 
 export function StatisticSelector({ selected, onChange, disabled }: StatisticSelectorProps) {
   const { currentModel } = useModel();
-  const modelStatistics = currentModel.statistics;
+  const modelStatistics = currentModel.statistics || [];
   const selectedSet = new Set(selected);
 
   const handleToggle = (id: string, checked: boolean) => {

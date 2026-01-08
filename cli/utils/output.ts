@@ -8,72 +8,13 @@ import type { BatchSnapshot } from '../../src/core/batch/types';
 /**
  * Convert snapshots to CSV format.
  */
+import { batchSnapshotsToCSV } from '../../src/core/batch/serialization';
+
+/**
+ * Convert snapshots to CSV format.
+ */
 export function snapshotsToCSV(snapshots: BatchSnapshot[]): string {
-  if (snapshots.length === 0) {
-    return '';
-  }
-
-  // Build header
-  const headers = [
-    'run_index',
-    'seed',
-    'time_h',
-    'cell_id',
-    'cell_type',
-    'pos_x',
-    'pos_y',
-    'A_x',
-    'A_y',
-    'B_x',
-    'B_y',
-    'has_A',
-    'has_B',
-    'phase',
-    'age',
-    'apical_neighbors',
-    'basal_neighbors',
-  ];
-
-  // Add sampled params columns (from first snapshot with params)
-  const paramKeys: string[] = [];
-  for (const snapshot of snapshots) {
-    if (Object.keys(snapshot.sampled_params).length > 0) {
-      paramKeys.push(...Object.keys(snapshot.sampled_params));
-      break;
-    }
-  }
-  const allHeaders = [...headers, ...paramKeys];
-
-  const rows: string[] = [allHeaders.join(',')];
-
-  // Build data rows
-  for (const snapshot of snapshots) {
-    for (const cell of snapshot.cells) {
-      const row = [
-        snapshot.run_index,
-        snapshot.seed,
-        snapshot.time_h,
-        cell.id,
-        cell.type,
-        cell.pos_x,
-        cell.pos_y,
-        cell.A_x,
-        cell.A_y,
-        cell.B_x,
-        cell.B_y,
-        cell.has_A ? 1 : 0,
-        cell.has_B ? 1 : 0,
-        cell.phase,
-        cell.age,
-        `"${cell.apical_neighbors}"`,
-        `"${cell.basal_neighbors}"`,
-        ...paramKeys.map((k) => snapshot.sampled_params[k] ?? ''),
-      ];
-      rows.push(row.join(','));
-    }
-  }
-
-  return rows.join('\n');
+  return batchSnapshotsToCSV(snapshots);
 }
 
 /**

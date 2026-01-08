@@ -4,7 +4,7 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
-import type { SimulationState } from '@/core/types/state';
+import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 import { getCellType } from './cell';
 
@@ -29,7 +29,7 @@ export function zeroForces(): CellForces {
  * Soft repulsion between overlapping cells.
  */
 export function calcRepulsionForces(
-  state: SimulationState,
+  state: EHTSimulationState,
   params: EHTParams,
   forces: CellForces[]
 ): void {
@@ -70,7 +70,7 @@ export function calcRepulsionForces(
  * Calculate apical-nuclei spring forces.
  */
 export function calcApicalNucleiForces(
-  state: SimulationState,
+  state: EHTSimulationState,
   _params: EHTParams,
   forces: CellForces[]
 ): void {
@@ -101,7 +101,7 @@ export function calcApicalNucleiForces(
  * Calculate basal-nuclei spring forces.
  */
 export function calcBasalNucleiForces(
-  state: SimulationState,
+  state: EHTSimulationState,
   _params: EHTParams,
   forces: CellForces[]
 ): void {
@@ -133,7 +133,7 @@ export function calcBasalNucleiForces(
  * Penalizes deviation from straight apical-nuclei-basal alignment.
  */
 export function calcStraightnessForces(
-  state: SimulationState,
+  state: EHTSimulationState,
   _params: EHTParams,
   forces: CellForces[]
 ): void {
@@ -173,7 +173,7 @@ export function calcStraightnessForces(
  * Calculate apical junction forces between connected cells.
  */
 export function calcApicalJunctionForces(
-  state: SimulationState,
+  state: EHTSimulationState,
   _params: EHTParams,
   forces: CellForces[]
 ): void {
@@ -204,7 +204,7 @@ export function calcApicalJunctionForces(
  * Calculate all forces for the current state.
  */
 export function calcAllForces(
-  state: SimulationState,
+  state: EHTSimulationState,
   params: EHTParams
 ): CellForces[] {
   const forces: CellForces[] = state.cells.map(() => zeroForces());

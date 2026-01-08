@@ -1,259 +1,209 @@
 /**
  * Toy model definition.
- *
- * A simple run-and-tumble model demonstrating the multi-model architecture.
- * This model manages its own simulation state (ToySimulationState) rather than
- * using the shared SimulationState/CellState types from EHT.
+ * A simple run-and-tumble model.
  */
 
-import type { ModelDefinition, CellForces as ModelCellForces } from '@/core/registry/types';
-import { modelRegistry } from '@/core/registry/registry';
-import type { SimulationState, CellState } from '@/core/types/state';
-import { CellPhase } from '@/core/types/state';
-import type { SeededRandom } from '@/core/math/random';
+import type { SimulationModel } from '@/core/registry/types';
+import type { ToySimulationState, ToyCell } from './simulation/types';
 import { Vector2 } from '@/core/math/vector2';
+import { SeededRandom } from '@/core/math/random';
 
 // Import Toy-specific modules
 import type { ToyParams } from './params/types';
 import { toyParamsSchema } from './params/schema';
 import { DEFAULT_TOY_PARAMS } from './params/defaults';
-import { TOY_STATISTICS } from './statistics';
+import { computeToyStatistics } from './statistics';
 import { TOY_PARAMETER_GROUPS, TOY_BATCH_PARAMETERS } from './ui';
 import { toyRenderer } from './renderer';
 
 /**
  * Toy Model Definition
- *
- * A simple run-and-tumble model with:
- * - N cells with soft repulsion
- * - Run-and-tumble dynamics with periodic polarity changes
- * - Box, periodic, or no boundary conditions
- *
- * Note: This model uses adapter functions to work with the shared simulation
- * engine types. The actual simulation logic is in ./simulation/simulation.ts.
  */
-export const ToyModel: ModelDefinition<ToyParams> = {
+export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
   // Identity
-  name: 'Toy',
-  displayName: 'Run & Tumble (Toy)',
-  version: { major: 1, minor: 0, patch: 0 },
+  id: 'Toy',
+  name: 'Run & Tumble (Toy)',
+  version: '1.0.0',
   description: 'Simple run-and-tumble model for demonstration purposes.',
 
   // Parameter system
-  paramsSchema: toyParamsSchema,
   defaultParams: DEFAULT_TOY_PARAMS,
-  cellTypes: ['toy'],
-
-  // Statistics
-  statistics: TOY_STATISTICS,
-
-  // Simulation hooks - adapted for the shared engine interface
-  // Note: The Toy model has simpler cell structure, so we create minimal adapters
-
-  createCell: (
-    params: ToyParams,
-    _state: SimulationState,
-    rng: SeededRandom,
-    position: Vector2,
-    _cellTypeName: string,
-    _parent?: CellState
-  ): CellState => {
-    // Create a minimal CellState for compatibility
-    const angle = rng.random(2 * Math.PI);
-    const polarityX = Math.cos(angle);
-    const polarityY = Math.sin(angle);
-
-    return {
-      id: _state.cells.length,
-      typeIndex: 'toy',
-      pos: { x: position.x, y: position.y },
-      A: { x: polarityX, y: polarityY }, // Store polarity in A
-      B: { x: 0, y: 0 }, // Unused
-      R_soft: params.general.soft_radius,
-      R_hard: params.general.soft_radius * 0.5,
-      eta_A: 0,
-      eta_B: 0,
-      has_A: true,
-      has_B: false,
-      phase: CellPhase.G1,
-      birth_time: 0,
-      division_time: Infinity,
-      is_running: true,
-      running_mode: 0,
-      has_inm: false,
-      time_A: 0,
-      time_B: 0,
-      time_S: 0,
-      time_P: 0,
-      stiffness_apical_apical: 0,
-      stiffness_straightness: 0,
-      stiffness_nuclei_apical: 0,
-      stiffness_nuclei_basal: 0,
-    };
+  validateParams(params: unknown): ToyParams {
+    return toyParamsSchema.parse(params);
   },
 
-  initializeSimulation: (
-    params: ToyParams,
-    state: SimulationState,
-    rng: SeededRandom
-  ): void => {
+  // Simulation Loop
+  init: (params: ToyParams, seed?: string): ToySimulationState => {
+    const effectiveSeed = seed ?? params.general.random_seed;
+    const rng = new SeededRandom(effectiveSeed);
+
     const { N, domain_size } = params.general;
     const [width, height] = domain_size;
 
-    state.cells = [];
+    const cells: ToyCell[] = [];
     for (let i = 0; i < N; i++) {
       const x = rng.random(width);
       const y = rng.random(height);
       const angle = rng.random(2 * Math.PI);
+      const initialPhase = rng.random() > 0.5 ? 'running' : 'tumbling';
 
-      state.cells.push({
+      cells.push({
         id: i,
-        typeIndex: 'toy',
-        pos: { x, y },
-        A: { x: Math.cos(angle), y: Math.sin(angle) }, // Polarity
-        B: { x: 0, y: 0 },
-        R_soft: params.general.soft_radius,
-        R_hard: params.general.soft_radius * 0.5,
-        eta_A: rng.random(params.general.running_duration + params.general.tumbling_duration), // Phase timer
-        eta_B: 0, // Tumble timer
-        has_A: true, // is_running
-        has_B: false,
-        phase: CellPhase.G1,
-        birth_time: 0,
-        division_time: Infinity,
-        is_running: true,
-        running_mode: 0,
-        has_inm: false,
-        time_A: 0,
-        time_B: 0,
-        time_S: 0,
-        time_P: 0,
-        stiffness_apical_apical: 0,
-        stiffness_straightness: 0,
-        stiffness_nuclei_apical: 0,
-        stiffness_nuclei_basal: 0,
+        position: new Vector2(x, y),
+        prevPosition: new Vector2(x, y),
+        polarity: new Vector2(Math.cos(angle), Math.sin(angle)),
+        phase: initialPhase,
+        phaseTime: 0, // Should be randomized?
+        timeSinceLastTumble: 0
       });
     }
+
+    return {
+      time: 0,
+      cells
+    };
   },
 
-  calcForces: (state: SimulationState, params: ToyParams): ModelCellForces[] => {
-    const { soft_radius, repulsion_strength, running_speed, tumble_speed, mu } = params.general;
+  step: (state: ToySimulationState, dt: number, params: ToyParams): ToySimulationState => {
+    // In-place mutation for performance
+    const {
+      soft_radius, repulsion_strength, running_speed, tumble_speed, mu,
+      boundary_type, domain_size,
+      running_duration, tumbling_duration, tumbling_period
+    } = params.general;
+    const [width, height] = domain_size;
     const cells = state.cells;
 
-    // Initialize forces with Vector2
-    const posForces: Vector2[] = cells.map(() => Vector2.zero());
+    // 1. Process Events (Run/Tumble transitions)
+    for (const cell of cells) {
+      cell.phaseTime += dt;
 
-    // Repulsion forces
-    for (let i = 0; i < cells.length; i++) {
-      for (let j = i + 1; j < cells.length; j++) {
-        const dx = cells[i].pos.x - cells[j].pos.x;
-        const dy = cells[i].pos.y - cells[j].pos.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+      if (cell.phase === 'running') {
+        if (cell.phaseTime >= running_duration) {
+          cell.phase = 'tumbling';
+          cell.phaseTime = 0;
+          cell.timeSinceLastTumble = 0;
+          // New random polarity
+          const angle = Math.random() * 2 * Math.PI;
+          cell.polarity = new Vector2(Math.cos(angle), Math.sin(angle));
+        }
+      } else {
+        // Tumbling
+        cell.timeSinceLastTumble += dt;
+        if (cell.timeSinceLastTumble >= tumbling_period) {
+          const angle = Math.random() * 2 * Math.PI;
+          cell.polarity = new Vector2(Math.cos(angle), Math.sin(angle));
+          cell.timeSinceLastTumble = 0;
+        }
 
-        if (dist < soft_radius && dist > 0) {
-          const overlap = soft_radius - dist;
-          const fx = (repulsion_strength * overlap * dx) / dist;
-          const fy = (repulsion_strength * overlap * dy) / dist;
-
-          posForces[i] = posForces[i].add(new Vector2(fx, fy));
-          posForces[j] = posForces[j].sub(new Vector2(fx, fy));
+        if (cell.phaseTime >= tumbling_duration) {
+          cell.phase = 'running';
+          cell.phaseTime = 0;
         }
       }
     }
 
-    // Self-propulsion forces
+    // 2. Compute Forces
+    const forces: Vector2[] = cells.map(() => Vector2.zero());
+
+    // Repulsion
     for (let i = 0; i < cells.length; i++) {
-      const cell = cells[i];
-      const isRunning = cell.has_A;
-      const speed = isRunning ? running_speed : tumble_speed;
-      const propulsion = new Vector2(speed * mu * cell.A.x, speed * mu * cell.A.y);
-      posForces[i] = posForces[i].add(propulsion);
+      for (let j = i + 1; j < cells.length; j++) {
+        const c1 = cells[i];
+        const c2 = cells[j];
+        const dx = c1.position.x - c2.position.x;
+        const dy = c1.position.y - c2.position.y;
+        const distSq = dx * dx + dy * dy;
+
+        // Optimization: check squared dist
+        const r = soft_radius;
+        if (distSq < r * r && distSq > 0) {
+          const dist = Math.sqrt(distSq);
+          const overlap = r - dist;
+          const fx = (repulsion_strength * overlap * dx) / dist;
+          const fy = (repulsion_strength * overlap * dy) / dist;
+          const f = new Vector2(fx, fy);
+          forces[i] = forces[i].add(f);
+          forces[j] = forces[j].sub(f);
+        }
+      }
     }
 
-    // Convert to ModelCellForces format
-    return posForces.map((f) => ({
-      pos: f,
-      A: Vector2.zero(),
-      B: Vector2.zero(),
+    // Propulsion
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      const speed = cell.phase === 'running' ? running_speed : tumble_speed;
+      // F = velocity * friction ? No, F_propulsion / mu = velocity
+      // Here: velocity = (Forces / mu)
+      // Self-propulsion adds to velocity directly? 
+      // Previous impl: F += speed * mu * polarity
+      const propulsion = cell.polarity.mult(speed * mu);
+      forces[i] = forces[i].add(propulsion);
+    }
+
+    // 3. Update Positions (Integration)
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      const f = forces[i];
+      cell.prevPosition = cell.position;
+
+      const dx = (f.x * dt) / mu;
+      const dy = (f.y * dt) / mu;
+      cell.position = new Vector2(cell.position.x + dx, cell.position.y + dy);
+
+      // 4. Constraints
+      if (boundary_type === 'periodic') {
+        cell.position = new Vector2(
+          ((cell.position.x % width) + width) % width,
+          ((cell.position.y % height) + height) % height
+        );
+      } else if (boundary_type === 'box') {
+        cell.position = new Vector2(
+          Math.max(0, Math.min(width, cell.position.x)),
+          Math.max(0, Math.min(height, cell.position.y))
+        );
+      }
+    }
+
+    state.time += dt;
+    return state;
+  },
+
+  // I/O
+  getSnapshot: (state: ToySimulationState): Record<string, any>[] => {
+    // Flatten
+    return state.cells.map(c => ({
+      id: c.id,
+      t: state.time,
+      pos_x: c.position.x,
+      pos_y: c.position.y,
+      phase: c.phase,
+      pol_x: c.polarity.x,
+      pol_y: c.polarity.y
     }));
   },
 
-  applyConstraints: (state: SimulationState, params: ToyParams): void => {
-    const { boundary_type, domain_size } = params.general;
-    const [width, height] = domain_size;
-
-    if (boundary_type === 'none') return;
-
-    for (const cell of state.cells) {
-      if (boundary_type === 'periodic') {
-        cell.pos = {
-          x: ((cell.pos.x % width) + width) % width,
-          y: ((cell.pos.y % height) + height) % height,
-        };
-      } else if (boundary_type === 'box') {
-        cell.pos = {
-          x: Math.max(0, Math.min(width, cell.pos.x)),
-          y: Math.max(0, Math.min(height, cell.pos.y)),
-        };
-      }
-    }
+  loadSnapshot: (rows: Record<string, any>[], _params: ToyParams): ToySimulationState => {
+    if (rows.length === 0) return { time: 0, cells: [] };
+    const t = Number(rows[0].t);
+    const cells: ToyCell[] = rows.map(r => ({
+      id: Number(r.id),
+      position: new Vector2(Number(r.pos_x), Number(r.pos_y)),
+      prevPosition: new Vector2(Number(r.pos_x), Number(r.pos_y)),
+      polarity: new Vector2(Number(r.pol_x), Number(r.pol_y)),
+      phase: r.phase as 'running' | 'tumbling',
+      phaseTime: 0, // Lost
+      timeSinceLastTumble: 0 // Lost
+    }));
+    return { time: t, cells };
   },
 
-  processEvents: (state: SimulationState, params: ToyParams, dt: number): void => {
-    const { running_duration, tumbling_duration, tumbling_period } = params.general;
-
-    for (const cell of state.cells) {
-      // eta_A stores phase time, has_A stores is_running, eta_B stores tumble timer
-      cell.eta_A += dt;
-
-      if (cell.has_A) {
-        // Running phase
-        if (cell.eta_A >= running_duration) {
-          cell.has_A = false; // Switch to tumbling
-          cell.eta_A = 0;
-          cell.eta_B = 0;
-          // Pick new random polarity
-          const angle = Math.random() * 2 * Math.PI;
-          cell.A = { x: Math.cos(angle), y: Math.sin(angle) };
-        }
-      } else {
-        // Tumbling phase
-        cell.eta_B += dt;
-
-        // Periodic polarity changes during tumbling
-        if (cell.eta_B >= tumbling_period) {
-          const angle = Math.random() * 2 * Math.PI;
-          cell.A = { x: Math.cos(angle), y: Math.sin(angle) };
-          cell.eta_B = 0;
-        }
-
-        // Check if should transition to running
-        if (cell.eta_A >= tumbling_duration) {
-          cell.has_A = true; // Switch to running
-          cell.eta_A = 0;
-        }
-      }
-    }
-  },
-
-  processDivisions: (): number => {
-    // No division in Toy model
-    return 0;
-  },
-
-  // UI configuration
-  parameterGroups: TOY_PARAMETER_GROUPS,
-  batchParameters: TOY_BATCH_PARAMETERS,
+  // Statistics
+  computeStats: (state: ToySimulationState) => computeToyStatistics(state),
 
   // Model-specific renderer
   renderer: toyRenderer,
 };
 
-// Register the Toy model
-modelRegistry.register(ToyModel);
-
-// Re-export everything
-export * from './params';
-export * from './simulation';
-export * from './statistics';
-export { TOY_PARAMETER_GROUPS, TOY_BATCH_PARAMETERS } from './ui';
+// Re-export specific parts if needed
+export { TOY_PARAMETER_GROUPS, TOY_BATCH_PARAMETERS };

@@ -27,10 +27,10 @@ import {
   statisticsToCSV,
   downloadCSV,
   readFileAsText,
-  computeStatistics,
   getTimeSamples,
   WorkerPool,
 } from '@/core/batch';
+import { useModel } from '@/contexts/ModelContext';
 
 export interface BatchTabProps {
   config: SimulationConfig;
@@ -150,9 +150,12 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   };
 
   // Load TOML (params + optional parameter ranges)
+
   // Compute statistics
+  const { currentModel } = useModel(); // Need model context
+
   const handleComputeStats = () => {
-    if (!batchData || selectedStats.length === 0) return;
+    if (!batchData || selectedStats.length === 0 || !currentModel) return;
 
     // Get parameter paths
     const paramPaths = new Set<string>();
@@ -191,12 +194,24 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
     // Build rows
     const rows: (string | number)[][] = [];
     for (const snapshot of snapshots) {
-      const stats = computeStatistics(snapshot, selectedStats);
+      // Reconstruct state to compute stats
+      // This might be slow for large datasets
+      // BUT for now it is the only generic way.
+      // We assume params are mostly static defaults + sampled_params overrides?
+      // Actually we need valid params to load snapshot.
+      // We can use config.params and overlay sampled_params.
+      const snapshotParams = { ...config.params }; // Shallow copy
+      // Apply sampled params if possible (deep merge or overrides)
+      // For now ignore deeper merge issues, assume flat or handled logic elsewhere
+      // Actually loadSnapshot signature: loadSnapshot(rows, params)
+      const state = currentModel.loadSnapshot(snapshot.data, snapshotParams);
+      const allStats = currentModel.computeStats(state);
+
       const row: (string | number)[] = [
         ...sortedPaths.map((p) => snapshot.sampled_params[p] ?? ''),
         snapshot.seed,
         snapshot.time_h,
-        ...selectedStats.map((id) => stats[id] ?? 0),
+        ...selectedStats.map((id) => allStats[id] ?? 0),
       ];
       rows.push(row);
     }
@@ -454,7 +469,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
             {/* Plot Configuration */}
             <div className="space-y-3">
               <h3 className="text-sm font-medium">Visualization</h3>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label htmlFor="plot-statistic" className="text-sm">
@@ -505,17 +520,17 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
                 (plotType === 'line' && plotData.length > 0) ||
                 (plotType === 'line_ci' && plotDataWithCI.length > 0)
               ) && (
-                <div className="mt-4 border rounded-md p-4 bg-muted/30">
-                  <BatchPlot
-                    data={plotData}
-                    dataWithCI={plotDataWithCI}
-                    statisticName={plotStatistic}
-                    plotType={plotType}
-                    width={640}
-                    height={400}
-                  />
-                </div>
-              )}
+                  <div className="mt-4 border rounded-md p-4 bg-muted/30">
+                    <BatchPlot
+                      data={plotData}
+                      dataWithCI={plotDataWithCI}
+                      statisticName={plotStatistic}
+                      plotType={plotType}
+                      width={640}
+                      height={400}
+                    />
+                  </div>
+                )}
             </div>
           </CardContent>
         </Card>

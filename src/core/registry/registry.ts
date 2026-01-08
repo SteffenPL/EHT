@@ -28,7 +28,10 @@ class ModelRegistry {
    * the latest version becomes the default for that model name.
    */
   register<T extends BaseSimulationParams>(model: ModelDefinition<T>): void {
-    const versionStr = formatVersion(model.version);
+    // modelVersion is string in SimulationModel
+    const version = parseVersion(model.version);
+    const versionStr = formatVersion(version);
+
     // Cast to unknown first to avoid type variance issues
     const modelDef = model as unknown as ModelDefinition;
 
@@ -41,14 +44,14 @@ class ModelRegistry {
       const entry = this.models.get(model.name)!;
       entry.versions.set(versionStr, modelDef);
       // Update latest if this version is newer
-      const currentVersion = entry.latestModel.version;
+      const currentVersion = parseVersion(entry.latestModel.version);
       if (
-        model.version.major > currentVersion.major ||
-        (model.version.major === currentVersion.major &&
-          model.version.minor > currentVersion.minor) ||
-        (model.version.major === currentVersion.major &&
-          model.version.minor === currentVersion.minor &&
-          model.version.patch > currentVersion.patch)
+        version.major > currentVersion.major ||
+        (version.major === currentVersion.major &&
+          version.minor > currentVersion.minor) ||
+        (version.major === currentVersion.major &&
+          version.minor === currentVersion.minor &&
+          version.patch > currentVersion.patch)
       ) {
         entry.latestModel = modelDef;
       }

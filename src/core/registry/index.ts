@@ -30,6 +30,7 @@ export {
   type ModelRenderer,
   type DeepPartial,
   type PartialParams,
+  type SimulationModel,
 } from './types';
 
 // Registry

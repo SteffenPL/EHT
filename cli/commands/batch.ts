@@ -7,19 +7,22 @@ import { SimulationEngine } from '../../src/core/simulation/engine';
 import { parseSimulationConfigToml } from '../../src/core/params/toml';
 import { createDefaultSimulationConfig } from '../../src/core/params/config';
 import { setNestedValue } from '../../src/core/params/merge';
-import { createSnapshot } from '../../src/core/snapshot';
+// import { createSnapshot } from '../../src/core/snapshot';
 import { generateParameterConfigs, getTimeSamples } from '../../src/core/batch/types';
-import type { SimulationParams, SimulationState } from '../../src/core/types';
+// import type { SimulationParams, SimulationState } from '../../src/core/types';
 import type { BatchSnapshot } from '../../src/core/batch/types';
 import { parseArgs } from '../utils/args';
 import { snapshotsToCSV, writeOutput, formatProgress } from '../utils/output';
 import { cloneDeep } from 'lodash-es';
 
+import { EHTModel } from '../../src/models/eht';
+import type { EHTParams } from '../../src/models/eht/params/types';
+
 /**
  * Run a single simulation and collect snapshots at specified times.
  */
 function runSingleSimulation(
-  baseParams: SimulationParams,
+  baseParams: EHTParams,
   overrides: Record<string, number>,
   seed: number,
   timeSamples: number[],
@@ -35,7 +38,7 @@ function runSingleSimulation(
   params.general.random_seed = seed;
 
   // Create engine
-  const engine = new SimulationEngine({ params });
+  const engine = new SimulationEngine({ model: EHTModel, params });
   engine.init();
 
   const snapshots: BatchSnapshot[] = [];
@@ -44,11 +47,14 @@ function runSingleSimulation(
 
   // Check if we should sample at t=0
   if (timeSamples.length > 0 && timeSamples[0] <= 0) {
-    const snapshot = createSnapshot(engine.getState() as SimulationState, {
-      runIndex,
+    const rows = EHTModel.getSnapshot(engine.getState() as any);
+    const snapshot: BatchSnapshot = {
+      run_index: runIndex,
       seed,
-      sampledParams: overrides,
-    });
+      time_h: 0,
+      sampled_params: overrides,
+      data: rows
+    };
     snapshots.push(snapshot);
     nextSampleIndex = 1;
   }
@@ -56,25 +62,29 @@ function runSingleSimulation(
   // Run simulation
   while (!engine.isComplete() && nextSampleIndex < timeSamples.length) {
     engine.step();
-    const state = engine.getState() as SimulationState;
+    const state = engine.getState() as any;
+    const t = state.t ?? 0;
 
     // Progress reporting every 1.0h
-    const currentHour = Math.floor(state.t);
+    const currentHour = Math.floor(t);
     if (currentHour > lastProgressTime) {
       lastProgressTime = currentHour;
-      console.error(formatProgress(state.t, endTime, runIndex, totalRuns));
+      console.error(formatProgress(t, endTime, runIndex, totalRuns));
     }
 
     // Check if we've reached a sample time
     while (
       nextSampleIndex < timeSamples.length &&
-      state.t >= timeSamples[nextSampleIndex]
+      t >= timeSamples[nextSampleIndex]
     ) {
-      const snapshot = createSnapshot(state, {
-        runIndex,
+      const rows = EHTModel.getSnapshot(state);
+      const snapshot: BatchSnapshot = {
+        run_index: runIndex,
         seed,
-        sampledParams: overrides,
-      });
+        time_h: timeSamples[nextSampleIndex],
+        sampled_params: overrides,
+        data: rows
+      };
       snapshots.push(snapshot);
       nextSampleIndex++;
     }

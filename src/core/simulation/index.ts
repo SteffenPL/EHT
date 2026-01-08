@@ -1,43 +1,5 @@
 /**
- * Simulation module - public API exports
+ * Core simulation module.
  */
 
-export { SimulationEngine } from './engine';
-export type { SimulationEngineConfig } from './engine';
-
-export { ModelSimulationEngine } from './model-engine';
-export type { ModelEngineConfig } from './model-engine';
-
-export { createCell, getCellType, updateCellPhase } from './cell';
-
-export {
-  calcAllForces,
-  calcRepulsionForces,
-  calcApicalNucleiForces,
-  calcBasalNucleiForces,
-  calcStraightnessForces,
-  calcApicalJunctionForces,
-  zeroForces,
-} from './forces';
-export type { CellForces } from './forces';
-
-export {
-  applyAllConstraints,
-  projectHardSphereConstraints,
-  projectBasalOrderingConstraints,
-  projectMaxBasalDistanceConstraints,
-  projectBasalCurveConstraints,
-} from './constraints';
-
-export {
-  processEMTEvents,
-  processLoseApicalAdhesion,
-  processLoseBasalAdhesion,
-  processLoseStraightness,
-  processStartRunning,
-  updateRunningState,
-} from './events';
-
-export { processCellDivisions } from './division';
-
-export { performTimestep } from './timestep';
+export { SimulationEngine, type SimulationEngineConfig } from './engine';

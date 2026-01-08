@@ -2,36 +2,19 @@
  * Batch simulation types.
  */
 
-/** Minimal cell snapshot for batch storage */
-export interface CellSnapshotMinimal {
-  id: number;
-  type: string; // 'control' | 'emt'
-  pos_x: number;
-  pos_y: number;
-  A_x: number;
-  A_y: number;
-  B_x: number;
-  B_y: number;
-  has_A: boolean;
-  has_B: boolean;
-  phase: number;
-  age: number;
-  apical_neighbors: string; // comma-separated IDs, e.g., "10,12"
-  basal_neighbors: string; // comma-separated IDs, e.g., "20,1"
-}
-
 /** Single snapshot from a batch run */
 export interface BatchSnapshot {
   run_index: number;
   seed: number;
   time_h: number;
   sampled_params: Record<string, number>;
-  cells: CellSnapshotMinimal[];
+  // Generic rows instead of specific CellSnapshotMinimal
+  data: Record<string, any>[];
 }
 
 /** Parameter range for batch sweeps */
 export interface ParameterRange {
-  path: string; // e.g., "general.N_emt" or "cell_types.emt.k_A"
+  path: string; // e.g., "general.N_emt"
   min: number;
   max: number;
   steps: number;
@@ -85,7 +68,7 @@ export function getTimeSamples(config: TimeSampleConfig): number[] {
   return samples;
 }
 
-/** Generate parameter configurations from ranges */
+/** Generate parameter configs (unchanged mostly) */
 export function generateParameterConfigs(
   ranges: ParameterRange[],
   mode: 'grid' | 'random',
@@ -103,7 +86,6 @@ export function generateParameterConfigs(
 }
 
 function generateGridConfigs(ranges: ParameterRange[]): Record<string, number>[] {
-  // Generate values for each range
   const rangeValues: { path: string; values: number[] }[] = ranges.map((r) => {
     const values: number[] = [];
     const stepSize = r.steps > 1 ? (r.max - r.min) / (r.steps - 1) : 0;
@@ -113,7 +95,6 @@ function generateGridConfigs(ranges: ParameterRange[]): Record<string, number>[]
     return { path: r.path, values };
   });
 
-  // Cartesian product
   const configs: Record<string, number>[] = [];
 
   function recurse(index: number, current: Record<string, number>) {

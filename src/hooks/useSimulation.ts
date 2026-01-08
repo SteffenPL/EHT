@@ -1,26 +1,25 @@
 /**
  * React hook for managing simulation state.
- * Uses the model-aware simulation engine.
+ * Uses the generic simulation engine.
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { ModelSimulationEngine } from '../core/simulation/model-engine';
-import type { SimulationState } from '../core/types';
-import type { ModelDefinition, BaseSimulationParams } from '../core/registry';
+import { SimulationEngine } from '../core/simulation/engine';
+import type { SimulationModel } from '../core/interfaces/model';
 
 /** Behavior when parameters change */
 export type ParamChangeBehavior = 'init' | 'step' | 'run';
 
-export interface UseSimulationOptions {
-  model: ModelDefinition<BaseSimulationParams>;
-  params: BaseSimulationParams;
+export interface UseSimulationOptions<Params = any, State = any> {
+  model: SimulationModel<Params, State>;
+  params: Params;
   autoInit?: boolean;
   /** What to do when params change. Default: 'init' */
   paramChangeBehavior?: ParamChangeBehavior;
 }
 
-export interface UseSimulationResult {
-  state: SimulationState | null;
-  params: BaseSimulationParams;
+export interface UseSimulationResult<Params = any, State = any> {
+  state: State | null;
+  params: Params;
   isRunning: boolean;
   isComplete: boolean;
   time: number;
@@ -29,32 +28,30 @@ export interface UseSimulationResult {
   pause: () => void;
   reset: () => void;
   step: () => void;
-  setParams: (params: BaseSimulationParams) => void;
+  setParams: (params: Params) => void;
+  engine: SimulationEngine<Params, State> | null;
 }
 
-export function useSimulation(options: UseSimulationOptions): UseSimulationResult {
+export function useSimulation<Params = any, State = any>(options: UseSimulationOptions<Params, State>): UseSimulationResult<Params, State> {
   const { model, params: initialParams, autoInit = true, paramChangeBehavior = 'init' } = options;
 
-  const [params, setParamsState] = useState<BaseSimulationParams>(initialParams);
-  const [state, setState] = useState<SimulationState | null>(null);
+  const [params, setParamsState] = useState<Params>(initialParams);
+  const [state, setState] = useState<State | null>(null);
   const [isRunning, setIsRunning] = useState(false);
 
-  const engineRef = useRef<ModelSimulationEngine | null>(null);
+  const engineRef = useRef<SimulationEngine<Params, State> | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const isFirstRender = useRef(true);
 
-  const snapshotState = useCallback((): SimulationState | null => {
-    const current = engineRef.current?.getState();
-    if (!current) return null;
-    return JSON.parse(JSON.stringify(current)) as SimulationState;
-  }, []);
+  // Force update helper
+  const [, forceUpdate] = useState({});
 
   // Initialize engine on first render
   useEffect(() => {
-    engineRef.current = new ModelSimulationEngine({ model, params: initialParams });
+    engineRef.current = new SimulationEngine({ model, params: initialParams });
     if (autoInit) {
       engineRef.current.init();
-      setState(snapshotState());
+      setState(engineRef.current.getState());
     }
 
     return () => {
@@ -78,20 +75,22 @@ export function useSimulation(options: UseSimulationOptions): UseSimulationResul
 
     // Reinitialize the engine with new model/params
     setIsRunning(false);
-    engineRef.current = new ModelSimulationEngine({ model, params: initialParams });
-    engineRef.current.init();
-    setState(snapshotState());
+    engineRef.current = new SimulationEngine({ model, params: initialParams });
+
+    setState(engineRef.current.getState());
 
     if (paramChangeBehavior === 'step') {
       // Run one step after init
       engineRef.current.step();
-      setState(snapshotState());
+      setState(engineRef.current.getState());
+      // Force update if state ref didn't change
+      forceUpdate({});
     } else if (paramChangeBehavior === 'run') {
       // Start the simulation running
       setIsRunning(true);
     }
     // 'init' just initializes (already done above)
-  }, [model, initialParams, paramChangeBehavior, snapshotState]);
+  }, [model, initialParams, paramChangeBehavior]);
 
   // Animation loop
   useEffect(() => {
@@ -114,7 +113,16 @@ export function useSimulation(options: UseSimulationOptions): UseSimulationResul
         }
 
         engineRef.current.step();
-        setState(snapshotState());
+
+        // Update React state
+        const s = engineRef.current.getState();
+
+        // Ensure state update triggers re-render (handle mutations)
+        if (typeof s === 'object' && s !== null) {
+          setState(Array.isArray(s) ? [...s] : { ...s } as any);
+        } else {
+          setState(s);
+        }
       }
 
       animationFrameRef.current = requestAnimationFrame(animate);
@@ -127,7 +135,7 @@ export function useSimulation(options: UseSimulationOptions): UseSimulationResul
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isRunning, snapshotState]);
+  }, [isRunning]);
 
   const start = useCallback(() => {
     setIsRunning(true);
@@ -140,21 +148,28 @@ export function useSimulation(options: UseSimulationOptions): UseSimulationResul
   const reset = useCallback(() => {
     setIsRunning(false);
     if (engineRef.current) {
-      engineRef.current.reset();
-      setState(snapshotState());
+      engineRef.current.init();
+      const s = engineRef.current.getState();
+      setState(typeof s === 'object' && s !== null ? { ...s } as any : s);
     }
-  }, [snapshotState]);
+  }, []);
 
   const step = useCallback(() => {
     if (engineRef.current && !engineRef.current.isComplete()) {
       engineRef.current.step();
-      setState(snapshotState());
+      const s = engineRef.current.getState();
+      setState(typeof s === 'object' && s !== null ? { ...s } as any : s);
     }
-  }, [snapshotState]);
+  }, []);
 
-  const setParams = useCallback((newParams: BaseSimulationParams) => {
+  const setParams = useCallback((newParams: Params) => {
     setIsRunning(false);
     setParamsState(newParams);
+    if (engineRef.current) {
+      engineRef.current.resetWithParams(newParams);
+      const s = engineRef.current.getState();
+      setState(typeof s === 'object' && s !== null ? { ...s } as any : s);
+    }
   }, []);
 
   return {
@@ -162,12 +177,13 @@ export function useSimulation(options: UseSimulationOptions): UseSimulationResul
     params,
     isRunning,
     isComplete: engineRef.current?.isComplete() ?? false,
-    time: state?.t ?? 0,
-    stepCount: state?.step_count ?? 0,
+    time: (state as any)?.t ?? 0,
+    stepCount: (state as any)?.step_count ?? 0,
     start,
     pause,
     reset,
     step,
     setParams,
+    engine: engineRef.current
   };
 }

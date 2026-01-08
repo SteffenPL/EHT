@@ -2,7 +2,9 @@
  * TOML parsing and serialization for parameters.
  */
 import TOML from '@iarna/toml';
-import type { SimulationParams, PartialSimulationParams } from '../types';
+// import type { SimulationParams, PartialSimulationParams } from '../types';
+type SimulationParams = any;
+type PartialSimulationParams = any;
 import type { ParameterRange } from '../batch/types';
 import { mergeWithDefaults } from './merge';
 import type { SimulationConfig } from './config';

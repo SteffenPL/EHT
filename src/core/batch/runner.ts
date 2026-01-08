@@ -5,12 +5,10 @@
  */
 
 import { cloneDeep } from 'lodash-es';
-import { ModelSimulationEngine } from '../simulation/model-engine';
+import { SimulationEngine } from '../simulation/engine';
 import { setNestedValue } from '../params';
-import { createSnapshot } from '../snapshot';
 import { modelRegistry } from '../registry';
 import type { ModelDefinition, BaseSimulationParams } from '../registry';
-import type { SimulationState } from '../types';
 import type {
   BatchConfig,
   BatchSnapshot,
@@ -55,8 +53,8 @@ function runSingleSimulation(
   }
   params.general.random_seed = seed;
 
-  // Create model-aware engine
-  const engine = new ModelSimulationEngine({ model, params });
+  // Create engine
+  const engine = new SimulationEngine({ model, params });
   engine.init();
 
   const snapshots: BatchSnapshot[] = [];
@@ -64,11 +62,14 @@ function runSingleSimulation(
 
   // Check if we should sample at t=0
   if (timeSamples.length > 0 && timeSamples[0] <= 0) {
-    const snapshot = createSnapshot(engine.getState() as SimulationState, {
-      runIndex,
+    const rows = model.getSnapshot(engine.getState());
+    const snapshot: BatchSnapshot = {
+      run_index: runIndex,
       seed,
-      sampledParams: overrides,
-    });
+      time_h: 0,
+      sampled_params: overrides,
+      data: rows
+    };
     snapshots.push(snapshot);
     callbacks?.onSnapshot?.(snapshot);
     nextSampleIndex = 1;
@@ -77,18 +78,22 @@ function runSingleSimulation(
   // Run simulation
   while (!engine.isComplete() && nextSampleIndex < timeSamples.length) {
     engine.step();
-    const state = engine.getState() as SimulationState;
+    const state = engine.getState() as any;
+    const t = state.t ?? 0;
 
     // Check if we've reached a sample time
     while (
       nextSampleIndex < timeSamples.length &&
-      state.t >= timeSamples[nextSampleIndex]
+      t >= timeSamples[nextSampleIndex]
     ) {
-      const snapshot = createSnapshot(state, {
-        runIndex,
+      const rows = model.getSnapshot(state);
+      const snapshot: BatchSnapshot = {
+        run_index: runIndex,
         seed,
-        sampledParams: overrides,
-      });
+        time_h: timeSamples[nextSampleIndex],
+        sampled_params: overrides,
+        data: rows
+      };
       snapshots.push(snapshot);
       callbacks?.onSnapshot?.(snapshot);
       nextSampleIndex++;
@@ -180,8 +185,6 @@ async function runBatchSequential(
 
 /**
  * Run batch simulations in parallel using Web Workers.
- * Note: Parallel mode requires workers to have the model registered.
- * For now, falls back to sequential if model-aware parallel is not supported.
  */
 async function runBatchParallel(
   model: ModelDefinition<BaseSimulationParams>,

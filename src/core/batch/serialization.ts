@@ -4,7 +4,7 @@
  */
 
 import Papa from 'papaparse';
-import type { BatchSnapshot, CellSnapshotMinimal, BatchData, BatchConfig } from './types';
+import type { BatchSnapshot, BatchData, BatchConfig } from './types';
 
 /** Column separator for parameter paths in CSV headers */
 const PATH_SEPARATOR = '__';
@@ -20,30 +20,9 @@ function columnToPath(column: string): string {
   return column.slice(('param' + PATH_SEPARATOR).length).replace(new RegExp(PATH_SEPARATOR, 'g'), '.');
 }
 
-/** CSV row for a single cell at a single snapshot */
-interface CellRow {
-  run_index: number;
-  seed: number;
-  time_h: number;
-  [paramColumn: string]: string | number | boolean; // param__general__N_emt, etc.
-  cell_id: number;
-  cell_type: string;
-  pos_x: number;
-  pos_y: number;
-  A_x: number;
-  A_y: number;
-  B_x: number;
-  B_y: number;
-  has_A: boolean;
-  has_B: boolean;
-  phase: number;
-  age: number;
-  apical_neighbors: string;
-  basal_neighbors: string;
-}
-
 /**
  * Serialize batch snapshots to CSV string.
+ * Flattens the generic `data` rows and adds metadata fields.
  */
 export function batchSnapshotsToCSV(snapshots: BatchSnapshot[]): string {
   if (snapshots.length === 0) {
@@ -59,29 +38,31 @@ export function batchSnapshotsToCSV(snapshots: BatchSnapshot[]): string {
   }
   const sortedPaths = Array.from(paramPaths).sort();
 
+  // Determine all distinct keys in the data rows across all snapshots
+  // to build a consistent header.
+  const dataKeys = new Set<string>();
+  for (const snapshot of snapshots) {
+    if (snapshot.data.length > 0) {
+      Object.keys(snapshot.data[0]).forEach(k => dataKeys.add(k));
+    }
+  }
+  // Try to keep 'id' first if it exists, others alphabetical
+  const sortedDataKeys = Array.from(dataKeys).sort((a, b) => {
+    if (a === 'id') return -1;
+    if (b === 'id') return 1;
+    return a.localeCompare(b);
+  });
+
   // Build rows
-  const rows: CellRow[] = [];
+  const rows: Record<string, any>[] = [];
 
   for (const snapshot of snapshots) {
-    for (const cell of snapshot.cells) {
-      const row: CellRow = {
+    for (const dataRow of snapshot.data) {
+      const row: Record<string, any> = {
         run_index: snapshot.run_index,
         seed: snapshot.seed,
         time_h: snapshot.time_h,
-        cell_id: cell.id,
-        cell_type: cell.type,
-        pos_x: cell.pos_x,
-        pos_y: cell.pos_y,
-        A_x: cell.A_x,
-        A_y: cell.A_y,
-        B_x: cell.B_x,
-        B_y: cell.B_y,
-        has_A: cell.has_A,
-        has_B: cell.has_B,
-        phase: cell.phase,
-        age: cell.age,
-        apical_neighbors: cell.apical_neighbors,
-        basal_neighbors: cell.basal_neighbors,
+        ...dataRow
       };
 
       // Add parameter columns
@@ -99,20 +80,7 @@ export function batchSnapshotsToCSV(snapshots: BatchSnapshot[]): string {
     'seed',
     'time_h',
     ...sortedPaths.map(pathToColumn),
-    'cell_id',
-    'cell_type',
-    'pos_x',
-    'pos_y',
-    'A_x',
-    'A_y',
-    'B_x',
-    'B_y',
-    'has_A',
-    'has_B',
-    'phase',
-    'age',
-    'apical_neighbors',
-    'basal_neighbors',
+    ...sortedDataKeys
   ];
 
   return Papa.unparse(rows, { columns });
@@ -140,6 +108,12 @@ export function csvToBatchSnapshots(csv: string): BatchSnapshot[] {
     f.startsWith('param' + PATH_SEPARATOR)
   ) ?? [];
 
+  // Identify data columns (not metadata, not params)
+  const metadataCols = new Set(['run_index', 'seed', 'time_h']);
+  const dataColumns = parsed.meta.fields?.filter(f =>
+    !metadataCols.has(f) && !f.startsWith('param' + PATH_SEPARATOR)
+  ) ?? [];
+
   for (const row of parsed.data) {
     const runIndex = parseInt(row.run_index, 10);
     const seed = parseInt(row.seed, 10);
@@ -162,30 +136,34 @@ export function csvToBatchSnapshots(csv: string): BatchSnapshot[] {
         seed,
         time_h: timeH,
         sampled_params: sampledParams,
-        cells: [],
+        data: [],
       });
     }
 
     const snapshot = snapshotMap.get(key)!;
 
-    const cell: CellSnapshotMinimal = {
-      id: parseInt(row.cell_id, 10),
-      type: row.cell_type,
-      pos_x: parseFloat(row.pos_x),
-      pos_y: parseFloat(row.pos_y),
-      A_x: parseFloat(row.A_x),
-      A_y: parseFloat(row.A_y),
-      B_x: parseFloat(row.B_x),
-      B_y: parseFloat(row.B_y),
-      has_A: row.has_A === 'true',
-      has_B: row.has_B === 'true',
-      phase: parseInt(row.phase, 10),
-      age: parseFloat(row.age),
-      apical_neighbors: row.apical_neighbors ?? '',
-      basal_neighbors: row.basal_neighbors ?? '',
-    };
+    // Extract data row
+    const dataRow: Record<string, any> = {};
+    for (const col of dataColumns) {
+      // Simple type inference: check if number
+      const val = row[col];
+      const num = Number(val);
+      // If not NaN and string is not empty, use number. Or should we keep strings?
+      // Models might expect specific types. 
+      // For EHT, most are numbers, some strings (comma separated lists).
+      // Let's try parsing as number if it looks like one.
+      if (!isNaN(num) && val.trim() !== '') {
+        dataRow[col] = num;
+      } else if (val === 'true') {
+        dataRow[col] = true;
+      } else if (val === 'false') {
+        dataRow[col] = false;
+      } else {
+        dataRow[col] = val;
+      }
+    }
 
-    snapshot.cells.push(cell);
+    snapshot.data.push(dataRow);
   }
 
   // Sort snapshots by run_index, then time

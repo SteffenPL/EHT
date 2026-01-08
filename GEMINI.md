@@ -93,6 +93,8 @@ npm run build        # Production build
 npm run lint         # ESLint
 ```
 
+Please note that sometimes a port is busy, so read the output of `npm run dev` to find the port that is used.
+
 ## Parameters
 
 Parameters are organized in TOML format:

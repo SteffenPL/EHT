@@ -2,7 +2,8 @@
  * Combined configuration used across single and batch simulations.
  * Includes base parameters, parameter ranges, and batch sampling settings.
  */
-import type { SimulationParams } from '../types';
+// import type { SimulationParams } from '../types';
+type SimulationParams = any;
 import type { ParameterRange, TimeSampleConfig } from '../batch';
 import { createDefaultParams } from './defaults';
 

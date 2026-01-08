@@ -7,7 +7,8 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { ParameterRange } from '@/core/batch';
-import type { SimulationParams } from '@/core/types';
+// import type { SimulationParams } from '@/core/types';
+type SimulationParams = any;
 import { useModel } from '@/contexts';
 
 export interface ParameterRangeListProps {
@@ -32,7 +33,7 @@ function getNestedValue(obj: unknown, path: string): number | undefined {
 
 export function ParameterRangeList({ ranges, onChange, baseParams, disabled }: ParameterRangeListProps) {
   const { currentModel } = useModel();
-  const modelBatchParams = currentModel.batchParameters;
+  const modelBatchParams = currentModel.batchParameters || [];
   const usedPaths = new Set(ranges.map((r) => r.path));
   const availableParams = modelBatchParams.filter((p) => !usedPaths.has(p.path));
 

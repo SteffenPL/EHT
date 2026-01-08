@@ -1,14 +1,18 @@
 /**
  * Model definition types for the multi-model architecture.
- * Each model must implement the ModelDefinition interface.
  */
 
-import { z } from 'zod';
-import type { SemanticVersion } from './version';
-import type { SimulationState, CellState } from '../types/state';
-import type { BatchSnapshot } from '../batch/types';
-import type { SeededRandom } from '../math/random';
+import type { SimulationModel } from '../interfaces/model';
+import type { ModelRenderer, ModelRenderContext, BoundingBox } from '../interfaces/renderer';
+
 import type { Vector2 } from '../math/vector2';
+
+// Re-export interface types
+export type { SimulationModel };
+export type { ModelRenderer, ModelRenderContext, BoundingBox };
+
+// Alias for backward compatibility (if needed) or clarity
+export type ModelDefinition<Params = any, State = any> = SimulationModel<Params, State>;
 
 /** Base parameter metadata - required for all models */
 export interface ParamsMetadata {
@@ -79,136 +83,17 @@ export interface BatchParameterDefinition {
   path: string;
   label: string;
   isInteger?: boolean;
+  options?: any[]; // For dropdowns/enums
 }
 
 /** Statistic definition for batch analysis */
-export interface StatisticDefinition {
+export interface StatisticDefinition<State = any> {
   id: string;
   label: string;
   description: string;
-  compute: (snapshot: BatchSnapshot) => number;
+  compute: (state: State) => number;
 }
 
-/**
- * Model definition interface - each model must implement this.
- *
- * @template TParams The model's specific parameter type extending BaseSimulationParams
- */
-export interface ModelDefinition<TParams extends BaseSimulationParams = BaseSimulationParams> {
-  // Identity
-  name: string;                           // e.g., "EHT"
-  displayName: string;                    // e.g., "Epithelial-to-Hematopoietic Transition"
-  version: SemanticVersion;
-  description: string;
-
-  // Parameter system
-  paramsSchema: z.ZodSchema<TParams>;     // Zod schema for validation
-  defaultParams: TParams;                 // Default parameter values
-  cellTypes: string[];                    // Available cell types (e.g., ['control', 'emt'])
-
-  // Statistics
-  statistics: StatisticDefinition[];      // Model-specific statistics
-
-  // Simulation hooks
-  createCell: (
-    params: TParams,
-    state: SimulationState,
-    rng: SeededRandom,
-    position: Vector2,
-    cellTypeName: string,
-    parent?: CellState
-  ) => CellState;
-
-  initializeSimulation: (
-    params: TParams,
-    state: SimulationState,
-    rng: SeededRandom
-  ) => void;
-
-  calcForces: (
-    state: SimulationState,
-    params: TParams
-  ) => CellForces[];
-
-  applyConstraints: (
-    state: SimulationState,
-    params: TParams
-  ) => void;
-
-  processEvents: (
-    state: SimulationState,
-    params: TParams,
-    dt: number
-  ) => void;
-
-  processDivisions: (
-    state: SimulationState,
-    params: TParams,
-    rng: SeededRandom
-  ) => number;
-
-  // UI configuration
-  parameterGroups: ParameterGroupDefinition[];
-  batchParameters: BatchParameterDefinition[];
-
-  // Optional: Parameter presets
-  presets?: Array<{
-    key: string;
-    label: string;
-    create: () => TParams;
-  }>;
-
-  // Model-specific renderer (required)
-  renderer: ModelRenderer<TParams>;
-}
-
-/** Bounding box for viewport calculation */
-export interface BoundingBox {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-}
-
-/** Rendering context provided to model renderers */
-export interface ModelRenderContext {
-  /** Pixi.js Graphics instance for drawing */
-  graphics: {
-    cells: unknown;      // Graphics for cells layer
-    links: unknown;      // Graphics for links/connections layer
-    overlay: unknown;    // Graphics for overlay layer
-  };
-  /** Whether dark theme is active */
-  isDark: boolean;
-  /** Scale factor (pixels per simulation unit) */
-  scale: number;
-}
-
-/**
- * Model renderer interface - each model implements this for custom rendering.
- */
-export interface ModelRenderer<TParams extends BaseSimulationParams = BaseSimulationParams> {
-  /**
-   * Get the bounding box for the simulation view.
-   * Used to calculate viewport transform.
-   */
-  getBoundingBox: (params: TParams, state: SimulationState) => BoundingBox;
-
-  /**
-   * Render the simulation state.
-   * Called each frame with fresh Graphics containers.
-   */
-  render: (
-    ctx: ModelRenderContext,
-    state: SimulationState,
-    params: TParams
-  ) => void;
-
-  /**
-   * Get background color based on theme.
-   */
-  getBackgroundColor: (isDark: boolean) => number;
-}
 
 /** Deep partial type for user input - allows partial specification of nested objects */
 export type DeepPartial<T> = {

@@ -5,8 +5,8 @@
 
 import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
-import type { SimulationState } from '@/core/types/state';
-import { CellPhase } from '@/core/types/state';
+import type { EHTSimulationState } from '../types';
+import { CellPhase } from '../types';
 import type { EHTParams } from '../params/types';
 import { createCell, getCellType } from './cell';
 
@@ -15,7 +15,7 @@ import { createCell, getCellType } from './cell';
  * Returns the number of divisions that occurred.
  */
 export function processCellDivisions(
-  state: SimulationState,
+  state: EHTSimulationState,
   params: EHTParams,
   rng: SeededRandom
 ): number {
@@ -116,7 +116,7 @@ export function processCellDivisions(
  * The new cell takes over the right connection of the original cell.
  */
 function updateApicalLinksAfterDivision(
-  state: SimulationState,
+  state: EHTSimulationState,
   params: EHTParams,
   originalIndex: number,
   newIndex: number
@@ -141,7 +141,7 @@ function updateApicalLinksAfterDivision(
  * Similar to apical links.
  */
 function updateBasalLinksAfterDivision(
-  state: SimulationState,
+  state: EHTSimulationState,
   _params: EHTParams,
   originalIndex: number,
   newIndex: number

@@ -2,13 +2,14 @@
  * CLI command for listing available statistics.
  */
 
+import { EHTModel } from '../../src/models/eht';
 import { listStatistics } from '../../src/core/batch/statistics';
 
 /**
  * List all available statistics.
  */
 export function statsCommand(_args: string[]): void {
-  const stats = listStatistics();
+  const stats = listStatistics(EHTModel);
 
   console.log('\nAvailable Statistics\n');
   console.log('Use these IDs with --stats when running simulations.\n');

@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useModel } from '@/contexts/ModelContext';
-import { modelRegistry, formatVersion } from '@/core/registry';
+import { modelRegistry } from '@/core/registry';
 
 export function ModelSelector() {
   const { currentModel, setModel, availableModels } = useModel();
@@ -27,7 +27,7 @@ export function ModelSelector() {
       <SelectContent>
         {availableModels.map((modelName) => {
           const model = modelRegistry.get(modelName);
-          const version = model ? formatVersion(model.version) : '';
+          const version = model ? model.version : '';
           const displayName = model?.displayName || modelName;
 
           return (

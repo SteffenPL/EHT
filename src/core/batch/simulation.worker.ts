@@ -4,12 +4,11 @@
  */
 
 import { cloneDeep } from 'lodash-es';
-import { ModelSimulationEngine } from '../simulation/model-engine';
+import { SimulationEngine } from '../simulation/engine';
 import { modelRegistry } from '../registry';
 import { setNestedValue } from '../params';
 import type { BaseSimulationParams } from '../registry';
-import type { SimulationState, ApicalLink, BasalLink } from '../types';
-import type { BatchSnapshot, CellSnapshotMinimal } from './types';
+import type { BatchSnapshot } from './types';
 
 // Import models to register them in the worker context
 import '@/models';
@@ -34,77 +33,6 @@ export interface WorkerResponse {
 }
 
 /**
- * Build neighbor string from links.
- */
-function getNeighbors(
-  cellIndex: number,
-  links: { l: number; r: number }[],
-  cells: { id: number }[]
-): string {
-  const neighborIndices: number[] = [];
-  for (const link of links) {
-    if (link.l === cellIndex) {
-      neighborIndices.push(link.r);
-    } else if (link.r === cellIndex) {
-      neighborIndices.push(link.l);
-    }
-  }
-  return neighborIndices.map((i) => cells[i]?.id ?? i).join(',');
-}
-
-/**
- * Create minimal cell snapshot from full state.
- */
-function createCellSnapshot(
-  state: SimulationState,
-  cellIndex: number,
-  apLinks: ApicalLink[],
-  baLinks: BasalLink[]
-): CellSnapshotMinimal {
-  const cell = state.cells[cellIndex];
-  return {
-    id: cell.id,
-    type: cell.typeIndex,
-    pos_x: cell.pos.x,
-    pos_y: cell.pos.y,
-    A_x: cell.A.x,
-    A_y: cell.A.y,
-    B_x: cell.B.x,
-    B_y: cell.B.y,
-    has_A: cell.has_A,
-    has_B: cell.has_B,
-    phase: cell.phase,
-    age: state.t - cell.birth_time,
-    apical_neighbors: getNeighbors(cellIndex, apLinks, state.cells),
-    basal_neighbors: getNeighbors(cellIndex, baLinks, state.cells),
-  };
-}
-
-/**
- * Create batch snapshot from simulation state.
- */
-function createBatchSnapshot(
-  runIndex: number,
-  seed: number,
-  timeH: number,
-  sampledParams: Record<string, number>,
-  state: SimulationState
-): BatchSnapshot {
-  const cells: CellSnapshotMinimal[] = [];
-  for (let i = 0; i < state.cells.length; i++) {
-    cells.push(createCellSnapshot(state, i, state.ap_links, state.ba_links));
-  }
-
-  return {
-    run_index: runIndex,
-    seed,
-    time_h: timeH,
-    sampled_params: sampledParams,
-    cells,
-  };
-}
-
-/**
  * Run a single simulation and collect snapshots.
  */
 function runSimulation(request: WorkerRequest): BatchSnapshot[] {
@@ -124,7 +52,7 @@ function runSimulation(request: WorkerRequest): BatchSnapshot[] {
   params.general.random_seed = seed;
 
   // Create model-aware engine
-  const engine = new ModelSimulationEngine({ model, params });
+  const engine = new SimulationEngine({ model, params });
   engine.init();
 
   const snapshots: BatchSnapshot[] = [];
@@ -132,35 +60,49 @@ function runSimulation(request: WorkerRequest): BatchSnapshot[] {
 
   // Check if we should sample at t=0
   if (timeSamples.length > 0 && timeSamples[0] <= 0) {
-    const snapshot = createBatchSnapshot(
-      runIndex,
+    const rows = model.getSnapshot(engine.getState());
+    snapshots.push({
+      run_index: runIndex,
       seed,
-      0,
-      overrides,
-      engine.getState() as SimulationState
-    );
-    snapshots.push(snapshot);
+      time_h: 0,
+      sampled_params: overrides,
+      data: rows
+    });
     nextSampleIndex = 1;
   }
 
   // Run simulation
   while (!engine.isComplete() && nextSampleIndex < timeSamples.length) {
     engine.step();
-    const state = engine.getState() as SimulationState;
+    // We might need to track time manually if model doesn't expose it uniformly
+    // But engine.getState() returns generic State. 
+    // We assume state has 't' or engine helps.
+    // The Generic SimulationEngine in engine.ts doesn't expose getTime() directly?
+    // Wait, I didn't add getTime() to Generic SimulationEngine.
+    // I added getState(). 
+    // But I used `state.t` in my implementation of `isComplete`.
+    // I should probably ensure `SimulationEngine` can provide time.
+
+    // Check if the state has time 't'. Generic model interface doesn't enforce 't'.
+    // BUT BaseSimulationParams has 't_end'.
+    // If the model is compatible with BaseSimulationParams, it likely has 't'.
+    // Let's assume state has 't'.
+    const state = engine.getState() as any;
+    const t = state.t ?? 0;
 
     // Check if we've reached a sample time
     while (
       nextSampleIndex < timeSamples.length &&
-      state.t >= timeSamples[nextSampleIndex]
+      t >= timeSamples[nextSampleIndex]
     ) {
-      const snapshot = createBatchSnapshot(
-        runIndex,
+      const rows = model.getSnapshot(state);
+      snapshots.push({
+        run_index: runIndex,
         seed,
-        timeSamples[nextSampleIndex],
-        overrides,
-        state
-      );
-      snapshots.push(snapshot);
+        time_h: timeSamples[nextSampleIndex],
+        sampled_params: overrides,
+        data: rows
+      });
       nextSampleIndex++;
     }
   }

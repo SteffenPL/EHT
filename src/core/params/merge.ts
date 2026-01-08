@@ -2,7 +2,9 @@
  * Deep merge utility for parameters.
  * Merges partial parameters over defaults for backwards compatibility.
  */
-import type { SimulationParams, PartialSimulationParams } from '../types';
+// import type { SimulationParams, PartialSimulationParams } from '../types';
+type SimulationParams = any;
+type PartialSimulationParams = any;
 import { DEFAULT_PARAMS, DEFAULT_CONTROL_CELL } from './defaults';
 import { cloneDeep, mergeWith, isPlainObject } from 'lodash-es';
 

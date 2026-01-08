@@ -9,7 +9,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
 import { ParameterGroup } from './ParameterGroup';
-import type { SimulationParams } from '@/core/types';
+// import type { SimulationParams } from '@/core/types';
+type SimulationParams = any;
 import { parseTomlWithDefaults, toToml, setNestedValue } from '@/core/params';
 import { cloneDeep } from 'lodash-es';
 

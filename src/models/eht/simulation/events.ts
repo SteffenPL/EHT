@@ -4,7 +4,7 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
-import type { SimulationState, ApicalLink, BasalLink, CellState } from '@/core/types/state';
+import type { EHTSimulationState, ApicalLink, BasalLink, CellState } from '../types';
 import type { EHTParams } from '../params/types';
 
 /**
@@ -12,7 +12,7 @@ import type { EHTParams } from '../params/types';
  * Removes apical links and reduces stiffness.
  */
 export function processLoseApicalAdhesion(
-  state: SimulationState,
+  state: EHTSimulationState,
   cellIndex: number
 ): void {
   const cell = state.cells[cellIndex];
@@ -59,7 +59,7 @@ export function processLoseApicalAdhesion(
  * Removes basal links.
  */
 export function processLoseBasalAdhesion(
-  state: SimulationState,
+  state: EHTSimulationState,
   cellIndex: number
 ): void {
   const cell = state.cells[cellIndex];
@@ -96,7 +96,7 @@ export function processLoseBasalAdhesion(
  * Process straightness loss event.
  */
 export function processLoseStraightness(
-  state: SimulationState,
+  state: EHTSimulationState,
   cellIndex: number
 ): void {
   const cell = state.cells[cellIndex];
@@ -107,7 +107,7 @@ export function processLoseStraightness(
  * Process start running event.
  */
 export function processStartRunning(
-  state: SimulationState,
+  state: EHTSimulationState,
   cellIndex: number
 ): void {
   const cell = state.cells[cellIndex];
@@ -127,7 +127,7 @@ export function updateRunningState(cell: CellState): void {
  * Process all EMT events for the current timestep.
  */
 export function processEMTEvents(
-  state: SimulationState,
+  state: EHTSimulationState,
   _params: EHTParams,
   dt: number
 ): void {

@@ -3,13 +3,12 @@
  * Delegates model-specific rendering to the model's renderer.
  */
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
-import type { SimulationState } from '../core/types';
 import type {
-  ModelDefinition,
+  SimulationModel,
   BaseSimulationParams,
   ModelRenderContext,
   BoundingBox,
-} from '../core/registry';
+} from '../core/registry'; // registry re-exports SimulationModel now
 
 export interface RendererConfig {
   width: number;
@@ -22,7 +21,7 @@ export interface RendererConfig {
  * Simulation renderer using Pixi.js.
  * Provides the rendering framework and delegates model-specific rendering.
  */
-export class SimulationRenderer {
+export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimulationParams, State = any> {
   private app: Application;
   private mainContainer: Container;
   private cellsContainer: Container;
@@ -33,8 +32,8 @@ export class SimulationRenderer {
   private isDark: boolean;
   private showScaleBar: boolean;
 
-  private model: ModelDefinition<BaseSimulationParams> | null = null;
-  private params: BaseSimulationParams | null = null;
+  private model: SimulationModel<Params, State> | null = null;
+  private params: Params | null = null;
 
   // Viewport transform
   private scale = 1;
@@ -83,17 +82,19 @@ export class SimulationRenderer {
   /**
    * Set the current model.
    */
-  setModel(model: ModelDefinition<BaseSimulationParams>): void {
+  setModel(model: SimulationModel<Params, State>): void {
     this.model = model;
     // Update background color for the model
     const backgroundColor = model.renderer.getBackgroundColor(this.isDark);
-    this.app.renderer.background.color = backgroundColor;
+    if (this.app.renderer) {
+      this.app.renderer.background.color = backgroundColor;
+    }
   }
 
   /**
    * Set simulation parameters (for viewport calculation).
    */
-  setParams(params: BaseSimulationParams): void {
+  setParams(params: Params): void {
     this.params = params;
     this.updateViewport();
   }
@@ -103,7 +104,7 @@ export class SimulationRenderer {
    */
   setDarkMode(isDark: boolean): void {
     this.isDark = isDark;
-    if (this.model) {
+    if (this.model && this.app.renderer) {
       const backgroundColor = this.model.renderer.getBackgroundColor(isDark);
       this.app.renderer.background.color = backgroundColor;
     }
@@ -113,8 +114,10 @@ export class SimulationRenderer {
    * Resize the renderer.
    */
   resize(width: number, height: number): void {
-    this.app.renderer.resize(width, height);
-    this.updateViewport();
+    if (this.app.renderer) {
+      this.app.renderer.resize(width, height);
+      this.updateViewport();
+    }
   }
 
   /**
@@ -122,14 +125,14 @@ export class SimulationRenderer {
    * Centers view with 10% padding on each side.
    */
   private updateViewport(): void {
-    if (!this.model || !this.params) return;
+    if (!this.model || !this.params || !this.app.renderer) return;
 
     const canvasWidth = this.app.renderer.width;
     const canvasHeight = this.app.renderer.height;
 
     // Get bounds from the model's renderer
-    const emptyState: SimulationState = { cells: [], ap_links: [], ba_links: [], t: 0, step_count: 0 };
-    const bounds: BoundingBox = this.model.renderer.getBoundingBox(this.params, emptyState);
+    // We pass undefined for state if we don't have it, assuming model can handle it (e.g. from params)
+    const bounds: BoundingBox = this.model.renderer.getBoundingBox(this.params, undefined);
 
     // Add 10% padding
     const padding = 0.1;
@@ -157,7 +160,7 @@ export class SimulationRenderer {
   /**
    * Render the current simulation state.
    */
-  render(state: SimulationState): void {
+  render(state: State): void {
     if (!this.model || !this.params) return;
 
     // Clear previous frame
@@ -199,6 +202,8 @@ export class SimulationRenderer {
    * Draw scale bar in the bottom-right corner (in screen space).
    */
   private drawScaleBar(): void {
+    if (!this.app.renderer) return;
+
     const canvasWidth = this.app.renderer.width;
     const canvasHeight = this.app.renderer.height;
 

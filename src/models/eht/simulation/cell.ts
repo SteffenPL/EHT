@@ -6,8 +6,8 @@
 import { Vector2 } from '@/core/math/vector2';
 import { basalCurve, basalNormal } from '@/core/math/geometry';
 import { SeededRandom } from '@/core/math/random';
-import type { CellState, SimulationState } from '@/core/types/state';
-import { CellPhase } from '@/core/types/state';
+import type { EHTSimulationState, CellState } from '../types';
+import { CellPhase } from '../types';
 import type { EHTParams, EHTCellTypeParams } from '../params/types';
 
 /**
@@ -23,7 +23,7 @@ import type { EHTParams, EHTCellTypeParams } from '../params/types';
  */
 export function createCell(
   params: EHTParams,
-  state: SimulationState,
+  state: EHTSimulationState,
   rng: SeededRandom,
   position: Vector2,
   cellType: EHTCellTypeParams,

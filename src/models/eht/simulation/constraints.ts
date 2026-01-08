@@ -5,7 +5,7 @@
 
 import { Vector2 } from '@/core/math/vector2';
 import { basalCurve, basalArcLength } from '@/core/math/geometry';
-import type { SimulationState } from '@/core/types/state';
+import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 
 /**
@@ -13,7 +13,7 @@ import type { EHTParams } from '../params/types';
  * Prevents cell nuclei from overlapping beyond hard radius.
  */
 export function projectHardSphereConstraints(
-  state: SimulationState,
+  state: EHTSimulationState,
   _params: EHTParams
 ): void {
   const cells = state.cells;
@@ -53,7 +53,7 @@ export function projectHardSphereConstraints(
  * Uses arc length comparison instead of x-coordinate for curved membranes.
  */
 export function projectBasalOrderingConstraints(
-  state: SimulationState,
+  state: EHTSimulationState,
   params: EHTParams
 ): void {
   const cells = state.cells;
@@ -110,7 +110,7 @@ export function projectBasalOrderingConstraints(
  * Points will be projected back onto the curve in a subsequent step.
  */
 export function projectMaxBasalDistanceConstraints(
-  state: SimulationState,
+  state: EHTSimulationState,
   params: EHTParams
 ): void {
   const cells = state.cells;
@@ -145,7 +145,7 @@ export function projectMaxBasalDistanceConstraints(
  * Project basal points onto the basal curve.
  */
 export function projectBasalCurveConstraints(
-  state: SimulationState,
+  state: EHTSimulationState,
   _params: EHTParams
 ): void {
   const cells = state.cells;
@@ -164,7 +164,7 @@ export function projectBasalCurveConstraints(
  * Apply all EHT constraints in sequence.
  */
 export function applyAllConstraints(
-  state: SimulationState,
+  state: EHTSimulationState,
   params: EHTParams
 ): void {
   projectHardSphereConstraints(state, params);

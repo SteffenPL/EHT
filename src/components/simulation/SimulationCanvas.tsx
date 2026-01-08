@@ -5,11 +5,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { SimulationRenderer } from '../../rendering';
 import { useTheme, useModel } from '@/contexts';
-import type { SimulationState } from '../../core/types';
 import type { BaseSimulationParams } from '../../core/registry';
 
 export interface SimulationCanvasProps {
-  state: SimulationState | null;
+  state: any;
   params: BaseSimulationParams;
   /** Minimum height in pixels. Default: 350 */
   minHeight?: number;

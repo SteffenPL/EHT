@@ -150,7 +150,7 @@ export function LevaParameterPanel({ params, onChange }: LevaParameterPanelProps
   const { currentModel } = useModel();
 
   // Get parameter groups from the current model
-  const parameterGroups = currentModel.parameterGroups;
+  const parameterGroups = currentModel.parameterGroups || [];
 
   // Build schema once when model changes
   const schema = useMemo(
@@ -195,47 +195,47 @@ export function LevaParameterPanel({ params, onChange }: LevaParameterPanelProps
   // Theme configuration
   const themeParams = isDark
     ? {
-        colors: {
-          elevation1: '#1a1a2e',
-          elevation2: '#16213e',
-          elevation3: '#0f3460',
-          accent1: '#e94560',
-          accent2: '#e94560',
-          accent3: '#e94560',
-          highlight1: '#2a2a4a',
-          highlight2: '#8892b0',
-          highlight3: '#ccd6f6',
-          vivid1: '#e94560',
-          folderWidgetColor: '#8892b0',
-          folderTextColor: '#ccd6f6',
-          toolTipBackground: '#1a1a2e',
-          toolTipText: '#ccd6f6',
-        },
-        fontSizes: {
-          root: '11px',
-        },
-      }
+      colors: {
+        elevation1: '#1a1a2e',
+        elevation2: '#16213e',
+        elevation3: '#0f3460',
+        accent1: '#e94560',
+        accent2: '#e94560',
+        accent3: '#e94560',
+        highlight1: '#2a2a4a',
+        highlight2: '#8892b0',
+        highlight3: '#ccd6f6',
+        vivid1: '#e94560',
+        folderWidgetColor: '#8892b0',
+        folderTextColor: '#ccd6f6',
+        toolTipBackground: '#1a1a2e',
+        toolTipText: '#ccd6f6',
+      },
+      fontSizes: {
+        root: '11px',
+      },
+    }
     : {
-        colors: {
-          elevation1: '#fafbfc',
-          elevation2: '#f0f2f5',
-          elevation3: '#e4e8ed',
-          accent1: '#0066cc',
-          accent2: '#0066cc',
-          accent3: '#0066cc',
-          highlight1: '#e4e8ed',
-          highlight2: '#6b7280',
-          highlight3: '#1f2937',
-          vivid1: '#0066cc',
-          folderWidgetColor: '#6b7280',
-          folderTextColor: '#1f2937',
-          toolTipBackground: '#1f2937',
-          toolTipText: '#f9fafb',
-        },
-        fontSizes: {
-          root: '11px',
-        },
-      };
+      colors: {
+        elevation1: '#fafbfc',
+        elevation2: '#f0f2f5',
+        elevation3: '#e4e8ed',
+        accent1: '#0066cc',
+        accent2: '#0066cc',
+        accent3: '#0066cc',
+        highlight1: '#e4e8ed',
+        highlight2: '#6b7280',
+        highlight3: '#1f2937',
+        vivid1: '#0066cc',
+        folderWidgetColor: '#6b7280',
+        folderTextColor: '#1f2937',
+        toolTipBackground: '#1f2937',
+        toolTipText: '#f9fafb',
+      },
+      fontSizes: {
+        root: '11px',
+      },
+    };
 
   return (
     <div className="relative w-full h-full min-h-[500px] overflow-y-auto custom-scrollbar" style={{ zIndex: 0 }}>

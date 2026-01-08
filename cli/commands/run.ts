@@ -2,16 +2,21 @@
  * CLI command for running a single simulation.
  */
 
+
 import * as fs from 'fs';
 import { SimulationEngine } from '../../src/core/simulation/engine';
-import { createDefaultParams } from '../../src/core/params/defaults';
+
 import { parseTomlWithDefaults } from '../../src/core/params/toml';
 import { setNestedValue } from '../../src/core/params/merge';
-import { createSnapshot } from '../../src/core/snapshot';
-import type { SimulationParams, SimulationState } from '../../src/core/types';
+// import { createSnapshot } from '../../src/core/snapshot';
+import type { BaseSimulationState as SimulationState } from '../../src/core/types';
 import type { BatchSnapshot } from '../../src/core/batch/types';
 import { parseArgs, generateTimeSamples } from '../utils/args';
 import { snapshotsToCSV, writeOutput, formatProgress } from '../utils/output';
+
+import { EHTModel } from '../../src/models/eht';
+import { DEFAULT_EHT_PARAMS } from '../../src/models/eht/params/defaults';
+import type { EHTParams } from '../../src/models/eht/params/types';
 
 /**
  * Run a single simulation from the CLI.
@@ -20,13 +25,15 @@ export async function runCommand(args: string[]): Promise<void> {
   const parsed = parseArgs(args);
 
   // Load base parameters
-  let params: SimulationParams;
+  let params: EHTParams;
   if (parsed.config) {
     const tomlContent = fs.readFileSync(parsed.config, 'utf-8');
-    params = parseTomlWithDefaults(tomlContent);
+    params = parseTomlWithDefaults(tomlContent); // This returns any, cast to EHTParams
     console.error(`Loaded config from: ${parsed.config}`);
   } else {
-    params = createDefaultParams();
+    // legacy defaults? or generic?
+    // Use EHT Defaults
+    params = { ...DEFAULT_EHT_PARAMS };
     console.error('Using default parameters');
   }
 
@@ -53,7 +60,8 @@ export async function runCommand(args: string[]): Promise<void> {
   console.error(`Time samples: ${timeSamples.join(', ')}h`);
 
   // Create and initialize simulation engine
-  const engine = new SimulationEngine({ params });
+  // Explicitly use EHT Model for CLI default
+  const engine = new SimulationEngine({ model: EHTModel, params });
   engine.init();
 
   // Collect snapshots
@@ -66,11 +74,14 @@ export async function runCommand(args: string[]): Promise<void> {
 
   // Check if we should sample at t=0
   if (timeSamples.length > 0 && timeSamples[0] <= 0) {
-    const snapshot = createSnapshot(engine.getState() as SimulationState, {
-      runIndex: 0,
+    const rows = EHTModel.getSnapshot(engine.getState() as any);
+    const snapshot: BatchSnapshot = {
+      run_index: 0,
       seed,
-      sampledParams: {},
-    });
+      time_h: 0,
+      sampled_params: {},
+      data: rows
+    };
     snapshots.push(snapshot);
     nextSampleIndex = 1;
   }
@@ -78,25 +89,30 @@ export async function runCommand(args: string[]): Promise<void> {
   // Run simulation with progress reporting
   while (!engine.isComplete() && nextSampleIndex < timeSamples.length) {
     engine.step();
-    const state = engine.getState() as SimulationState;
+    // Generic engine state is unknown type properly, cast to any for t access unless using generic
+    const state = engine.getState() as any;
+    const t = state.t ?? 0;
 
     // Progress reporting every 1.0h
-    const currentHour = Math.floor(state.t);
+    const currentHour = Math.floor(t);
     if (currentHour > lastProgressTime) {
       lastProgressTime = currentHour;
-      console.error(formatProgress(state.t, endTime));
+      console.error(formatProgress(t, endTime));
     }
 
     // Check if we've reached a sample time
     while (
       nextSampleIndex < timeSamples.length &&
-      state.t >= timeSamples[nextSampleIndex]
+      t >= timeSamples[nextSampleIndex]
     ) {
-      const snapshot = createSnapshot(state, {
-        runIndex: 0,
+      const rows = EHTModel.getSnapshot(state);
+      const snapshot: BatchSnapshot = {
+        run_index: 0,
         seed,
-        sampledParams: {},
-      });
+        time_h: timeSamples[nextSampleIndex],
+        sampled_params: {},
+        data: rows
+      };
       snapshots.push(snapshot);
       nextSampleIndex++;
     }
