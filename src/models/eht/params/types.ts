@@ -60,8 +60,8 @@ export interface EHTGeneralParams {
   w_screen: number;         // Screen width (visualization)
   h_screen: number;         // Screen height (visualization)
   p_div_out: number;        // Probability of division producing one offspring
-  curvature_1: number;      // Basal membrane curvature (horizontal, a = 1/curvature_1)
-  curvature_2: number;      // Basal membrane curvature (vertical, b = 1/curvature_2)
+  perimeter: number;        // Ellipse perimeter (0 for straight line)
+  aspect_ratio: number;     // Ellipse aspect ratio a/b (any positive value)
 }
 
 /** Cell property parameters (shared properties across cell types) */

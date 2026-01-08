@@ -5,7 +5,7 @@ import { BatchTab } from './components/batch';
 import { ParameterConfigView } from './components/params';
 import { DEFAULT_TIME_SAMPLES } from './core/params';
 import type { SimulationConfig } from './core/params';
-import { ModelProvider, useModel } from './contexts';
+import { ModelProvider, useModel, MessagesProvider } from './contexts';
 
 // Import models to register them
 import './models';
@@ -57,7 +57,9 @@ function AppContent() {
 function App() {
   return (
     <ModelProvider>
-      <AppContent />
+      <MessagesProvider>
+        <AppContent />
+      </MessagesProvider>
     </ModelProvider>
   );
 }

@@ -29,8 +29,8 @@ export function createCell(
   parent?: CellState
 ): CellState {
   const h = params.general.h_init;
-  const curvature_1 = params.general.curvature_1;
-  const curvature_2 = params.general.curvature_2;
+  const curvature_1 = state.geometry?.curvature_1 ?? 0;
+  const curvature_2 = state.geometry?.curvature_2 ?? 0;
 
   // Calculate apical and basal positions
   const B = basalCurve(position, curvature_1, curvature_2);

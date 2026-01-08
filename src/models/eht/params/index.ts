@@ -61,3 +61,10 @@ export {
   safeValidateParams,
   safeValidatePartialParams,
 } from './schema';
+
+// Geometry utilities
+export {
+  type EllipseGeometry,
+  ramanujanPerimeter,
+  computeEllipseFromPerimeter,
+} from './geometry';

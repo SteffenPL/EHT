@@ -5,9 +5,25 @@
 
 import { Graphics } from 'pixi.js';
 import type { ModelRenderer, ModelRenderContext, BoundingBox } from '@/core/registry/types';
-import type { SimulationState } from '@/core/types/state';
+import type { SimulationState, GeometryState } from '@/core/types/state';
 import type { EHTParams } from './params/types';
 import { shapeCenter } from '@/core/math/geometry';
+import { computeEllipseFromPerimeter } from './params/geometry';
+
+/**
+ * Get curvatures from state.geometry or compute from params as fallback.
+ */
+function getCurvatures(state: SimulationState, params: EHTParams): GeometryState {
+  if (state.geometry) {
+    return state.geometry;
+  }
+  // Fallback: compute from params (e.g., for initial render before simulation starts)
+  const geometry = computeEllipseFromPerimeter(params.general.perimeter, params.general.aspect_ratio);
+  return {
+    curvature_1: geometry.curvature_1,
+    curvature_2: geometry.curvature_2,
+  };
+}
 
 /** Theme colors for EHT rendering */
 interface EHTThemeColors {
@@ -47,9 +63,7 @@ function rgbToHex(r: number, g: number, b: number): number {
 /**
  * Draw the basal membrane curve.
  */
-function drawBasalCurve(graphics: Graphics, params: EHTParams, theme: EHTThemeColors): void {
-  const { curvature_1, curvature_2 } = params.general;
-
+function drawBasalCurve(graphics: Graphics, curvature_1: number, curvature_2: number, theme: EHTThemeColors): void {
   if (curvature_1 === 0 && curvature_2 === 0) {
     // Straight line
     graphics.moveTo(-50, 0);
@@ -136,8 +150,9 @@ function drawBasalLinks(graphics: Graphics, state: SimulationState, theme: EHTTh
  * EHT Model Renderer
  */
 export const ehtRenderer: ModelRenderer<EHTParams> = {
-  getBoundingBox(params: EHTParams, _state: SimulationState): BoundingBox {
-    const { curvature_1, curvature_2, h_init } = params.general;
+  getBoundingBox(params: EHTParams, state: SimulationState): BoundingBox {
+    const { curvature_1, curvature_2 } = getCurvatures(state, params);
+    const h_init = params.general.h_init;
 
     if (curvature_1 === 0 && curvature_2 === 0) {
       // Straight line case
@@ -164,9 +179,10 @@ export const ehtRenderer: ModelRenderer<EHTParams> = {
     const theme = ctx.isDark ? DARK_THEME : LIGHT_THEME;
     const cellsGraphics = ctx.graphics.cells as Graphics;
     const linksGraphics = ctx.graphics.links as Graphics;
+    const { curvature_1, curvature_2 } = getCurvatures(state, params);
 
     // Draw basal membrane
-    drawBasalCurve(linksGraphics, params, theme);
+    drawBasalCurve(linksGraphics, curvature_1, curvature_2, theme);
 
     // Draw links (behind cells)
     drawBasalLinks(linksGraphics, state, theme);

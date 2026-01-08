@@ -76,8 +76,8 @@ export const ehtGeneralParamsSchema = z.object({
   w_screen: z.number().positive(),
   h_screen: z.number().positive(),
   p_div_out: z.number().min(0).max(1),
-  curvature_1: z.number(),
-  curvature_2: z.number(),
+  perimeter: z.number().nonnegative(),     // 0 = straight line
+  aspect_ratio: z.number().positive(),     // a/b ratio (can be < 1 when b > a)
 });
 
 /** Cell property params schema */

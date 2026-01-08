@@ -91,8 +91,8 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     w_screen: 70,
     h_screen: 70,
     p_div_out: 1.0,
-    curvature_1: 0.06,
-    curvature_2: 0.06,
+    perimeter: 105,    // ≈ 2π × 16.67 (equivalent to curvature 0.06)
+    aspect_ratio: 1,   // Circle
   },
   cell_prop: {
     apical_junction_init: 0.0,
@@ -135,8 +135,8 @@ export const EHT_PRESETS: Array<{
     label: 'Straight',
     create: () => {
       const params = createDefaultEHTParams();
-      params.general.curvature_1 = 0;
-      params.general.curvature_2 = 0;
+      params.general.perimeter = 0;      // Straight line
+      params.general.aspect_ratio = 1;
       params.general.full_circle = false;
       return params;
     },
@@ -146,8 +146,8 @@ export const EHT_PRESETS: Array<{
     label: 'Full Circle',
     create: () => {
       const params = createDefaultEHTParams();
-      params.general.curvature_1 = 0.2;
-      params.general.curvature_2 = 0.2;
+      params.general.perimeter = 31.4;   // ≈ 2π × 5 (equivalent to curvature 0.2)
+      params.general.aspect_ratio = 1;
       params.general.full_circle = true;
       return params;
     },

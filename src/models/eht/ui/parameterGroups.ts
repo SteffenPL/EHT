@@ -26,8 +26,8 @@ export const EHT_PARAMETER_GROUPS: ParameterGroupDefinition[] = [
       { path: 'general.w_screen', label: 'Screen Width', type: 'number', step: 10 },
       { path: 'general.h_screen', label: 'Screen Height', type: 'number', step: 10 },
       { path: 'general.p_div_out', label: 'Division Prob.', type: 'number', step: 0.01, min: 0, max: 1 },
-      { path: 'general.curvature_1', label: 'Curvature 1', type: 'number', step: 0.001 },
-      { path: 'general.curvature_2', label: 'Curvature 2', type: 'number', step: 0.001 },
+      { path: 'general.perimeter', label: 'Perimeter', type: 'number', step: 1, min: 0 },
+      { path: 'general.aspect_ratio', label: 'Aspect Ratio (a/b)', type: 'number', step: 0.1, min: 0.1 },
     ],
   },
   {

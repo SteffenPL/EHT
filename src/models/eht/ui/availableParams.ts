@@ -9,8 +9,8 @@ export const EHT_BATCH_PARAMETERS: BatchParameterDefinition[] = [
   // General parameters
   { path: 'general.N_emt', label: 'N_emt (EMT cell count)', isInteger: true },
   { path: 'general.N_init', label: 'N_init (Initial cells)', isInteger: true },
-  { path: 'general.curvature_1', label: 'Curvature 1 (horizontal)' },
-  { path: 'general.curvature_2', label: 'Curvature 2 (vertical)' },
+  { path: 'general.perimeter', label: 'Perimeter (ellipse)' },
+  { path: 'general.aspect_ratio', label: 'Aspect Ratio (a/b)' },
   { path: 'general.random_seed', label: 'Random seed', isInteger: true },
   { path: 'general.t_end', label: 't_end (End time)' },
 

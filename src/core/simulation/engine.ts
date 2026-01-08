@@ -17,6 +17,7 @@ import { createInitialState } from '../types/state';
 import { createCell } from './cell';
 import { performTimestep } from './timestep';
 import { createSnapshot } from '../snapshot';
+import { computeEllipseFromPerimeter } from '@/models/eht/params/geometry';
 
 export interface SimulationEngineConfig {
   params: SimulationParams;
@@ -61,9 +62,19 @@ export class SimulationEngine {
     this.totalDivisions = 0;
 
     const pg = this.params.general;
+
+    // Compute and store geometry from perimeter/aspect_ratio
+    const geometry = computeEllipseFromPerimeter(pg.perimeter, pg.aspect_ratio);
+    this.state.geometry = {
+      curvature_1: geometry.curvature_1,
+      curvature_2: geometry.curvature_2,
+    };
+
+    const { curvature_1, curvature_2 } = this.state.geometry;
+
     const N = pg.N_init;
-    const w = pg.full_circle && pg.curvature_1 !== 0 && pg.curvature_1 === pg.curvature_2
-      ? 2 * Math.PI * Math.abs(1 / pg.curvature_1)
+    const w = pg.full_circle && curvature_1 !== 0 && curvature_1 === curvature_2
+      ? 2 * Math.PI * Math.abs(1 / curvature_1)
       : pg.w_init;
     const h = pg.h_init;
 
@@ -76,7 +87,7 @@ export class SimulationEngine {
     for (let i = 0; i < N; i++) {
       const l = this.rng.random(-w, w);
       const height = this.rng.random(h / 3, (2 * h) / 3);
-      const pos = curvedCoordsToPosition(l, height, pg.curvature_1, pg.curvature_2);
+      const pos = curvedCoordsToPosition(l, height, curvature_1, curvature_2);
 
       positions.push(pos);
     }
@@ -84,8 +95,8 @@ export class SimulationEngine {
     // Sort by position along the basal curve (arc length), not by x coordinate.
     // This preserves ordering for curved membranes.
     positions.sort((a, b) => {
-      const la = basalArcLength(basalCurve(a, pg.curvature_1, pg.curvature_2), pg.curvature_1, pg.curvature_2);
-      const lb = basalArcLength(basalCurve(b, pg.curvature_1, pg.curvature_2), pg.curvature_1, pg.curvature_2);
+      const la = basalArcLength(basalCurve(a, curvature_1, curvature_2), curvature_1, curvature_2);
+      const lb = basalArcLength(basalCurve(b, curvature_1, curvature_2), curvature_1, curvature_2);
       return la - lb;
     });
 

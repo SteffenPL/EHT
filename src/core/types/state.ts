@@ -75,6 +75,12 @@ export interface CellState {
   stiffness_nuclei_basal: number;
 }
 
+/** Geometry parameters computed at initialization */
+export interface GeometryState {
+  curvature_1: number; // Horizontal membrane curvature (1/a)
+  curvature_2: number; // Vertical membrane curvature (1/b)
+}
+
 /** Complete simulation state */
 export interface SimulationState {
   cells: CellState[];
@@ -82,6 +88,7 @@ export interface SimulationState {
   ba_links: BasalLink[];
   t: number;
   step_count: number;
+  geometry?: GeometryState; // Computed geometry (model-specific)
 }
 
 /** Initial state for a new simulation */

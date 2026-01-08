@@ -57,8 +57,8 @@ export function projectBasalOrderingConstraints(
 ): void {
   const cells = state.cells;
   const baLinks = state.ba_links;
-  const curvature_1 = params.general.curvature_1;
-  const curvature_2 = params.general.curvature_2;
+  const curvature_1 = state.geometry?.curvature_1 ?? 0;
+  const curvature_2 = state.geometry?.curvature_2 ?? 0;
 
   for (const link of baLinks) {
     const ci = cells[link.l];
@@ -145,11 +145,11 @@ export function projectMaxBasalDistanceConstraints(
  */
 export function projectBasalCurveConstraints(
   state: SimulationState,
-  params: SimulationParams
+  _params: SimulationParams
 ): void {
   const cells = state.cells;
-  const curvature_1 = params.general.curvature_1;
-  const curvature_2 = params.general.curvature_2;
+  const curvature_1 = state.geometry?.curvature_1 ?? 0;
+  const curvature_2 = state.geometry?.curvature_2 ?? 0;
 
   for (const cell of cells) {
     const B = Vector2.from(cell.B);
