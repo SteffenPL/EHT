@@ -70,6 +70,8 @@ export interface SimulationModel<Params = any, State = any> {
 
     // Batch parameters for parameter sweeps
     batchParameters?: BatchParameterDefinition[];
+    /** Generate batch parameters dynamically from current params */
+    generateBatchParameters?: (params: Params) => BatchParameterDefinition[];
 
     // Model-specific UI components
     ui?: ModelUI<Params>;

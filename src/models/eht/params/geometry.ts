@@ -1,6 +1,13 @@
 /**
  * Ellipse geometry calculations for the EHT model.
  * Converts user-friendly perimeter/aspect_ratio to internal curvature values.
+ * 
+ * Aspect ratio semantics:
+ * - aspect = 0: straight line
+ * - aspect > 0: curve above x-axis (normal points into tissue, up)
+ *   - large aspect = large vertical radius, small horizontal radius
+ * - aspect < 0: curve below x-axis (normal points outward, down)
+ *   - |aspect| determines the shape
  */
 
 /**
@@ -10,7 +17,7 @@ export interface EllipseGeometry {
   a: number;           // horizontal semi-axis
   b: number;           // vertical semi-axis
   curvature_1: number; // 1/a (horizontal curvature)
-  curvature_2: number; // 1/b (vertical curvature)
+  curvature_2: number; // 1/b (vertical curvature), sign indicates orientation
 }
 
 /**
@@ -38,29 +45,28 @@ export function ramanujanPerimeter(a: number, b: number): number {
 /**
  * Compute ellipse semi-axes and curvatures from perimeter and aspect ratio.
  *
- * Algorithm:
- * 1. Normalize: b' = 1, a' = aspectRatio
- * 2. Compute normalized perimeter P' using Ramanujan's formula
- * 3. Scale factor f = perimeter / P'
- * 4. Final axes: a = f * a', b = f * b'
- * 5. Curvatures: curvature_1 = 1/a, curvature_2 = 1/b
+ * New semantics:
+ * - aspect = 0: straight line (curvatures = 0)
+ * - aspect > 0: tissue on inside of curve (normal points up/inward)
+ *   - Larger aspect = larger vertical radius (tall ellipse)
+ *   - aspect = 1: circle
+ * - aspect < 0: tissue on outside of curve (normal points down/outward)
+ *   - Same shape as |aspect|, but curvatures are negative
  *
- * Special cases:
- * - perimeter = 0: straight line (curvatures = 0)
- * - aspectRatio = 1: circle (curvature_1 = curvature_2)
- * - aspectRatio < 1: ellipse with b > a (taller than wide)
- * - aspectRatio > 1: ellipse with a > b (wider than tall)
+ * The aspect ratio determines b/a (vertical/horizontal), so:
+ * - aspect = 2: vertical radius is twice horizontal (tall ellipse)
+ * - aspect = 0.5: vertical radius is half horizontal (wide ellipse)
  *
- * @param perimeter - Target ellipse perimeter (0 for straight line)
- * @param aspectRatio - Ratio a/b (any positive value)
+ * @param perimeter - Target ellipse perimeter (used when aspect != 0)
+ * @param aspectRatio - Shape: 0=line, >0=curve above, <0=curve below
  * @returns EllipseGeometry with computed values
  */
 export function computeEllipseFromPerimeter(
   perimeter: number,
   aspectRatio: number
 ): EllipseGeometry {
-  // Special case: straight line
-  if (perimeter === 0) {
+  // Special case: straight line (aspect = 0)
+  if (aspectRatio === 0) {
     return {
       a: Infinity,
       b: Infinity,
@@ -69,13 +75,15 @@ export function computeEllipseFromPerimeter(
     };
   }
 
-  // Ensure aspectRatio is positive
-  const ar = Math.max(Number.EPSILON, aspectRatio);
+  // Extract sign for orientation and magnitude for shape
+  const sign = Math.sign(aspectRatio);
+  const absAspect = Math.abs(aspectRatio);
 
-  // Normalized ellipse: b' = 1, a' = aspectRatio
-  // This works for any positive aspectRatio (including < 1)
-  const aPrime = ar;
-  const bPrime = 1;
+  // New semantics: aspect = b/a (vertical/horizontal)
+  // So if aspect = 2, b = 2*a (tall ellipse)
+  // Normalized ellipse: a' = 1, b' = absAspect
+  const aPrime = 1;
+  const bPrime = absAspect;
 
   // Compute normalized perimeter
   const pPrime = ramanujanPerimeter(aPrime, bPrime);
@@ -88,8 +96,9 @@ export function computeEllipseFromPerimeter(
   const b = f * bPrime;
 
   // Curvatures (handle potential division by zero)
-  const curvature_1 = a > 0 ? 1 / a : 0;
-  const curvature_2 = b > 0 ? 1 / b : 0;
+  // Sign controls orientation: positive = tissue inside, negative = tissue outside
+  const curvature_1 = a > 0 ? sign / a : 0;
+  const curvature_2 = b > 0 ? sign / b : 0;
 
   return {
     a,

@@ -21,7 +21,7 @@ interface ModelContextType {
 const ModelContext = createContext<ModelContextType | undefined>(undefined);
 
 export function ModelProvider({ children }: { children: ReactNode }) {
-  console.log('[ModelProvider] Rendering, registry size:', modelRegistry.getModelNames().length);
+  // console.log('[ModelProvider] Rendering, registry size:', modelRegistry.getModelNames().length);
   const availableModels = modelRegistry.getModelNames();
   const defaultModel = modelRegistry.getDefault() || (availableModels.length > 0 ? modelRegistry.get(availableModels[0]) : undefined);
 

@@ -9,6 +9,7 @@ import type { EHTParams, EHTCellTypeParams } from './types';
 export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
   name: 'control',
   N_init: 25,
+  location: "",
   R_hard: 0.4,
   R_hard_div: 0.7,
   R_soft: 1.2,
@@ -42,6 +43,7 @@ export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
 export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
   name: 'emt',
   N_init: 5,
+  location: "bottom",
   R_hard: 0.4,
   R_hard_div: 0.7,
   R_soft: 1.2,
@@ -95,7 +97,7 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
   },
   cell_prop: {
     apical_junction_init: 0.0,
-    max_basal_junction_dist: 2.0,
+    max_basal_junction_dist: 4.0,
     basal_daming_ratio: 1.0,
     basal_membrane_repulsion: 0.0,
     cytos_init: 0.0,

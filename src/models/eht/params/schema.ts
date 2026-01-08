@@ -36,6 +36,7 @@ export const emtEventTimesSchema = z.object({
 export const ehtCellTypeSchema = z.object({
   name: z.string(),
   N_init: z.number().int().nonnegative(),
+  location: z.string(),
   R_hard: z.number().positive(),
   R_hard_div: z.number().positive(),
   R_soft: z.number().positive(),
@@ -74,8 +75,8 @@ export const ehtGeneralParamsSchema = z.object({
   w_screen: z.number().positive(),
   h_screen: z.number().positive(),
   p_div_out: z.number().min(0).max(1),
-  perimeter: z.number().nonnegative(),     // 0 = straight line
-  aspect_ratio: z.number().positive(),     // a/b ratio (can be < 1 when b > a)
+  perimeter: z.number().positive(),           // Ellipse perimeter (only used when aspect != 0)
+  aspect_ratio: z.number(),                   // 0=line, >0=curve above, <0=curve below; |aspect|=b/a
 });
 
 /** Cell property params schema */

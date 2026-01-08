@@ -95,13 +95,13 @@ function projectOntoEllipse(pos: Vector2, a: number, b: number): number {
 /**
  * Compute arc length of an ellipse from theta=0 to theta using adaptive integration.
  * Arc length integral: ∫√(a²sin²(t) + b²cos²(t)) dt
- * 
+ *
  * @param theta - End angle
  * @param a - Horizontal semi-axis
  * @param b - Vertical semi-axis
  * @returns Arc length from 0 to theta
  */
-function ellipseArcLength(theta: number, a: number, b: number): number {
+export function ellipseArcLength(theta: number, a: number, b: number): number {
   // Integrand: sqrt(a^2 * sin^2(t) + b^2 * cos^2(t))
   const integrand = (t: number) => {
     const s = Math.sin(t);
@@ -170,13 +170,13 @@ function ellipseArcLength(theta: number, a: number, b: number): number {
 /**
  * Find theta such that arc length from 0 to theta equals target length.
  * Uses forward integration with adaptive bisection refinement.
- * 
+ *
  * @param targetLength - Target arc length
  * @param a - Horizontal semi-axis
  * @param b - Vertical semi-axis
  * @returns Theta value
  */
-function ellipseThetaFromArcLength(targetLength: number, a: number, b: number): number {
+export function ellipseThetaFromArcLength(targetLength: number, a: number, b: number): number {
   if (Math.abs(targetLength) < 1e-10) {
     return 0;
   }
@@ -199,7 +199,7 @@ function ellipseThetaFromArcLength(targetLength: number, a: number, b: number): 
   const avgRadius = (a + b) / 2;
   let dt = absTarget / avgRadius / 10; // Start with ~10 steps
   
-  const tol = 1e-8;
+  const tol = 1e-6;
   const maxIter = 1000;
   let direction = 1; // 1 for forward, -1 for backward
   
@@ -245,7 +245,7 @@ function ellipseThetaFromArcLength(targetLength: number, a: number, b: number): 
     }
     
     // Safety check: if dt becomes too small, stop
-    if (Math.abs(dt) < 1e-12) {
+    if (Math.abs(dt) < 1e-8) {
       break;
     }
   }
@@ -290,10 +290,12 @@ export function basalCurveParam(l: number, curvature_1: number, curvature_2: num
   
   // For elliptical case, find theta from arc length
   const theta = ellipseThetaFromArcLength(l, a, b);
-  
+
+  // Standard ellipse parameterization: x = a*cos(theta), y = b*sin(theta)
+  // This must match the parameterization used in ellipseArcLength
   return new Vector2(
-    center.x + dir * a * Math.sin(theta),
-    center.y + dir * b * Math.cos(theta)
+    center.x + dir * a * Math.cos(theta),
+    center.y + dir * b * Math.sin(theta)
   );
 }
 

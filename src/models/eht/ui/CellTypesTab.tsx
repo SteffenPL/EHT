@@ -64,6 +64,23 @@ function NumberCell({ value, onChange, disabled, step = 0.1, min, max }: NumberC
   );
 }
 
+function StringCell({ value, onChange, disabled }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(e.target.value);
+  };
+  return (
+    <td className="py-1 px-1">
+      <Input
+        type="text"
+        value={value}
+        onChange={handleChange}
+        disabled={disabled}
+        className="h-6 text-xs w-24"
+      />
+    </td>
+  );
+}
+
 interface RangeCellProps {
   value: Range;
   onChange: (value: Range) => void;
@@ -244,6 +261,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
       ...cloneDeep(DEFAULT_CONTROL_CELL),
       name: `New Type ${counter}`,
       N_init: 0,
+      location: "",
       color: { r: Math.floor(Math.random() * 200) + 50, g: Math.floor(Math.random() * 200) + 50, b: Math.floor(Math.random() * 200) + 50 },
     };
     newParams.cell_types[newKey] = newCellType;
@@ -325,6 +343,18 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 disabled={disabled}
                 min={0}
                 step={1}
+              />
+            ))}
+          </CellTypeRow>
+
+          {/* Location */}
+          <CellTypeRow label="Location" tooltip='Predefined location along basal membrane: "top", "bottom", "rest" or numeric value in [-1, 1]'>
+            {cellTypeKeys.map((key) => (
+              <StringCell
+                key={key}
+                value={getCellType(key).location}
+                onChange={(v) => updateCellType(key, 'location', v)}
+                disabled={disabled}
               />
             ))}
           </CellTypeRow>

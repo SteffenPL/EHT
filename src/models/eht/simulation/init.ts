@@ -8,7 +8,7 @@ import { SeededRandom } from '@/core/math/random';
 import { basalArcLength, basalCurve, curvedCoordsToPosition } from '@/core/math/geometry';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
-import { computeEllipseFromPerimeter } from '../params/geometry';
+import { computeEllipseFromPerimeter, ramanujanPerimeter } from '../params/geometry';
 import { createCell } from './cell';
 
 /**
@@ -35,56 +35,126 @@ export function initializeEHTSimulation(
   const cellTypeEntries = Object.entries(params.cell_types);
   const totalN = cellTypeEntries.reduce((sum, [, ct]) => sum + ct.N_init, 0);
 
-  const w = pg.full_circle && curvature_1 !== 0 && curvature_1 === curvature_2
-    ? 2 * Math.PI * Math.abs(1 / curvature_1)
+  // first we distribute cell positions along a periodic domain from [-1, 1] in x
+  // later we will wrap it around to the curved basal membrane
+
+  const locations: [number,string][] = [];
+  for(let i = 0; i < totalN; i++) {
+    
+    locations.push([-1 + (2 * (i)) / totalN, ""]);
+  }
+
+  // sort cell type entried by weather or not they have a location specified
+  cellTypeEntries.sort((a, b) => {
+    const aHasLoc = a[1].location !== "" ? 1 : 0;
+    const bHasLoc = b[1].location !== "" ? 1 : 0;
+    return bHasLoc - aHasLoc;
+  });
+
+  // assign locations to cell types that have them specified
+  for(const [typeKey, cellType] of cellTypeEntries) {
+    if(cellType.location !== "") {
+      let locValue: number;
+      // console.log("Assigning locations for cell type", typeKey, "with location", cellType.location);
+      if(cellType.location === "top") {
+        locValue = 0;
+      } else if(cellType.location === "bottom") {
+        locValue = 1;
+      } else {
+        locValue = parseFloat(cellType.location);
+        if(isNaN(locValue) || locValue < -1 || locValue > 1) {
+          locValue = 0.0;
+        }
+      }
+
+      // sort locations by closeness to desired location, using modulo on [-1, 1]
+      locations.sort((a, b) => {
+        return Math.min(Math.abs(a[0] - locValue),Math.abs(a[0] + 2 - locValue)) -
+          Math.min(Math.abs(b[0] - locValue),Math.abs(b[0] + 2 - locValue));
+      });
+
+      // assign the closest unassigned locations to this cell type
+      let assigned = 0;
+      for(let i = 0; i < locations.length && assigned < cellType.N_init; i++) {
+        if(locations[i][1] === "") {
+          locations[i] = [locations[i][0], typeKey];
+          console.log("Assigned location", locations[i][0], "to cell type", typeKey);
+          assigned++;
+        }
+      }
+    }
+  }
+
+  // sort locations again by x value
+  locations.sort((a, b) => a[0] - b[0]);
+
+  // fill in unassigned locations with remaining cell types
+  let assignIndex = 0;
+  for(let i = 0; i < locations.length; i++) {
+    if(locations[i][1] !== "") continue; // Check if already assigned
+    while(assignIndex < cellTypeEntries.length) {
+      const [typeKey, cellType] = cellTypeEntries[assignIndex];
+      const assignedCount = locations.filter(loc => loc[1] === typeKey).length; // Count in locations array
+      if(assignedCount < cellType.N_init) {
+        locations[i] = [locations[i][0], typeKey]; // Assign type key to location
+        break;
+      } else {
+        assignIndex++;
+      }
+    }
+  }
+
+  // Sort locations back to original order
+  locations.sort((a, b) => a[0] - b[0]);
+
+  const w = pg.full_circle
+    ? ramanujanPerimeter(Math.abs(1 / curvature_1), Math.abs(1 / curvature_2))
     : pg.w_init;
   const h = pg.h_init;
 
   // Generate initial positions for all cells
   const positions: Vector2[] = [];
+  const typeAssignments: string[] = [];
   for (let i = 0; i < totalN; i++) {
-    const l = rng.random(-w, w);
+    // const l = rng.random(-w, w);
+    const l = locations[i][0] * (w / 2);
+    console.log("Cell", i, "location:", l, "assigned type:", locations[i][1]);
     const height = rng.random(h / 3, (2 * h) / 3);
     const pos = curvedCoordsToPosition(l, height, curvature_1, curvature_2);
     positions.push(pos);
+    typeAssignments.push(locations[i][1]);
   }
 
-  // Sort by position along the basal curve (arc length)
-  positions.sort((a, b) => {
-    const la = basalArcLength(basalCurve(a, curvature_1, curvature_2), curvature_1, curvature_2);
-    const lb = basalArcLength(basalCurve(b, curvature_1, curvature_2), curvature_1, curvature_2);
-    return la - lb;
-  });
 
-  // Build a list of cell type keys for each position
-  // Distribute cell types along the tissue (each type gets contiguous segment)
-  const typeAssignments: string[] = [];
-  for (const [typeKey, cellType] of cellTypeEntries) {
-    for (let i = 0; i < cellType.N_init; i++) {
-      typeAssignments.push(typeKey);
-    }
-  }
+
+  // // Sort by position along the basal curve (arc length)
+  // positions.sort((a, b) => {
+  //   const la = basalArcLength(basalCurve(a, curvature_1, curvature_2), curvature_1, curvature_2);
+  //   const lb = basalArcLength(basalCurve(b, curvature_1, curvature_2), curvature_1, curvature_2);
+  //   return la - lb;
+  // });
 
   // Shuffle type assignments to distribute types, then sort positions
   // Actually, keep contiguous for now (simpler, matches old behavior)
   // Create cells
-  let positionIndex = 0;
-  for (const [typeKey, cellType] of cellTypeEntries) {
-    for (let i = 0; i < cellType.N_init; i++) {
-      if (positionIndex >= positions.length) break;
-
-      const cell = createCell(
-        params,
-        state,
-        rng,
-        positions[positionIndex],
-        cellType,
-        typeKey
-      );
-
-      state.cells.push(cell);
-      positionIndex++;
+  state.cells = [];
+  for(let i = 0; i < positions.length; i++) {
+    const typeKey = typeAssignments[i];
+    const cellType = params.cell_types[typeKey];
+    if(!cellType) {
+      console.warn("No cell type found for key", typeKey);
+      continue;
     }
+    const cell = createCell(
+      params,
+      state,
+      rng,
+      positions[i],
+      cellType,
+      typeKey
+    );
+
+    state.cells.push(cell);
   }
 
   // Create initial links between adjacent cells

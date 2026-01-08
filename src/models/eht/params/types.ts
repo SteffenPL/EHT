@@ -20,6 +20,7 @@ export interface EMTEventTimes {
 export interface EHTCellTypeParams {
   name: string;
   N_init: number;           // Initial number of cells of this type
+  location: string;         // Optional predefined location along the basal membrane, "top", "bottom", "rest" or numeric value in [-1, 1]
   R_hard: number;           // Hard sphere radius
   R_hard_div: number;       // Hard sphere radius during division
   R_soft: number;           // Soft interaction radius
@@ -59,7 +60,7 @@ export interface EHTGeneralParams {
   h_screen: number;         // Screen height (visualization)
   p_div_out: number;        // Probability of division producing one offspring
   perimeter: number;        // Ellipse perimeter (0 for straight line)
-  aspect_ratio: number;     // Ellipse aspect ratio a/b (any positive value)
+  aspect_ratio: number;     // Shape: 0=line, >0=curve above, <0=curve below; |aspect|=b/a
 }
 
 /** Cell property parameters (shared properties across cell types) */

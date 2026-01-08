@@ -41,8 +41,8 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
           <BoolInput label="Full Circle" value={g.full_circle} onChange={(v) => update('full_circle', v)} disabled={disabled} />
           <NumberInput label="Initial Width" value={g.w_init} onChange={(v) => update('w_init', v)} disabled={disabled} step={1} min={0} />
           <NumberInput label="Initial Height" value={g.h_init} onChange={(v) => update('h_init', v)} disabled={disabled} step={0.1} min={0} />
-          <NumberInput label="Perimeter" value={g.perimeter} onChange={(v) => update('perimeter', v)} disabled={disabled} step={1} min={0} />
-          <NumberInput label="Aspect Ratio (a/b)" value={g.aspect_ratio} onChange={(v) => update('aspect_ratio', v)} disabled={disabled} step={0.1} min={0.1} />
+          <NumberInput label="Perimeter" value={g.perimeter} onChange={(v) => update('perimeter', v)} disabled={disabled} step={1} min={1} />
+          <NumberInput label="Aspect (0=line, b/a)" value={g.aspect_ratio} onChange={(v) => update('aspect_ratio', v)} disabled={disabled} step={0.1} />
         </div>
       </div>
 

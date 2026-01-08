@@ -12,7 +12,7 @@ import type { EHTParams } from './params/types';
 import { ehtParamsSchema } from './params/schema';
 import { DEFAULT_EHT_PARAMS, EHT_PRESETS } from './params/defaults';
 import { computeEHTStatistics } from './statistics';
-import { EHT_BATCH_PARAMETERS } from './ui/availableParams';
+import { EHT_BATCH_PARAMETERS, generateEHTBatchParameters } from './ui/availableParams';
 import { ehtUI } from './ui';
 import { initializeEHTSimulation } from './simulation/init';
 import { performTimestep } from './simulation/step';
@@ -93,6 +93,10 @@ export const EHTModel: SimulationModel<EHTParams, EHTSimulationState> = {
 
   // Statistics
   computeStats: (state: EHTSimulationState) => computeEHTStatistics(state),
+
+  // Batch parameters - dynamic generation
+  generateBatchParameters: (params: EHTParams) => generateEHTBatchParameters(params),
+  batchParameters: EHT_BATCH_PARAMETERS, // Static fallback
 
   // Model-specific renderer
   renderer: ehtRenderer,

@@ -1,20 +1,20 @@
 /**
  * List of parameter ranges for batch sweeps.
  */
+import React from 'react';
 import { Plus, X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import type { ParameterRange } from '@/core/batch';
-// import type { SimulationParams } from '@/core/types';
-type SimulationParams = any;
+import type { BatchParameterDefinition, BaseSimulationParams } from '@/core/registry/types';
 import { useModel } from '@/contexts';
 
 export interface ParameterRangeListProps {
   ranges: ParameterRange[];
   onChange: (ranges: ParameterRange[]) => void;
-  baseParams: SimulationParams;
+  baseParams: BaseSimulationParams;
   disabled?: boolean;
 }
 
@@ -33,7 +33,17 @@ function getNestedValue(obj: unknown, path: string): number | undefined {
 
 export function ParameterRangeList({ ranges, onChange, baseParams, disabled }: ParameterRangeListProps) {
   const { currentModel } = useModel();
-  const modelBatchParams = currentModel.batchParameters || [];
+
+  // Generate batch parameters dynamically if possible
+  const modelBatchParams = React.useMemo(() => {
+    // Try to use model's generateBatchParameters function if available
+    if (currentModel.generateBatchParameters && baseParams) {
+      return currentModel.generateBatchParameters(baseParams) as BatchParameterDefinition[];
+    }
+    // Fall back to static batch parameters
+    return (currentModel.batchParameters || []) as BatchParameterDefinition[];
+  }, [currentModel, baseParams]);
+
   const usedPaths = new Set(ranges.map((r) => r.path));
   const availableParams = modelBatchParams.filter((p) => !usedPaths.has(p.path));
 
