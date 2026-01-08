@@ -31,6 +31,8 @@ export {
   type DeepPartial,
   type PartialParams,
   type SimulationModel,
+  type ModelUI,
+  type ModelUITabProps,
 } from './types';
 
 // Registry

@@ -1,5 +1,6 @@
-
+import type { ComponentType } from 'react';
 import type { ModelRenderer } from './renderer';
+
 // We need StatisticDefinition but need to avoid circular deps if possible
 // Ideally core/interfaces/model shouldn't depend on registry/types.
 // But StatisticDefinition is generic enough.
@@ -10,17 +11,33 @@ interface StatisticDefinition<State = any> {
     description: string;
     compute: (state: State) => number;
 }
-interface ParameterGroupDefinition {
-    id: string;
-    label: string;
-    collapsed?: boolean;
-    fields: any[]; // Avoid deep dependency for now
-}
 interface BatchParameterDefinition {
     path: string;
     label: string;
     isInteger?: boolean;
     options?: any[];
+}
+
+/**
+ * Props passed to model-specific UI tab components.
+ */
+export interface ModelUITabProps<Params = any> {
+    params: Params;
+    onChange: (params: Params) => void;
+    disabled?: boolean;
+}
+
+/**
+ * Model-specific UI components for parameter editing.
+ * Each model can provide its own React components for the parameter panel tabs.
+ */
+export interface ModelUI<Params = any> {
+    /** Parameters tab - general model parameters (T_end, N_init, etc.) */
+    ParametersTab?: ComponentType<ModelUITabProps<Params>>;
+    /** Cell Types tab - table with rows per parameter, columns per cell type */
+    CellTypesTab?: ComponentType<ModelUITabProps<Params>>;
+    /** Simulation tab - algorithmic parameters (dt, substeps, etc.) */
+    SimulationTab?: ComponentType<ModelUITabProps<Params>>;
 }
 
 /**
@@ -42,10 +59,11 @@ export interface SimulationModel<Params = any, State = any> {
     validateParams(params: unknown): Params;
     paramsSchema?: any; // Zod schema
 
-    // UI Metadata (Optional)
-    parameterGroups?: ParameterGroupDefinition[];
+    // Batch parameters for parameter sweeps
     batchParameters?: BatchParameterDefinition[];
-    cellTypes?: string[];
+
+    // Model-specific UI components
+    ui?: ModelUI<Params>;
 
     // Simulation Loop
     /**

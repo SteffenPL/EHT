@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
-import { LevaParameterPanel } from './LevaParameterPanel';
+import { ModelParameterPanel } from './ModelParameterPanel';
 import { ParameterRangeList } from '../batch/ParameterRangeList';
 import { TimeSampleConfig } from '../batch/TimeSampleConfig';
 import type { SimulationConfig } from '@/core/params';
@@ -116,9 +116,10 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
         <Separator />
 
         <div className="h-[500px] border rounded-md overflow-hidden relative">
-          <LevaParameterPanel
+          <ModelParameterPanel
             params={config.params}
             onChange={handleParamsChange}
+            disabled={disabled}
           />
         </div>
 

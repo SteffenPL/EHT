@@ -13,7 +13,7 @@ import type { ToyParams } from './params/types';
 import { toyParamsSchema } from './params/schema';
 import { DEFAULT_TOY_PARAMS } from './params/defaults';
 import { computeToyStatistics } from './statistics';
-import { TOY_PARAMETER_GROUPS, TOY_BATCH_PARAMETERS } from './ui';
+import { TOY_BATCH_PARAMETERS, toyUI } from './ui';
 import { toyRenderer } from './renderer';
 
 /**
@@ -203,7 +203,10 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
 
   // Model-specific renderer
   renderer: toyRenderer,
+
+  // Model-specific UI components
+  ui: toyUI,
 };
 
 // Re-export specific parts if needed
-export { TOY_PARAMETER_GROUPS, TOY_BATCH_PARAMETERS };
+export { TOY_BATCH_PARAMETERS };

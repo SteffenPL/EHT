@@ -12,8 +12,8 @@ import type { EHTParams } from './params/types';
 import { ehtParamsSchema } from './params/schema';
 import { DEFAULT_EHT_PARAMS, EHT_PRESETS } from './params/defaults';
 import { computeEHTStatistics } from './statistics';
-import { EHT_PARAMETER_GROUPS } from './ui/parameterGroups';
 import { EHT_BATCH_PARAMETERS } from './ui/availableParams';
+import { ehtUI } from './ui';
 import { initializeEHTSimulation } from './simulation/init';
 import { performTimestep } from './simulation/step';
 import { ehtRenderer } from './renderer';
@@ -96,7 +96,10 @@ export const EHTModel: SimulationModel<EHTParams, EHTSimulationState> = {
 
   // Model-specific renderer
   renderer: ehtRenderer,
+
+  // Model-specific UI components
+  ui: ehtUI,
 };
 
-// Re-export specific parts if needed by UI
-export { EHT_PRESETS, EHT_PARAMETER_GROUPS, EHT_BATCH_PARAMETERS };
+// Re-export specific parts if needed
+export { EHT_PRESETS, EHT_BATCH_PARAMETERS };
