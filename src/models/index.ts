@@ -1,12 +1,14 @@
-/**
- * Models module.
- * Import this file to register all available simulation models.
- */
+console.log('[Models] Loading index');
+import { modelRegistry } from '@/core/registry';
+import { EHTModel } from './eht';
+import { ToyModel } from './toy';
 
-// Import models to trigger their registration
-import './eht';
-import './toy';
+// Register models
+modelRegistry.register(EHTModel);
+modelRegistry.register(ToyModel);
+
+// Set default
+modelRegistry.setDefault(EHTModel.id);
 
 // Re-export for convenience
-export { EHTModel } from './eht';
-export { ToyModel } from './toy';
+export { EHTModel, ToyModel };

@@ -22,6 +22,10 @@ class ModelRegistry {
   private models: Map<string, RegistryEntry> = new Map();
   private defaultModelName: string | null = null;
 
+  constructor() {
+    console.log('[Registry] Initializing');
+  }
+
   /**
    * Register a model definition.
    * If multiple versions of the same model are registered,
@@ -35,13 +39,16 @@ class ModelRegistry {
     // Cast to unknown first to avoid type variance issues
     const modelDef = model as unknown as ModelDefinition;
 
-    if (!this.models.has(model.name)) {
-      this.models.set(model.name, {
+    // Use model.id as the key, NOT model.name
+    // model.id (e.g. "EHT", "Toy") is the stable identifier
+    if (!this.models.has(model.id)) {
+      this.models.set(model.id, {
         latestModel: modelDef,
         versions: new Map([[versionStr, modelDef]]),
       });
+      console.log(`[Registry] Registered new model: ${model.id} (v${versionStr})`);
     } else {
-      const entry = this.models.get(model.name)!;
+      const entry = this.models.get(model.id)!;
       entry.versions.set(versionStr, modelDef);
       // Update latest if this version is newer
       const currentVersion = parseVersion(entry.latestModel.version);
@@ -54,6 +61,7 @@ class ModelRegistry {
           version.patch > currentVersion.patch)
       ) {
         entry.latestModel = modelDef;
+        console.log(`[Registry] Updated model ${model.id} to version ${versionStr}`);
       }
     }
   }
