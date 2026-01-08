@@ -2,6 +2,7 @@
 import type { EHTSimulationState, CellState, ApicalLink, BasalLink } from './types';
 import type { EHTParams } from './params/types';
 import { CellPhase } from './types';
+import { createBasalGeometry } from '@/core/math';
 
 
 /**
@@ -94,7 +95,8 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
             ap_links: [],
             ba_links: [],
             t: 0,
-            step_count: 0
+            step_count: 0,
+            basalGeometry: createBasalGeometry(0, 0, 360)
         };
     }
 
@@ -110,7 +112,8 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
         ba_links: [],
         t,
         step_count,
-        geometry: { curvature_1, curvature_2 }
+        geometry: { curvature_1, curvature_2 },
+        basalGeometry: createBasalGeometry(curvature_1, curvature_2, 360)
     };
 
     // Map from cell ID to array index

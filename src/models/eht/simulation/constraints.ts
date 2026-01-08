@@ -4,7 +4,6 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
-import { basalCurve, basalArcLength } from '@/core/math/geometry';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 
@@ -68,8 +67,8 @@ export function projectBasalOrderingConstraints(
     const Bi = Vector2.from(ci.B);
     const Bj = Vector2.from(cj.B);
 
-    const li = basalArcLength(Bi, curvature_1, curvature_2);
-    const lj = basalArcLength(Bj, curvature_1, curvature_2);
+    const li = state.basalGeometry.getArcLength(Bi);
+    const lj = state.basalGeometry.getArcLength(Bj);
 
     // Arc length delta: positive means j is "ahead" of i (correct ordering)
     let deltaL = lj - li;
@@ -149,12 +148,10 @@ export function projectBasalCurveConstraints(
   _params: EHTParams
 ): void {
   const cells = state.cells;
-  const curvature_1 = state.geometry?.curvature_1 ?? 0;
-  const curvature_2 = state.geometry?.curvature_2 ?? 0;
 
   for (const cell of cells) {
     const B = Vector2.from(cell.B);
-    const projected = basalCurve(B, curvature_1, curvature_2);
+    const projected = state.basalGeometry.projectPoint(B);
     cell.B.x = projected.x;
     cell.B.y = projected.y;
   }

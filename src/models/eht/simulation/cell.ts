@@ -4,7 +4,6 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
-import { basalCurve, basalNormal } from '@/core/math/geometry';
 import { SeededRandom } from '@/core/math/random';
 import type { EHTSimulationState, CellState } from '../types';
 import { CellPhase } from '../types';
@@ -32,12 +31,10 @@ export function createCell(
   parent?: CellState
 ): CellState {
   const h = params.general.h_init;
-  const curvature_1 = state.geometry?.curvature_1 ?? 0;
-  const curvature_2 = state.geometry?.curvature_2 ?? 0;
 
   // Calculate apical and basal positions
-  const B = basalCurve(position, curvature_1, curvature_2);
-  const normal = basalNormal(position, curvature_1, curvature_2);
+  const B = state.basalGeometry.projectPoint(position);
+  const normal = state.basalGeometry.getNormal(B);
   const A = B.add(normal.scale(h));
 
   // Determine lifespan

@@ -11,3 +11,10 @@ export {
   basalNormal,
   basalArcLength,
 } from './geometry';
+export {
+  BasalGeometry,
+  StraightLineGeometry,
+  CircularGeometry,
+  EllipticalGeometry,
+  createBasalGeometry,
+} from './basal-geometry';

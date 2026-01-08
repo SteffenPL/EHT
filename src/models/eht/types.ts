@@ -2,6 +2,9 @@
  * EHT Model specific state definitions.
  */
 
+import type { BasalGeometry } from '@/core/math';
+import { StraightLineGeometry } from '@/core/math';
+
 /** Cell phase enum */
 export enum CellPhase {
     G1 = 0,       // Normal growth
@@ -86,6 +89,7 @@ export interface EHTSimulationState {
     t: number;
     step_count: number;
     geometry?: GeometryState; // Computed geometry (model-specific)
+    basalGeometry: BasalGeometry; // Pre-computed basal curve geometry
 }
 
 /** Initial state for a new simulation */
@@ -96,5 +100,6 @@ export function createInitialEHTState(): EHTSimulationState {
         ba_links: [],
         t: 0,
         step_count: 0,
+        basalGeometry: new StraightLineGeometry(), // Placeholder, will be replaced during init
     };
 }

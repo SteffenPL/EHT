@@ -5,7 +5,7 @@
 
 import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
-import { basalArcLength, basalCurve, curvedCoordsToPosition } from '@/core/math/geometry';
+import { createBasalGeometry } from '@/core/math';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 import { computeEllipseFromPerimeter, ramanujanPerimeter } from '../params/geometry';
@@ -30,6 +30,9 @@ export function initializeEHTSimulation(
   };
 
   const { curvature_1, curvature_2 } = state.geometry;
+
+  // Create pre-computed basal geometry representation
+  state.basalGeometry = createBasalGeometry(curvature_1, curvature_2, 360);
 
   // Collect all cell type entries and compute total N
   const cellTypeEntries = Object.entries(params.cell_types);
@@ -57,9 +60,9 @@ export function initializeEHTSimulation(
       let locValue: number;
       // console.log("Assigning locations for cell type", typeKey, "with location", cellType.location);
       if(cellType.location === "top") {
-        locValue = 0;
+        locValue = -0.5;
       } else if(cellType.location === "bottom") {
-        locValue = 1;
+        locValue = 0.5;
       } else {
         locValue = parseFloat(cellType.location);
         if(isNaN(locValue) || locValue < -1 || locValue > 1) {
@@ -120,7 +123,7 @@ export function initializeEHTSimulation(
     const l = locations[i][0] * (w / 2);
     console.log("Cell", i, "location:", l, "assigned type:", locations[i][1]);
     const height = rng.random(h / 3, (2 * h) / 3);
-    const pos = curvedCoordsToPosition(l, height, curvature_1, curvature_2);
+    const pos = state.basalGeometry.curvedToCartesian(l, height);
     positions.push(pos);
     typeAssignments.push(locations[i][1]);
   }

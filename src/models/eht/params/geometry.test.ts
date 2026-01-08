@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { ramanujanPerimeter, computeEllipseFromPerimeter } from './geometry';
-import { assertClose, circlePerimeter, isCloseRelative } from '@/test/helpers';
+import { assertClose, circlePerimeter } from '@/test/helpers';
 
 describe('ramanujanPerimeter', () => {
   it('should compute exact circle perimeter', () => {

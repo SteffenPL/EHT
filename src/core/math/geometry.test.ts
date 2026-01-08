@@ -15,7 +15,7 @@ import {
   shapeCenter,
 } from './geometry';
 import { Vector2 } from './vector2';
-import { assertClose, generateEllipsePoints, circlePerimeter, isCloseRelative } from '@/test/helpers';
+import { assertClose, circlePerimeter, isCloseRelative } from '@/test/helpers';
 
 describe('ellipseArcLength', () => {
   it('should compute exact circle perimeter', () => {
@@ -289,18 +289,17 @@ describe('basalArcLength', () => {
   });
 
   it('should compute arc length for circle', () => {
-    // TODO: basalArcLength uses atan2 which has different reference point
     const radius = 5;
     const curvature = 1 / radius;
     const center = shapeCenter(curvature, curvature);
     const dir = -Math.sign(curvature);
 
-    // Position at theta=0: (center.x + dir*radius, center.y)
-    const pos = center.add(new Vector2(dir * radius, 0));
-    const arcLen = basalArcLength(pos, curvature, curvature);
+    // The arc length parameterization uses atan2(dir*x, dir*y) which gives zero
+    // when x=0, y=radius (not when x=radius, y=0)
+    const posAtZero = center.add(new Vector2(0, dir * radius));
+    const arcLenAtZero = basalArcLength(posAtZero, curvature, curvature);
 
-    // At theta=0, arc length should be 0
-    assertClose(arcLen, 0, 1e-6);
+    assertClose(arcLenAtZero, 0, 1e-6);
   });
 });
 
