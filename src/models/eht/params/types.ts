@@ -72,6 +72,7 @@ export interface EHTGeneralParams {
   p_div_out: number;        // Probability of division producing one offspring
   perimeter: number;        // Ellipse perimeter (0 for straight line)
   aspect_ratio: number;     // Shape: 0=line, >0=curve above, <0=curve below; |aspect|=b/a
+  hard_sphere_nuclei: boolean; // If true, use R_hard instead of R_soft for nuclei spring rest length
 }
 
 /** Cell property parameters (legacy - kept empty for backwards compatibility) */

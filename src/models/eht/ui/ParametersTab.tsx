@@ -40,10 +40,11 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
         </div>
       </div>
 
-      {/* Physics */}
+      {/* Model Parameters */}
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Physics</Label>
+        <Label className="text-sm font-medium">Model Parameters</Label>
         <div className="space-y-2 pl-2">
+          <BoolInput label="Hard Sphere Nuclei" value={g.hard_sphere_nuclei} onChange={(v) => update('hard_sphere_nuclei', v)} disabled={disabled} />
           <NumberInput label="Friction (mu)" value={g.mu} onChange={(v) => update('mu', v)} disabled={disabled} min={0} />
         </div>
       </div>

@@ -116,6 +116,7 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     p_div_out: 1.0,
     perimeter: 105,    // ≈ 2π × 16.67 (equivalent to curvature 0.06)
     aspect_ratio: 1,   // Circle
+    hard_sphere_nuclei: false,
   },
   cell_prop: {
     // All properties moved to per-cell-type in cell_types
@@ -155,8 +156,9 @@ export const EHT_PRESETS: Array<{
         metadata: { model: 'EHT', version: '1.0.0' },
         general: {
           t_end: 54, dt: 0.1, random_seed: 0, full_circle: false,
-          w_init: 10, h_init: 8, mu: 0.2, n_substeps: 40, alg_dt: 0.05,
+          w_init: 8, h_init: 10, mu: 0.2, n_substeps: 30, alg_dt: 0.05,
           w_screen: 15, h_screen: 0, p_div_out: 0.8, perimeter: 20, aspect_ratio: 0,
+          hard_sphere_nuclei: false,
         },
         cell_prop: {},
         cell_types: {
@@ -168,9 +170,9 @@ export const EHT_PRESETS: Array<{
             stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
             stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
             stiffness_repulsion: 1, stiffness_straightness: 15,
-            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
+            lifespan_start: 10, lifespan_end: 21, INM: 1, hetero: false,
             events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
-            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.333333333333333,
+            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.6,
             cytos_init: 1.5, basal_membrane_repulsion: 0, apical_junction_init: 0.333333333333333,
           },
           emt: {
@@ -181,9 +183,9 @@ export const EHT_PRESETS: Array<{
             stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
             stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
             stiffness_repulsion: 1, stiffness_straightness: 15,
-            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
+            lifespan_start: 10, lifespan_end: 21, INM: 1, hetero: false,
             events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
-            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.333333333333333,
+            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.6,
             cytos_init: 1.5, basal_membrane_repulsion: 0, apical_junction_init: 0.333333333333333,
           },
         },
@@ -198,6 +200,7 @@ export const EHT_PRESETS: Array<{
           t_end: 54, dt: 0.1, random_seed: 0, full_circle: false,
           w_init: 10, h_init: 8, mu: 0.2, n_substeps: 40, alg_dt: 0.05,
           w_screen: 15, h_screen: 0, p_div_out: 0.8, perimeter: 20, aspect_ratio: 0,
+          hard_sphere_nuclei: false,
         },
         cell_prop: {},
         cell_types: {
@@ -239,6 +242,7 @@ export const EHT_PRESETS: Array<{
           t_end: 80, dt: 0.05, random_seed: 0, full_circle: false,
           w_init: 20, h_init: 2, mu: 0.1, n_substeps: 40, alg_dt: 0.01,
           w_screen: 30, h_screen: 0, p_div_out: 0.9, perimeter: 40, aspect_ratio: 0,
+          hard_sphere_nuclei: false,
         },
         cell_prop: {},
         cell_types: {
@@ -280,6 +284,7 @@ export const EHT_PRESETS: Array<{
           t_end: 80, dt: 0.05, random_seed: 0, full_circle: false,
           w_init: 20, h_init: 2, mu: 0.5, n_substeps: 40, alg_dt: 0.01,
           w_screen: 30, h_screen: 0, p_div_out: 0.9, perimeter: 40, aspect_ratio: 0,
+          hard_sphere_nuclei: false,
         },
         cell_prop: {},
         cell_types: {

@@ -88,6 +88,7 @@ export const ehtGeneralParamsSchema = z.object({
   p_div_out: z.number().min(0).max(1),
   perimeter: z.number().positive(),           // Ellipse perimeter (only used when aspect != 0)
   aspect_ratio: z.number(),                   // 0=line, >0=curve above, <0=curve below; |aspect|=b/a
+  hard_sphere_nuclei: z.boolean(),            // If true, use R_hard instead of R_soft for nuclei spring rest length
 });
 
 /** Cell property params schema (legacy - empty, properties moved to cell types) */

@@ -71,10 +71,11 @@ export function calcRepulsionForces(
  */
 export function calcApicalNucleiForces(
   state: EHTSimulationState,
-  _params: EHTParams,
+  params: EHTParams,
   forces: CellForces[]
 ): void {
   const cells = state.cells;
+  const useHardRadius = params.general.hard_sphere_nuclei;
 
   for (let i = 0; i < cells.length; i++) {
     const ci = cells[i];
@@ -86,7 +87,8 @@ export function calcApicalNucleiForces(
     const al = ax.mag();
 
     if (al > 0) {
-      const rl = ci.eta_A + ci.R_soft;
+      const radius = useHardRadius ? ci.R_hard : ci.R_soft;
+      const rl = ci.eta_A + radius;
       const stiffness = ci.stiffness_nuclei_apical;
       const forceMag = 2 * stiffness * (al - rl) / (al * rl * rl);
       const force = ax.scale(forceMag);
@@ -102,10 +104,11 @@ export function calcApicalNucleiForces(
  */
 export function calcBasalNucleiForces(
   state: EHTSimulationState,
-  _params: EHTParams,
+  params: EHTParams,
   forces: CellForces[]
 ): void {
   const cells = state.cells;
+  const useHardRadius = params.general.hard_sphere_nuclei;
 
   for (let i = 0; i < cells.length; i++) {
     const ci = cells[i];
@@ -117,7 +120,8 @@ export function calcBasalNucleiForces(
     const bl = bx.mag();
 
     if (bl > 0) {
-      const rl = ci.eta_B + ci.R_soft;
+      const radius = useHardRadius ? ci.R_hard : ci.R_soft;
+      const rl = ci.eta_B + radius;
       const stiffness = ci.stiffness_nuclei_basal;
       const forceMag = 2 * stiffness * (bl - rl) / (bl * rl * rl);
       const force = bx.scale(forceMag);
