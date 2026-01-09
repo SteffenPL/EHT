@@ -28,16 +28,6 @@ export function generateEHTBatchParameters(params: EHTParams): BatchParameterDef
     { path: 'general.aspect_ratio', label: 'Aspect ratio' },
   );
 
-  // Cell property parameters
-  batchParams.push(
-    { path: 'cell_prop.apical_junction_init', label: 'Apical junction init' },
-    { path: 'cell_prop.max_basal_junction_dist', label: 'Max basal junction dist' },
-    { path: 'cell_prop.basal_daming_ratio', label: 'Basal damping ratio' },
-    { path: 'cell_prop.basal_membrane_repulsion', label: 'Basal membrane repulsion' },
-    { path: 'cell_prop.cytos_init', label: 'Cytos init' },
-    { path: 'cell_prop.diffusion', label: 'Diffusion' },
-  );
-
   // Cell type parameters - generated dynamically from actual cell types
   for (const [typeKey, _cellType] of Object.entries(params.cell_types)) {
     const prefix = `cell_types.${typeKey}`;
@@ -66,6 +56,14 @@ export function generateEHTBatchParameters(params: EHTParams): BatchParameterDef
       { path: `${prefix}.lifespan_start`, label: `${label}: lifespan start` },
       { path: `${prefix}.lifespan_end`, label: `${label}: lifespan end` },
       { path: `${prefix}.INM`, label: `${label}: INM probability` },
+      // Per-cell-type properties (moved from cell_prop)
+      { path: `${prefix}.diffusion`, label: `${label}: diffusion` },
+      { path: `${prefix}.basal_damping_ratio`, label: `${label}: basal_damping_ratio` },
+      { path: `${prefix}.max_basal_junction_dist`, label: `${label}: max_basal_junction_dist` },
+      { path: `${prefix}.cytos_init`, label: `${label}: cytos_init` },
+      { path: `${prefix}.basal_membrane_repulsion`, label: `${label}: basal_membrane_repulsion` },
+      { path: `${prefix}.apical_junction_init`, label: `${label}: apical_junction_init` },
+      // Events
       { path: `${prefix}.events.time_A_start`, label: `${label}: time_A start` },
       { path: `${prefix}.events.time_A_end`, label: `${label}: time_A end` },
       { path: `${prefix}.events.time_B_start`, label: `${label}: time_B start` },
@@ -88,10 +86,10 @@ export const EHT_BATCH_PARAMETERS: BatchParameterDefinition[] = [
   { path: 'general.random_seed', label: 'Random seed', isInteger: true },
   { path: 'general.t_end', label: 't_end (End time)' },
 
-  // Cell property parameters
-  { path: 'cell_prop.apical_junction_init', label: 'Apical junction init' },
-  { path: 'cell_prop.max_basal_junction_dist', label: 'Max basal junction dist' },
-  { path: 'cell_prop.diffusion', label: 'Diffusion' },
+  // Per-cell-type parameters (example for control type)
+  { path: 'cell_types.control.diffusion', label: 'control: diffusion' },
+  { path: 'cell_types.control.max_basal_junction_dist', label: 'control: max_basal_junction_dist' },
+  { path: 'cell_types.control.apical_junction_init', label: 'control: apical_junction_init' },
 ];
 
 // Legacy export for backwards compatibility

@@ -194,16 +194,15 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
             const nId = Number(nIdStr);
             const neighborIndex = idMap.get(nId);
             if (neighborIndex !== undefined && neighborIndex > cellIndex) { // Avoid duplicates
-                state.ap_links.push({
-                    l: cellIndex,
-                    r: neighborIndex,
-                    rl: params.cell_prop.apical_junction_init // Reset to default RL or calculate from current distance
-                });
                 // Recalculate RL based on current distance to prevent snapping
                 const c1 = state.cells[cellIndex];
                 const c2 = state.cells[neighborIndex];
                 const dist = Math.sqrt(Math.pow(c1.A.x - c2.A.x, 2) + Math.pow(c1.A.y - c2.A.y, 2));
-                state.ap_links[state.ap_links.length - 1].rl = dist;
+                state.ap_links.push({
+                    l: cellIndex,
+                    r: neighborIndex,
+                    rl: dist
+                });
             }
         }
 

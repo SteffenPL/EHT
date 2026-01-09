@@ -650,6 +650,79 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
             ))}
           </CellTypeRow>
 
+          {/* Cell-Type Specific Properties */}
+          <tr className="bg-muted/50">
+            <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">
+              Cell-Type Properties
+            </td>
+          </tr>
+          <CellTypeRow label="Diffusion" tooltip="Diffusion coefficient">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).diffusion}
+                onChange={(v) => updateCellType(key, 'diffusion', v)}
+                disabled={disabled}
+                min={0}
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Basal Damping" tooltip="Basal damping ratio">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).basal_damping_ratio}
+                onChange={(v) => updateCellType(key, 'basal_damping_ratio', v)}
+                disabled={disabled}
+                min={0}
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Max Basal Junc Dist" tooltip="Maximum basal junction distance">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).max_basal_junction_dist}
+                onChange={(v) => updateCellType(key, 'max_basal_junction_dist', v)}
+                disabled={disabled}
+                min={0}
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Cytos Init" tooltip="Initial cytoskeleton length">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).cytos_init}
+                onChange={(v) => updateCellType(key, 'cytos_init', v)}
+                disabled={disabled}
+                min={0}
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Basal Repulsion" tooltip="Basal membrane repulsion strength">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).basal_membrane_repulsion}
+                onChange={(v) => updateCellType(key, 'basal_membrane_repulsion', v)}
+                disabled={disabled}
+                min={0}
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Apical Junc Init" tooltip="Initial apical junction distance">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).apical_junction_init}
+                onChange={(v) => updateCellType(key, 'apical_junction_init', v)}
+                disabled={disabled}
+                min={0}
+              />
+            ))}
+          </CellTypeRow>
+
           {/* EMT Events */}
           <tr className="bg-muted/50">
             <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">

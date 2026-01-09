@@ -41,6 +41,13 @@ export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
     time_P_start: Infinity,
     time_P_end: Infinity,
   },
+  // Per-cell-type properties
+  diffusion: 0.2,
+  basal_damping_ratio: 1.0,
+  max_basal_junction_dist: 4.0,
+  cytos_init: 0.0,
+  basal_membrane_repulsion: 0.0,
+  apical_junction_init: 0.0,
 };
 
 /** Default EMT cell type */
@@ -79,6 +86,13 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
     time_P_start: Infinity,
     time_P_end: Infinity,
   },
+  // Per-cell-type properties
+  diffusion: 0.2,
+  basal_damping_ratio: 1.0,
+  max_basal_junction_dist: 4.0,
+  cytos_init: 0.0,
+  basal_membrane_repulsion: 0.0,
+  apical_junction_init: 0.0,
 };
 
 /** Default EHT simulation parameters */

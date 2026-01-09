@@ -63,6 +63,13 @@ export const ehtCellTypeSchema = z.object({
   INM: z.number().min(0).max(1),
   hetero: z.boolean(),
   events: emtEventTimesSchema,
+  // Per-cell-type properties
+  diffusion: z.number().nonnegative(),
+  basal_damping_ratio: z.number().nonnegative(),
+  max_basal_junction_dist: z.number().positive(),
+  cytos_init: z.number().nonnegative(),
+  basal_membrane_repulsion: z.number().nonnegative(),
+  apical_junction_init: z.number().nonnegative(),
 });
 
 /** General params schema */

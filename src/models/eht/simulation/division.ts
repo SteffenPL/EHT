@@ -137,11 +137,14 @@ function updateApicalLinksAfterDivision(
     }
   }
 
+  // Use the cell type's apical junction init (both cells are same type after division)
+  const cellType = getCellType(params, state.cells[originalIndex]);
+
   // Add new link between original and new cell
   state.ap_links.push({
     l: originalIndex,
     r: newIndex,
-    rl: params.cell_prop.apical_junction_init,
+    rl: cellType.apical_junction_init,
   });
 }
 

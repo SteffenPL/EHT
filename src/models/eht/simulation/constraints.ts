@@ -6,6 +6,7 @@
 import { Vector2 } from '@/core/math/vector2';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
+import { getCellType } from './cell';
 
 /**
  * Project hard sphere collision constraints.
@@ -114,11 +115,15 @@ export function projectMaxBasalDistanceConstraints(
 ): void {
   const cells = state.cells;
   const baLinks = state.ba_links;
-  const maxDist = params.cell_prop.max_basal_junction_dist;
 
   for (const link of baLinks) {
     const ci = cells[link.l];
     const cj = cells[link.r];
+
+    // Use the average of both cell types' max basal junction distance
+    const cellTypeI = getCellType(params, ci);
+    const cellTypeJ = getCellType(params, cj);
+    const maxDist = (cellTypeI.max_basal_junction_dist + cellTypeJ.max_basal_junction_dist) / 2;
 
     const Bi = Vector2.from(ci.B);
     const Bj = Vector2.from(cj.B);

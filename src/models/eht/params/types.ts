@@ -47,6 +47,13 @@ export interface EHTCellTypeParams {
   INM: number;              // Interkinetic nuclear migration probability
   hetero: boolean;          // Heterogeneous EMT behavior
   events: EMTEventTimes;
+  // Per-cell-type properties (previously global in cell_prop)
+  diffusion: number;                // Diffusion coefficient
+  basal_damping_ratio: number;      // Basal damping ratio
+  max_basal_junction_dist: number;  // Maximum basal junction distance
+  cytos_init: number;               // Initial cytoskeleton length
+  basal_membrane_repulsion: number; // Basal membrane repulsion strength
+  apical_junction_init: number;     // Initial apical junction distance
 }
 
 /** EHT general simulation parameters */

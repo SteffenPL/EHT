@@ -126,7 +126,6 @@ function integrateForces(
     dt: number
 ): void {
     const mu = params.general.mu;
-    const diffusion = params.cell_prop.diffusion;
     const sqrtDt = Math.sqrt(dt);
 
     for (let i = 0; i < state.cells.length; i++) {
@@ -134,7 +133,8 @@ function integrateForces(
         const cellType = getCellType(params, cell);
         const f = forces[i];
 
-        // Add diffusion noise
+        // Add diffusion noise (per-cell-type)
+        const diffusion = cellType.diffusion;
         cell.pos.x += sqrtDt * diffusion * rng.gaussian();
         cell.pos.y += sqrtDt * diffusion * rng.gaussian();
 

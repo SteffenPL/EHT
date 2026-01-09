@@ -175,10 +175,14 @@ export function initializeEHTSimulation(
 
   // Create initial links between adjacent cells
   for (let i = 0; i < state.cells.length - 1; i++) {
+    // Use average of both cell types' apical junction init
+    const cellTypeI = params.cell_types[state.cells[i].typeIndex];
+    const cellTypeJ = params.cell_types[state.cells[i + 1].typeIndex];
+    const apicalJunctionInit = (cellTypeI.apical_junction_init + cellTypeJ.apical_junction_init) / 2;
     state.ap_links.push({
       l: i,
       r: i + 1,
-      rl: params.cell_prop.apical_junction_init,
+      rl: apicalJunctionInit,
     });
     state.ba_links.push({
       l: i,
@@ -189,10 +193,13 @@ export function initializeEHTSimulation(
   // If simulating a closed ring, connect the last and first cells as well.
   if (pg.full_circle && state.cells.length > 2) {
     const last = state.cells.length - 1;
+    const cellTypeLast = params.cell_types[state.cells[last].typeIndex];
+    const cellTypeFirst = params.cell_types[state.cells[0].typeIndex];
+    const apicalJunctionInit = (cellTypeLast.apical_junction_init + cellTypeFirst.apical_junction_init) / 2;
     state.ap_links.push({
       l: last,
       r: 0,
-      rl: params.cell_prop.apical_junction_init,
+      rl: apicalJunctionInit,
     });
     state.ba_links.push({
       l: last,

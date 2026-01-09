@@ -12,7 +12,7 @@
  * | sim.dt                      | general.dt                      | Direct                                   |
  * | stat.random_seed            | general.random_seed             | Direct (int)                             |
  * | epi.basal_curvature         | general.perimeter/aspect_ratio  | 0 → perimeter=0, else compute            |
- * | epi.N_init                  | (sum of cell_types N_init)      | Ignored, use cell_type sheet             |
+ * | epi.N_init                  | (scales cell_types N_init)      | Scale init_distr to match this total     |
  * | epi.prob_out_div            | general.p_div_out               | Direct                                   |
  * | epi.init_apical_junction_dist| cell_prop.apical_junction_init | Direct                                   |
  * | epi.init_zone.size.x        | general.w_init                  | Direct                                   |
@@ -45,12 +45,12 @@
  * | stiffness_straightness  | stiffness_straightness        | Direct                                   |
  * | life_span.min           | lifespan_start                | Direct                                   |
  * | life_span.max           | lifespan_end                  | Direct                                   |
- * | diffusion               | (cell_prop.diffusion)         | Use first value for cell_prop            |
- * | basal_damping_ratio     | (cell_prop.basal_daming_ratio)| Use first value for cell_prop            |
- * | max_basal_junction_dist | (cell_prop.max_basal_junction_dist)| Use first value                     |
- * | cytoskeleton_init       | (cell_prop.cytos_init)        | Use first value                          |
- * | basal_repulsion         | (cell_prop.basal_membrane_repulsion)| Use first value                     |
- * | apical_junction_init    | (cell_prop.apical_junction_init)| Use first value                        |
+ * | diffusion               | cell_types[key].diffusion       | Per-cell-type (default if 0/missing)     |
+ * | basal_damping_ratio     | cell_types[key].basal_damping_ratio| Per-cell-type (default if 0/missing)|
+ * | max_basal_junction_dist | cell_types[key].max_basal_junction_dist| Per-cell-type (default if 0/missing)|
+ * | cytoskeleton_init       | cell_types[key].cytos_init      | Per-cell-type                            |
+ * | basal_repulsion         | cell_types[key].basal_membrane_repulsion| Per-cell-type                    |
+ * | apical_junction_init    | cell_types[key].apical_junction_init| Per-cell-type                        |
  * | apical_cytos_strain     | -                             | Ignored (dynamic behavior)               |
  * | basal_cytos_strain      | -                             | Ignored (dynamic behavior)               |
  *
@@ -189,6 +189,10 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
     params.general.full_circle = true;
   }
 
+  // Set screen size to 2x initial width
+  params.general.w_screen = params.general.w_init * 1.5;
+  params.general.h_screen = 0;
+
   // === Cell Property Parameters ===
   if (p['epi.init_apical_junction_dist'] !== undefined) {
     params.cell_prop.apical_junction_init = parseNumber(p['epi.init_apical_junction_dist'], 0);
@@ -198,37 +202,23 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
   }
 
   // === Cell Types ===
-  // First, parse init_distr to get N_init values
+  // First, parse init_distr to get N_init values (ratios)
   const initDistr = parseInitDistr(String(p['epi.init_distr'] || ''));
+
+  // Get the target total N_init from epi.N_init
+  const targetTotalN = parseNumber(p['epi.N_init'], 0);
+
+  // Calculate sum of init_distr values
+  const initDistrSum = Object.values(initDistr).reduce((sum, n) => sum + n, 0);
+
+  // Scale factor to reach target N_init (if both are specified)
+  const scaleFactor = (targetTotalN > 0 && initDistrSum > 0) ? targetTotalN / initDistrSum : 1;
 
   // Clear existing cell types and create from XLSX
   params.cell_types = {};
 
   const cellTypeData = data.cell_type;
   const typeNames = Object.keys(cellTypeData.types);
-
-  // Use first cell type's values for cell_prop (shared properties)
-  if (typeNames.length > 0) {
-    const firstType = cellTypeData.types[typeNames[0]];
-    if (firstType['diffusion'] !== undefined) {
-      params.cell_prop.diffusion = parseNumber(firstType['diffusion'], 0.2);
-    }
-    if (firstType['basal_damping_ratio'] !== undefined) {
-      params.cell_prop.basal_daming_ratio = parseNumber(firstType['basal_damping_ratio'], 1.0);
-    }
-    if (firstType['max_basal_junction_dist'] !== undefined) {
-      params.cell_prop.max_basal_junction_dist = parseNumber(firstType['max_basal_junction_dist'], 4.0);
-    }
-    if (firstType['cytoskeleton_init'] !== undefined) {
-      params.cell_prop.cytos_init = parseNumber(firstType['cytoskeleton_init'], 0);
-    }
-    if (firstType['basal_repulsion'] !== undefined) {
-      params.cell_prop.basal_membrane_repulsion = parseNumber(firstType['basal_repulsion'], 0);
-    }
-    if (firstType['apical_junction_init'] !== undefined) {
-      params.cell_prop.apical_junction_init = parseNumber(firstType['apical_junction_init'], 0);
-    }
-  }
 
   // Create cell types
   for (const typeName of typeNames) {
@@ -246,30 +236,48 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
     // Set location: 'bottom' for emt, empty for others
     const cellLocation = currentTypeName === 'emt' ? 'bottom' : '';
 
+    // Scale N_init to match target total from epi.N_init
+    const scaledNInit = Math.round((initDistr[typeName] || 0) * scaleFactor);
+
     const cellType: EHTCellTypeParams = {
       ...cloneDeep(DEFAULT_CONTROL_CELL),
-      N_init: initDistr[typeName] || 0,
+      N_init: scaledNInit,
       location: cellLocation,
-      R_hard: parseNumber(legacyType['R_hard'], 0.4),
-      R_hard_div: parseNumber(legacyType['R_hard'], 0.4) * 1.75, // Legacy used event to set this
-      R_soft: parseNumber(legacyType['R_soft'], 1.2),
+      R_hard: parseNumber(legacyType["R_hard"], 0.3),
+      R_hard_div: (parseNumber(legacyType["R_hard"], 0.3) * 0.7) / 0.3, // Legacy used event to set this
+      R_soft: parseNumber(legacyType["R_soft"], 1.2),
       color: cellColor,
-      dur_G2: parseNumber(legacyType['duration_G2'], 0.5),
-      dur_mitosis: parseNumber(legacyType['duration_mitosis'], 0.5),
-      k_apical_junction: Math.abs(parseNumber(legacyType['k_apical_junction'], 5)),
-      k_cytos: parseNumber(legacyType['k_cytoskeleton'], 5),
-      max_cytoskeleton_length: 0.5, // Default, not in legacy
+      dur_G2: parseNumber(legacyType["duration_G2"], 0.5),
+      dur_mitosis: parseNumber(legacyType["duration_mitosis"], 0.5),
+      k_apical_junction: Math.abs(
+        parseNumber(legacyType["k_apical_junction"], 5)
+      ),
+      k_cytos: parseNumber(legacyType["k_cytoskeleton"], 5),
+      max_cytoskeleton_length: parseNumber(legacyType["max_cytoskeleton_length"], 0.0), // Default, not in legacy
       run: 0, // Default, not directly in legacy
-      running_speed: parseNumber(legacyType['running_speed'], 1),
-      running_mode: Math.floor(parseNumber(legacyType['running_mode'], 0)),
-      stiffness_apical_apical: parseNumber(legacyType['stiffness_apical_apical'], 2),
-      stiffness_apical_apical_div: parseNumber(legacyType['stiffness_apical_apical'], 2) * 2, // Legacy doubled during division
-      stiffness_nuclei_apical: parseNumber(legacyType['stiffness_nuclei_apical'], 3),
-      stiffness_nuclei_basal: parseNumber(legacyType['stiffness_nuclei_basal'], 2),
-      stiffness_repulsion: parseNumber(legacyType['stiffness_repulsion'], 2),
-      stiffness_straightness: parseNumber(legacyType['stiffness_straightness'], 5),
-      lifespan_start: parseNumber(legacyType['life_span.min'], 5.5),
-      lifespan_end: parseNumber(legacyType['life_span.max'], 6.5),
+      running_speed: parseNumber(legacyType["running_speed"], 1),
+      running_mode: Math.floor(parseNumber(legacyType["running_mode"], 0)),
+      stiffness_apical_apical: parseNumber(
+        legacyType["stiffness_apical_apical"],
+        2
+      ),
+      stiffness_apical_apical_div:
+        parseNumber(legacyType["stiffness_apical_apical"], 2) * 2, // Legacy doubled during division
+      stiffness_nuclei_apical: parseNumber(
+        legacyType["stiffness_nuclei_apical"],
+        3
+      ),
+      stiffness_nuclei_basal: parseNumber(
+        legacyType["stiffness_nuclei_basal"],
+        2
+      ),
+      stiffness_repulsion: parseNumber(legacyType["stiffness_repulsion"], 2),
+      stiffness_straightness: parseNumber(
+        legacyType["stiffness_straightness"],
+        5
+      ),
+      lifespan_start: parseNumber(legacyType["life_span.min"], 5.5),
+      lifespan_end: parseNumber(legacyType["life_span.max"], 6.5),
       INM: 0, // Default
       hetero: false, // Will be set based on events
       events: {
@@ -282,6 +290,13 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
         time_P_start: Infinity,
         time_P_end: Infinity,
       },
+      // Per-cell-type properties (use value from XLSX or default if zero/missing)
+      diffusion: parseNumber(legacyType["diffusion"], 0) || DEFAULT_CONTROL_CELL.diffusion,
+      basal_damping_ratio: parseNumber(legacyType["basal_damping_ratio"], 0) || DEFAULT_CONTROL_CELL.basal_damping_ratio,
+      max_basal_junction_dist: parseNumber(legacyType["max_basal_junction_dist"], 0) || DEFAULT_CONTROL_CELL.max_basal_junction_dist,
+      cytos_init: parseNumber(legacyType["cytoskeleton_init"], DEFAULT_CONTROL_CELL.cytos_init),
+      basal_membrane_repulsion: parseNumber(legacyType["basal_repulsion"], DEFAULT_CONTROL_CELL.basal_membrane_repulsion),
+      apical_junction_init: parseNumber(legacyType["apical_junction_init"], DEFAULT_CONTROL_CELL.apical_junction_init),
     };
 
     params.cell_types[currentTypeName] = cellType;
