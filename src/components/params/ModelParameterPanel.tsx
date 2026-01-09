@@ -38,7 +38,7 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
       {/* Warning banner - always visible above tabs */}
       {WarningBanner && (
         <div className="shrink-0 p-2">
-          <WarningBanner params={params} />
+          <WarningBanner params={params} onChange={onChange} disabled={disabled} />
         </div>
       )}
 

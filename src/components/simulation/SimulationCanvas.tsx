@@ -2,10 +2,22 @@
  * Simulation canvas component with Pixi.js rendering.
  * Automatically resizes to fill its container.
  */
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { SimulationRenderer } from '../../rendering';
 import { useTheme, useModel } from '@/contexts';
 import type { BaseSimulationParams } from '../../core/registry';
+
+/** Ref interface exposed by SimulationCanvas */
+export interface SimulationCanvasRef {
+  /** Get a screenshot of the current canvas as a data URL */
+  getScreenshot: () => string | null;
+  /** Start recording video */
+  startRecording: () => void;
+  /** Stop recording and return video blob */
+  stopRecording: () => Promise<Blob | null>;
+  /** Check if currently recording */
+  isRecording: () => boolean;
+}
 
 export interface SimulationCanvasProps {
   state: any;
@@ -18,21 +30,74 @@ export interface SimulationCanvasProps {
   style?: React.CSSProperties;
 }
 
-export function SimulationCanvas({
+export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvasProps>(({
   state,
   params,
   minHeight = 350,
   aspectRatio = 1,
   className,
   style,
-}: SimulationCanvasProps) {
+}, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<SimulationRenderer | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
   const [isReady, setIsReady] = useState(false);
   const [size, setSize] = useState({ width: 800, height: minHeight });
   const { isDark } = useTheme();
   const { currentModel } = useModel();
+
+  // Expose imperative methods via ref
+  useImperativeHandle(ref, () => ({
+    getScreenshot: () => {
+      if (canvasRef.current) {
+        return canvasRef.current.toDataURL('image/png');
+      }
+      return null;
+    },
+    startRecording: () => {
+      if (!canvasRef.current || mediaRecorderRef.current) return;
+
+      const stream = canvasRef.current.captureStream(30); // 30 FPS
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm';
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      recordedChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          recordedChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorderRef.current = recorder;
+      recorder.start(100); // Capture every 100ms
+    },
+    stopRecording: () => {
+      return new Promise((resolve) => {
+        const recorder = mediaRecorderRef.current;
+        if (!recorder) {
+          resolve(null);
+          return;
+        }
+
+        recorder.onstop = () => {
+          const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+          recordedChunksRef.current = [];
+          mediaRecorderRef.current = null;
+          resolve(blob);
+        };
+
+        recorder.stop();
+      });
+    },
+    isRecording: () => {
+      return mediaRecorderRef.current?.state === 'recording';
+    },
+  }), []);
 
   // Measure container size
   const updateSize = useCallback(() => {
@@ -179,4 +244,6 @@ export function SimulationCanvas({
       />
     </div>
   );
-}
+});
+
+SimulationCanvas.displayName = 'SimulationCanvas';

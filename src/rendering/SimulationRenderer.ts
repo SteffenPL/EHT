@@ -73,6 +73,8 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
       antialias: true,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
+      // Required for screenshots and video recording
+      preserveDrawingBuffer: true,
     });
 
     this.app.stage.addChild(this.mainContainer);

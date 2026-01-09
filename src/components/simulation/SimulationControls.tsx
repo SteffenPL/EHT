@@ -1,7 +1,7 @@
 /**
- * Simulation control buttons (play, pause, reset, step).
+ * Simulation control buttons (play, pause, reset, step) and export actions.
  */
-import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
+import { Play, Pause, RotateCcw, SkipForward, Camera, Video, FileDown } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import {
@@ -24,6 +24,11 @@ export interface SimulationControlsProps {
   onStep: () => void;
   paramChangeBehavior: ParamChangeBehavior;
   onParamChangeBehaviorChange: (behavior: ParamChangeBehavior) => void;
+  // Export callbacks
+  onSaveScreenshot?: () => void;
+  onSaveMovie?: () => void;
+  onExportCSV?: () => void;
+  isRecording?: boolean;
 }
 
 export function SimulationControls({
@@ -37,6 +42,10 @@ export function SimulationControls({
   onStep,
   paramChangeBehavior,
   onParamChangeBehaviorChange,
+  onSaveScreenshot,
+  onSaveMovie,
+  onExportCSV,
+  isRecording = false,
 }: SimulationControlsProps) {
   const progress = endTime > 0 ? (time / endTime) * 100 : 0;
 
@@ -88,6 +97,33 @@ export function SimulationControls({
       </div>
 
       <Progress value={progress} className="h-2" />
+
+      {/* Export Actions */}
+      <div className="flex gap-2 flex-wrap items-center pt-1 border-t border-border/40">
+        {onSaveScreenshot && (
+          <Button onClick={onSaveScreenshot} variant="outline" size="sm" className="text-xs">
+            <Camera className="h-3.5 w-3.5 mr-1" />
+            Screenshot
+          </Button>
+        )}
+        {onSaveMovie && (
+          <Button
+            onClick={onSaveMovie}
+            variant={isRecording ? "destructive" : "outline"}
+            size="sm"
+            className="text-xs"
+          >
+            <Video className="h-3.5 w-3.5 mr-1" />
+            {isRecording ? "Stop Recording" : "Record"}
+          </Button>
+        )}
+        {onExportCSV && (
+          <Button onClick={onExportCSV} variant="outline" size="sm" className="text-xs">
+            <FileDown className="h-3.5 w-3.5 mr-1" />
+            Export CSV
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

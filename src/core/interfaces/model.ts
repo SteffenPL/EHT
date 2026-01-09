@@ -32,6 +32,8 @@ export interface ModelUITabProps<Params = any> {
  */
 export interface ModelWarningProps<Params = any> {
     params: Params;
+    onChange?: (params: Params) => void;
+    disabled?: boolean;
 }
 
 /**

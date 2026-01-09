@@ -3,7 +3,7 @@
  */
 
 export { SimulationCanvas } from './SimulationCanvas';
-export type { SimulationCanvasProps } from './SimulationCanvas';
+export type { SimulationCanvasProps, SimulationCanvasRef } from './SimulationCanvas';
 
 export { SimulationControls } from './SimulationControls';
 export type { SimulationControlsProps } from './SimulationControls';
