@@ -10,3 +10,6 @@ coverage/
 
 # data
 datasets/
+
+# old
+old/
