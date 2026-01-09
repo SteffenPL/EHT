@@ -90,14 +90,9 @@ export const ehtGeneralParamsSchema = z.object({
   aspect_ratio: z.number(),                   // 0=line, >0=curve above, <0=curve below; |aspect|=b/a
 });
 
-/** Cell property params schema */
+/** Cell property params schema (legacy - empty, properties moved to cell types) */
 export const ehtCellPropertyParamsSchema = z.object({
-  apical_junction_init: z.number().nonnegative(),
-  max_basal_junction_dist: z.number().positive(),
-  basal_daming_ratio: z.number().nonnegative(),
-  basal_membrane_repulsion: z.number().nonnegative(),
-  cytos_init: z.number().nonnegative(),
-  diffusion: z.number().nonnegative(),
+  // All properties moved to per-cell-type in ehtCellTypeSchema
 });
 
 /** Cell types map schema - any keys allowed */

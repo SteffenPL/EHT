@@ -118,12 +118,7 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     aspect_ratio: 1,   // Circle
   },
   cell_prop: {
-    apical_junction_init: 0.0,
-    max_basal_junction_dist: 4.0,
-    basal_daming_ratio: 1.0,
-    basal_membrane_repulsion: 0.0,
-    cytos_init: 0.0,
-    diffusion: 0.2,
+    // All properties moved to per-cell-type in cell_types
   },
   cell_types: {
     control: DEFAULT_CONTROL_CELL,

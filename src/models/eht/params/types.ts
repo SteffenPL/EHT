@@ -74,14 +74,10 @@ export interface EHTGeneralParams {
   aspect_ratio: number;     // Shape: 0=line, >0=curve above, <0=curve below; |aspect|=b/a
 }
 
-/** Cell property parameters (shared properties across cell types) */
+/** Cell property parameters (legacy - kept empty for backwards compatibility) */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface EHTCellPropertyParams {
-  apical_junction_init: number;
-  max_basal_junction_dist: number;
-  basal_daming_ratio: number;
-  basal_membrane_repulsion: number;
-  cytos_init: number;
-  diffusion: number;
+  // All properties moved to per-cell-type in EHTCellTypeParams
 }
 
 /** Cell types map - allows any cell types */

@@ -84,14 +84,6 @@ export function ParameterPanel({
               disabled={disabled}
             />
             <ParameterGroup
-              title="Cell Properties"
-              groupKey="cell_prop"
-              params={params.cell_prop}
-              basePath="cell_prop"
-              onChange={handleParamChange}
-              disabled={disabled}
-            />
-            <ParameterGroup
               title="Control Cells"
               groupKey="control"
               params={params.cell_types.control}

@@ -14,7 +14,7 @@
  * | epi.basal_curvature         | general.perimeter/aspect_ratio  | 0 → perimeter=0, else compute            |
  * | epi.N_init                  | (scales cell_types N_init)      | Scale init_distr to match this total     |
  * | epi.prob_out_div            | general.p_div_out               | Direct                                   |
- * | epi.init_apical_junction_dist| cell_prop.apical_junction_init | Direct                                   |
+ * | epi.init_apical_junction_dist| cell_types[*].apical_junction_init | Applied to all cell types              |
  * | epi.init_zone.size.x        | general.w_init                  | Direct                                   |
  * | epi.init_zone.size.y        | general.h_init                  | Direct                                   |
  * | epi.mu                      | general.mu                      | Direct                                   |
@@ -24,7 +24,7 @@
  * | epi.init_distr              | -                               | Parsed for N_init per type               |
  * | epi.init_method             | -                               | Ignored                                  |
  * | epi.k_apical_healing        | -                               | Ignored (not implemented)                |
- * | epi.init_basal_junction_dist| cell_prop.max_basal_junction_dist| Direct                                  |
+ * | epi.init_basal_junction_dist| cell_types[*].max_basal_junction_dist| Applied to all cell types            |
  *
  * ### Sheet: cell_type → cell_types[key]
  * | Legacy Parameter        | Current Property              | Notes                                    |
@@ -193,13 +193,13 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
   params.general.w_screen = params.general.w_init * 1.5;
   params.general.h_screen = 0;
 
-  // === Cell Property Parameters ===
-  if (p['epi.init_apical_junction_dist'] !== undefined) {
-    params.cell_prop.apical_junction_init = parseNumber(p['epi.init_apical_junction_dist'], 0);
-  }
-  if (p['epi.init_basal_junction_dist'] !== undefined) {
-    params.cell_prop.max_basal_junction_dist = parseNumber(p['epi.init_basal_junction_dist'], 4);
-  }
+  // Parse global cell property values (will be applied to all cell types below)
+  const globalApicalJunctionInit = p['epi.init_apical_junction_dist'] !== undefined
+    ? parseNumber(p['epi.init_apical_junction_dist'], 0)
+    : undefined;
+  const globalMaxBasalJunctionDist = p['epi.init_basal_junction_dist'] !== undefined
+    ? parseNumber(p['epi.init_basal_junction_dist'], 4)
+    : undefined;
 
   // === Cell Types ===
   // First, parse init_distr to get N_init values (ratios)
@@ -290,13 +290,13 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
         time_P_start: Infinity,
         time_P_end: Infinity,
       },
-      // Per-cell-type properties (use value from XLSX or default if zero/missing)
+      // Per-cell-type properties (use value from XLSX or global value or default if zero/missing)
       diffusion: parseNumber(legacyType["diffusion"], 0) || DEFAULT_CONTROL_CELL.diffusion,
       basal_damping_ratio: parseNumber(legacyType["basal_damping_ratio"], 0) || DEFAULT_CONTROL_CELL.basal_damping_ratio,
-      max_basal_junction_dist: parseNumber(legacyType["max_basal_junction_dist"], 0) || DEFAULT_CONTROL_CELL.max_basal_junction_dist,
+      max_basal_junction_dist: parseNumber(legacyType["max_basal_junction_dist"], 0) || globalMaxBasalJunctionDist || DEFAULT_CONTROL_CELL.max_basal_junction_dist,
       cytos_init: parseNumber(legacyType["cytoskeleton_init"], DEFAULT_CONTROL_CELL.cytos_init),
       basal_membrane_repulsion: parseNumber(legacyType["basal_repulsion"], DEFAULT_CONTROL_CELL.basal_membrane_repulsion),
-      apical_junction_init: parseNumber(legacyType["apical_junction_init"], DEFAULT_CONTROL_CELL.apical_junction_init),
+      apical_junction_init: parseNumber(legacyType["apical_junction_init"], 0) || globalApicalJunctionInit || DEFAULT_CONTROL_CELL.apical_junction_init,
     };
 
     params.cell_types[currentTypeName] = cellType;
