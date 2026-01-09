@@ -1,6 +1,7 @@
 /**
  * EHT Cell Types Tab - Table with rows per parameter, columns per cell type.
  */
+import { useState, useCallback } from 'react';
 import { cloneDeep } from 'lodash-es';
 import type { ModelUITabProps } from '@/core/registry';
 import type { EHTParams, EHTCellTypeParams } from '../params/types';
@@ -8,8 +9,35 @@ import { DEFAULT_CONTROL_CELL } from '../params/defaults';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, Copy, ClipboardPaste } from 'lucide-react';
 import type { RGBColor } from '@/components/params/inputs/ColorInput';
+
+// Section definitions for copy/paste
+type SectionKey = 'initial' | 'geometry' | 'appearance' | 'stiffness' | 'division' | 'cellTypeProps' | 'events' | 'running';
+
+interface SectionDefinition {
+  key: SectionKey;
+  label: string;
+  fields: (keyof EHTCellTypeParams)[];
+}
+
+const SECTIONS: SectionDefinition[] = [
+  { key: 'initial', label: 'Initial Setup', fields: ['N_init', 'location'] },
+  { key: 'geometry', label: 'Geometry', fields: ['R_hard', 'R_hard_div', 'R_soft'] },
+  { key: 'appearance', label: 'Appearance', fields: ['color'] },
+  { key: 'stiffness', label: 'Stiffness', fields: ['k_apical_junction', 'k_cytos', 'stiffness_apical_apical', 'stiffness_apical_apical_div', 'stiffness_nuclei_apical', 'stiffness_nuclei_basal', 'stiffness_repulsion', 'stiffness_straightness'] },
+  { key: 'division', label: 'Division & Lifecycle', fields: ['lifespan_start', 'lifespan_end', 'dur_G2', 'dur_mitosis', 'INM'] },
+  { key: 'cellTypeProps', label: 'Cell-Type Properties', fields: ['diffusion', 'basal_damping_ratio', 'max_basal_junction_dist', 'cytos_init', 'basal_membrane_repulsion', 'apical_junction_init', 'max_cytoskeleton_length'] },
+  { key: 'events', label: 'EMT Events (time ranges)', fields: ['hetero', 'events'] },
+  { key: 'running', label: 'Running Behavior', fields: ['run', 'running_speed', 'running_mode'] },
+];
 
 interface CellTypeRowProps {
   label: string;
@@ -221,7 +249,132 @@ function ColorCell({ value, onChange, disabled }: ColorCellProps) {
   );
 }
 
+// Section header component with per-column copy/paste buttons
+interface SectionHeaderProps {
+  section: SectionDefinition;
+  cellTypeKeys: string[];
+  disabled?: boolean;
+  params: EHTParams;
+  onChange: (params: EHTParams) => void;
+}
+
+
+function SectionHeader({ section, cellTypeKeys, disabled, params, onChange }: SectionHeaderProps) {
+  const [pasteStatus, setPasteStatus] = useState<Record<string, 'idle' | 'success' | 'error'>>({});
+
+  // Serialize value: convert Infinity to "Infinity" string for JSON compatibility
+  const serializeValue = useCallback((value: unknown): unknown => {
+    if (value === Infinity) return "Infinity";
+    if (value === -Infinity) return "-Infinity";
+    if (typeof value === 'object' && value !== null) {
+      if (Array.isArray(value)) {
+        return value.map(serializeValue);
+      }
+      const result: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value)) {
+        result[k] = serializeValue(v);
+      }
+      return result;
+    }
+    return value;
+  }, []);
+
+  // Deserialize value: convert "Infinity" string back to Infinity number
+  const deserializeValue = useCallback((value: unknown): unknown => {
+    if (value === "Infinity") return Infinity;
+    if (value === "-Infinity") return -Infinity;
+    if (typeof value === 'object' && value !== null) {
+      if (Array.isArray(value)) {
+        return value.map(deserializeValue);
+      }
+      const result: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(value)) {
+        result[k] = deserializeValue(v);
+      }
+      return result;
+    }
+    return value;
+  }, []);
+
+  const handleCopy = useCallback(async (cellTypeKey: string) => {
+    const cellType = params.cell_types[cellTypeKey] as EHTCellTypeParams;
+    const data: Partial<EHTCellTypeParams> = {};
+    for (const field of section.fields) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (data as any)[field] = serializeValue(cloneDeep(cellType[field]));
+    }
+    const json = JSON.stringify({ section: section.key, cellType: cellTypeKey, data }, null, 2);
+    await navigator.clipboard.writeText(json);
+  }, [params.cell_types, section, serializeValue]);
+
+  const handlePaste = useCallback(async (cellTypeKey: string) => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const parsed = JSON.parse(text);
+
+      // Validate that it's the same section type
+      if (parsed.section !== section.key || !parsed.data) {
+        setPasteStatus(s => ({ ...s, [cellTypeKey]: 'error' }));
+        setTimeout(() => setPasteStatus(s => ({ ...s, [cellTypeKey]: 'idle' })), 2000);
+        return;
+      }
+
+      const newParams = cloneDeep(params);
+      const targetCellType = newParams.cell_types[cellTypeKey] as EHTCellTypeParams;
+      for (const field of section.fields) {
+        if (field in parsed.data) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (targetCellType as any)[field] = deserializeValue(cloneDeep(parsed.data[field]));
+        }
+      }
+      onChange(newParams);
+      setPasteStatus(s => ({ ...s, [cellTypeKey]: 'success' }));
+      setTimeout(() => setPasteStatus(s => ({ ...s, [cellTypeKey]: 'idle' })), 2000);
+    } catch {
+      setPasteStatus(s => ({ ...s, [cellTypeKey]: 'error' }));
+      setTimeout(() => setPasteStatus(s => ({ ...s, [cellTypeKey]: 'idle' })), 2000);
+    }
+  }, [params, section, onChange, deserializeValue]);
+
+  return (
+    <tr className="bg-muted/50">
+      <td className="py-1 px-2">
+        <span className="text-xs font-semibold text-muted-foreground">{section.label}</span>
+      </td>
+      {cellTypeKeys.map((key) => (
+        <td key={key} className="py-1 px-1">
+          <div className="flex gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleCopy(key)}
+              disabled={disabled}
+              className="h-5 w-5"
+              title={`Copy ${section.label} from ${key}`}
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handlePaste(key)}
+              disabled={disabled}
+              className={`h-5 w-5 ${pasteStatus[key] === 'success' ? 'text-green-500' : pasteStatus[key] === 'error' ? 'text-red-500' : ''}`}
+              title={`Paste ${section.label} to ${key}`}
+            >
+              <ClipboardPaste className="h-3 w-3" />
+            </Button>
+          </div>
+        </td>
+      ))}
+    </tr>
+  );
+}
+
 export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<EHTParams>) {
+  // State for copy-from selection
+  const [copyFromType, setCopyFromType] = useState<string>('');
+
   // Get cell type keys as strings
   const cellTypeKeys = Object.keys(params.cell_types);
 
@@ -255,7 +408,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     onChange(newParams);
   };
 
-  const addCellType = () => {
+  const addCellType = useCallback((sourceKey?: string) => {
     const newParams = cloneDeep(params);
     // Generate unique key
     let counter = 1;
@@ -264,16 +417,28 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
       counter++;
       newKey = `type_${counter}`;
     }
-    // Create new cell type based on defaults
-    const newCellType: EHTCellTypeParams = {
-      ...cloneDeep(DEFAULT_CONTROL_CELL),
-      N_init: 0,
-      location: "",
-      color: { r: Math.floor(Math.random() * 200) + 50, g: Math.floor(Math.random() * 200) + 50, b: Math.floor(Math.random() * 200) + 50 },
-    };
-    newParams.cell_types[newKey] = newCellType;
+
+    // If source key provided, copy from that cell type
+    if (sourceKey && params.cell_types[sourceKey]) {
+      const source = params.cell_types[sourceKey] as EHTCellTypeParams;
+      const newCellType: EHTCellTypeParams = {
+        ...cloneDeep(source),
+        N_init: 0, // Always start with 0
+        color: { r: Math.floor(Math.random() * 200) + 50, g: Math.floor(Math.random() * 200) + 50, b: Math.floor(Math.random() * 200) + 50 },
+      };
+      newParams.cell_types[newKey] = newCellType;
+    } else {
+      // Create new cell type based on defaults
+      const newCellType: EHTCellTypeParams = {
+        ...cloneDeep(DEFAULT_CONTROL_CELL),
+        N_init: 0,
+        location: "",
+        color: { r: Math.floor(Math.random() * 200) + 50, g: Math.floor(Math.random() * 200) + 50, b: Math.floor(Math.random() * 200) + 50 },
+      };
+      newParams.cell_types[newKey] = newCellType;
+    }
     onChange(newParams);
-  };
+  }, [params, onChange]);
 
   const deleteCellType = (key: string) => {
     if (cellTypeKeys.length <= 1) return; // Keep at least one cell type
@@ -298,18 +463,35 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
   // Helper to get cell type params
   const getCellType = (key: string): EHTCellTypeParams => params.cell_types[key] as EHTCellTypeParams;
 
+  const handleAddCellType = useCallback(() => {
+    addCellType(copyFromType === '__new__' ? undefined : copyFromType);
+    setCopyFromType('__new__'); // Reset selection
+  }, [addCellType, copyFromType]);
+
   return (
     <div className="overflow-x-auto">
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end items-center gap-2 mb-2">
+        <span className="text-xs text-muted-foreground">Copy from:</span>
+        <Select value={copyFromType || '__new__'} onValueChange={setCopyFromType}>
+          <SelectTrigger className="h-7 w-28 text-xs">
+            <SelectValue placeholder="(new)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__new__">(new)</SelectItem>
+            {cellTypeKeys.map((key) => (
+              <SelectItem key={key} value={key}>{key}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
           variant="outline"
           size="sm"
-          onClick={addCellType}
+          onClick={handleAddCellType}
           disabled={disabled}
           className="gap-1"
         >
           <Plus className="h-4 w-4" />
-          New Cell Type
+          Add Cell Type
         </Button>
       </div>
       <table className="w-full text-xs">
@@ -349,11 +531,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
         </thead>
         <tbody>
           {/* Initial Count */}
-          <tr className="bg-muted/50">
-            <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">
-              Initial Setup
-            </td>
-          </tr>
+          <SectionHeader section={SECTIONS[0]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
           <CellTypeRow label="N Init" tooltip="Initial number of cells of this type">
             {cellTypeKeys.map((key) => (
               <NumberCell
@@ -379,11 +557,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
 
           {/* Geometry */}
-          <tr className="bg-muted/50">
-            <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">
-              Geometry
-            </td>
-          </tr>
+          <SectionHeader section={SECTIONS[1]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
           <CellTypeRow label="R Hard" tooltip="Hard sphere radius">
             {cellTypeKeys.map((key) => (
               <NumberCell
@@ -419,11 +593,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
 
           {/* Appearance */}
-          <tr className="bg-muted/50">
-            <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">
-              Appearance
-            </td>
-          </tr>
+          <SectionHeader section={SECTIONS[2]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
           <CellTypeRow label="Color">
             {cellTypeKeys.map((key) => (
               <ColorCell
@@ -436,11 +606,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
 
           {/* Stiffness */}
-          <tr className="bg-muted/50">
-            <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">
-              Stiffness
-            </td>
-          </tr>
+          <SectionHeader section={SECTIONS[3]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
           <CellTypeRow label="k Apical Junction" tooltip="Apical junction spring constant">
             {cellTypeKeys.map((key) => (
               <NumberCell
@@ -531,11 +697,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
 
           {/* Division */}
-          <tr className="bg-muted/50">
-            <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">
-              Division & Lifecycle
-            </td>
-          </tr>
+          <SectionHeader section={SECTIONS[4]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
           <CellTypeRow label="Lifespan (start)">
             {cellTypeKeys.map((key) => (
               <SplitRangeCell
@@ -597,65 +759,8 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
             ))}
           </CellTypeRow>
 
-          {/* Running */}
-          <tr className="bg-muted/50">
-            <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">
-              Running Behavior
-            </td>
-          </tr>
-          <CellTypeRow label="Run Probability">
-            {cellTypeKeys.map((key) => (
-              <NumberCell
-                key={key}
-                value={getCellType(key).run}
-                onChange={(v) => updateCellType(key, 'run', v)}
-                disabled={disabled}
-                min={0}
-                max={1}
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Running Speed">
-            {cellTypeKeys.map((key) => (
-              <NumberCell
-                key={key}
-                value={getCellType(key).running_speed}
-                onChange={(v) => updateCellType(key, 'running_speed', v)}
-                disabled={disabled}
-                min={0}
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Running Mode" tooltip="0: none, 1: after extrusion, 2: retain length, 3: immediate">
-            {cellTypeKeys.map((key) => (
-              <NumberCell
-                key={key}
-                value={getCellType(key).running_mode}
-                onChange={(v) => updateCellType(key, 'running_mode', Math.round(v))}
-                disabled={disabled}
-                min={0}
-                max={3}
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Max Cytos Length" tooltip="Maximum cytoskeleton length">
-            {cellTypeKeys.map((key) => (
-              <NumberCell
-                key={key}
-                value={getCellType(key).max_cytoskeleton_length}
-                onChange={(v) => updateCellType(key, 'max_cytoskeleton_length', v)}
-                disabled={disabled}
-                min={0}
-              />
-            ))}
-          </CellTypeRow>
-
           {/* Cell-Type Specific Properties */}
-          <tr className="bg-muted/50">
-            <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">
-              Cell-Type Properties
-            </td>
-          </tr>
+          <SectionHeader section={SECTIONS[5]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
           <CellTypeRow label="Diffusion" tooltip="Diffusion coefficient">
             {cellTypeKeys.map((key) => (
               <NumberCell
@@ -722,13 +827,20 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
+          <CellTypeRow label="Max Cytos Length" tooltip="Maximum cytoskeleton length">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).max_cytoskeleton_length}
+                onChange={(v) => updateCellType(key, 'max_cytoskeleton_length', v)}
+                disabled={disabled}
+                min={0}
+              />
+            ))}
+          </CellTypeRow>
 
           {/* EMT Events */}
-          <tr className="bg-muted/50">
-            <td colSpan={cellTypeKeys.length + 1} className="py-1 px-2 text-xs font-semibold text-muted-foreground">
-              EMT Events (time ranges)
-            </td>
-          </tr>
+          <SectionHeader section={SECTIONS[6]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
           <CellTypeRow label="Heterogeneous">
             {cellTypeKeys.map((key) => (
               <BoolCell
@@ -840,6 +952,44 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_P', v)}
                 disabled={disabled}
                 label="end"
+              />
+            ))}
+          </CellTypeRow>
+
+          {/* Running Behavior - at the end */}
+          <SectionHeader section={SECTIONS[7]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
+          <CellTypeRow label="Run Probability">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).run}
+                onChange={(v) => updateCellType(key, 'run', v)}
+                disabled={disabled}
+                min={0}
+                max={1}
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Running Speed">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).running_speed}
+                onChange={(v) => updateCellType(key, 'running_speed', v)}
+                disabled={disabled}
+                min={0}
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Running Mode" tooltip="0: none, 1: after extrusion, 2: retain length, 3: immediate">
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).running_mode}
+                onChange={(v) => updateCellType(key, 'running_mode', Math.round(v))}
+                disabled={disabled}
+                min={0}
+                max={3}
               />
             ))}
           </CellTypeRow>

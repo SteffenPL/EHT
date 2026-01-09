@@ -123,6 +123,60 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
         <CardTitle className="text-base">Parameters &amp; Ranges</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* File Operations - moved to top */}
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2 items-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".toml"
+              onChange={handleLoadConfig}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled}
+              className="flex-1"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Load TOML
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveConfig}
+              disabled={disabled}
+              className="flex-1"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Save TOML
+            </Button>
+          </div>
+          <div className="flex gap-2 items-center">
+            <input
+              ref={xlsxInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImportXLSX}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => xlsxInputRef.current?.click()}
+              disabled={disabled || isImporting}
+              className="flex-1"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              {isImporting ? 'Importing...' : 'Import Legacy XLSX'}
+            </Button>
+          </div>
+        </div>
+
+        <Separator />
+
         <div className="space-y-1">
           <Label className="text-sm font-medium">Select preset</Label>
           <Select onValueChange={applyPreset} disabled={disabled}>
@@ -181,59 +235,6 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
               disabled={disabled}
               className="h-8 w-32"
             />
-          </div>
-        </div>
-
-        <Separator />
-
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2 items-center">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".toml"
-              onChange={handleLoadConfig}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled}
-              className="flex-1"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-            Load TOML
-          </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSaveConfig}
-              disabled={disabled}
-              className="flex-1"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Save TOML
-            </Button>
-          </div>
-          <div className="flex gap-2 items-center">
-            <input
-              ref={xlsxInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleImportXLSX}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => xlsxInputRef.current?.click()}
-              disabled={disabled || isImporting}
-              className="flex-1"
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              {isImporting ? 'Importing...' : 'Import Legacy XLSX'}
-            </Button>
           </div>
         </div>
       </CardContent>
