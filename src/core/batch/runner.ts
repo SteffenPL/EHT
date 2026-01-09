@@ -133,7 +133,8 @@ async function runBatchSequential(
 
   for (const paramConfig of paramConfigs) {
     for (let seedOffset = 0; seedOffset < config.seeds_per_config; seedOffset++) {
-      const seed = baseParams.general.random_seed + seedOffset;
+      // Seed increments globally across all runs (not reset per config)
+      const seed = baseParams.general.random_seed + runIndex;
 
       // Report progress
       callbacks?.onProgress?.({
@@ -219,7 +220,8 @@ async function runBatchParallel(
     let runIndex = 0;
     for (const paramConfig of paramConfigs) {
       for (let seedOffset = 0; seedOffset < config.seeds_per_config; seedOffset++) {
-        const seed = baseParams.general.random_seed + seedOffset;
+        // Seed increments globally across all runs (not reset per config)
+        const seed = baseParams.general.random_seed + runIndex;
         tasks.push({ paramConfig, seed, runIndex });
         runIndex++;
       }

@@ -81,7 +81,6 @@ export function initializeEHTSimulation(
       for(let i = 0; i < locations.length && assigned < cellType.N_init; i++) {
         if(locations[i][1] === "") {
           locations[i] = [locations[i][0], typeKey];
-          console.log("Assigned location", locations[i][0], "to cell type", typeKey);
           assigned++;
         }
       }

@@ -220,7 +220,8 @@ export async function batchCommand(args: string[]): Promise<void> {
 
   for (const paramConfig of paramConfigs) {
     for (let seedOffset = 0; seedOffset < seedsPerConfig; seedOffset++) {
-      const seed = params.general.random_seed + seedOffset;
+      // Seed increments globally across all runs (not reset per config)
+      const seed = params.general.random_seed + runIndex;
 
       console.error(`\nStarting run ${runIndex + 1}/${totalRuns} (seed=${seed})`);
       if (Object.keys(paramConfig).length > 0) {
