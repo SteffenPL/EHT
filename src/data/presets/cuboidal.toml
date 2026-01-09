@@ -1,0 +1,120 @@
+cell_prop = { }
+parameter_ranges = [ ]
+seeds_per_config = 1
+
+[metadata]
+model = "EHT"
+version = "1.0.0"
+
+[general]
+t_end = 80
+dt = 0.05
+random_seed = 0
+full_circle = false
+w_init = 20
+h_init = 2
+mu = 0.1
+n_substeps = 40
+alg_dt = 0.01
+w_screen = 30
+h_screen = 0
+p_div_out = 0.9
+perimeter = 40
+aspect_ratio = 0
+
+[cell_types.control]
+N_init = 29
+location = ""
+R_hard = 0.3
+R_hard_div = 0.7
+R_soft = 1
+dur_G2 = 0.5
+dur_mitosis = 0.5
+k_apical_junction = 5
+k_cytos = 5
+max_cytoskeleton_length = 0
+run = 0
+running_speed = 1
+running_mode = 0
+stiffness_apical_apical = 5
+stiffness_apical_apical_div = 10
+stiffness_nuclei_apical = 2
+stiffness_nuclei_basal = 2
+stiffness_repulsion = 4
+stiffness_straightness = 15
+lifespan_start = 10
+lifespan_end = 21
+INM = 0
+hetero = false
+diffusion = 0.1
+basal_damping_ratio = 1
+max_basal_junction_dist = 2
+cytos_init = 1.5
+basal_membrane_repulsion = 0.1
+apical_junction_init = 0.333333333333333
+
+  [cell_types.control.color]
+  r = 0
+  g = 128
+  b = 0
+
+  [cell_types.control.events]
+  time_A_start = 1e+308
+  time_A_end = 1e+308
+  time_B_start = 1e+308
+  time_B_end = 1e+308
+  time_S_start = 1e+308
+  time_S_end = 1e+308
+  time_P_start = 1e+308
+  time_P_end = 1e+308
+
+[cell_types.emt]
+N_init = 1
+location = "bottom"
+R_hard = 0.3
+R_hard_div = 0.7
+R_soft = 1
+dur_G2 = 0.5
+dur_mitosis = 0.5
+k_apical_junction = 5
+k_cytos = 5
+max_cytoskeleton_length = 0
+run = 0
+running_speed = 1
+running_mode = 0
+stiffness_apical_apical = 5
+stiffness_apical_apical_div = 10
+stiffness_nuclei_apical = 2
+stiffness_nuclei_basal = 2
+stiffness_repulsion = 4
+stiffness_straightness = 15
+lifespan_start = 10
+lifespan_end = 21
+INM = 0
+hetero = false
+diffusion = 0.1
+basal_damping_ratio = 1
+max_basal_junction_dist = 2
+cytos_init = 1.5
+basal_membrane_repulsion = 0.1
+apical_junction_init = 0.333333333333333
+
+  [cell_types.emt.color]
+  r = 255
+  g = 0
+  b = 255
+
+  [cell_types.emt.events]
+  time_A_start = 1e+308
+  time_A_end = 1e+308
+  time_B_start = 1e+308
+  time_B_end = 1e+308
+  time_S_start = 1e+308
+  time_S_end = 1e+308
+  time_P_start = 1e+308
+  time_P_end = 1e+308
+
+[time_samples]
+start = 0
+end = 48
+step = 12

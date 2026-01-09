@@ -149,26 +149,168 @@ export const EHT_PRESETS: Array<{
       create: () => cloneDeep(DEFAULT_EHT_PARAMS),
     },
     {
-      key: 'straight',
-      label: 'Straight',
-      create: () => {
-        const params = createDefaultEHTParams();
-        params.general.perimeter = 0;      // Straight line
-        params.general.aspect_ratio = 1;
-        params.general.full_circle = false;
-        return params;
-      },
+      key: 'chick_embryo_control',
+      label: 'Chick Embryo Control',
+      create: (): EHTParams => ({
+        metadata: { model: 'EHT', version: '1.0.0' },
+        general: {
+          t_end: 54, dt: 0.1, random_seed: 0, full_circle: false,
+          w_init: 10, h_init: 8, mu: 0.2, n_substeps: 40, alg_dt: 0.05,
+          w_screen: 15, h_screen: 0, p_div_out: 0.8, perimeter: 20, aspect_ratio: 0,
+        },
+        cell_prop: {},
+        cell_types: {
+          control: {
+            N_init: 45, location: '', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
+            color: { r: 0, g: 128, b: 0 }, dur_G2: 0.5, dur_mitosis: 0.5,
+            k_apical_junction: 1, k_cytos: 5, max_cytoskeleton_length: 0,
+            run: 0, running_speed: 1, running_mode: 0,
+            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
+            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
+            stiffness_repulsion: 1, stiffness_straightness: 15,
+            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
+            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
+            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.333333333333333,
+            cytos_init: 1.5, basal_membrane_repulsion: 0, apical_junction_init: 0.333333333333333,
+          },
+          emt: {
+            N_init: 0, location: 'bottom', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
+            color: { r: 255, g: 0, b: 255 }, dur_G2: 0.5, dur_mitosis: 0.5,
+            k_apical_junction: 1, k_cytos: 5, max_cytoskeleton_length: 0,
+            run: 0, running_speed: 1, running_mode: 0,
+            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
+            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
+            stiffness_repulsion: 1, stiffness_straightness: 15,
+            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
+            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
+            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.333333333333333,
+            cytos_init: 1.5, basal_membrane_repulsion: 0, apical_junction_init: 0.333333333333333,
+          },
+        },
+      }),
     },
     {
-      key: 'full_circle',
-      label: 'Full Circle',
-      create: () => {
-        const params = createDefaultEHTParams();
-        params.general.perimeter = 31.4;   // ≈ 2π × 5 (equivalent to curvature 0.2)
-        params.general.aspect_ratio = 1;
-        params.general.full_circle = true;
-        return params;
-      },
+      key: 'chick_embryo_single_emt',
+      label: 'Chick Embryo Single EMT',
+      create: (): EHTParams => ({
+        metadata: { model: 'EHT', version: '1.0.0' },
+        general: {
+          t_end: 54, dt: 0.1, random_seed: 0, full_circle: false,
+          w_init: 10, h_init: 8, mu: 0.2, n_substeps: 40, alg_dt: 0.05,
+          w_screen: 15, h_screen: 0, p_div_out: 0.8, perimeter: 20, aspect_ratio: 0,
+        },
+        cell_prop: {},
+        cell_types: {
+          control: {
+            N_init: 50, location: '', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
+            color: { r: 0, g: 128, b: 0 }, dur_G2: 0.5, dur_mitosis: 0.5,
+            k_apical_junction: 1, k_cytos: 5, max_cytoskeleton_length: 0,
+            run: 0, running_speed: 1, running_mode: 0,
+            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
+            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
+            stiffness_repulsion: 1, stiffness_straightness: 15,
+            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
+            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
+            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.333333333333333,
+            cytos_init: 1.5, basal_membrane_repulsion: 0, apical_junction_init: 0.333333333333333,
+          },
+          emt: {
+            N_init: 1, location: 'bottom', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
+            color: { r: 255, g: 0, b: 255 }, dur_G2: 0.5, dur_mitosis: 0.5,
+            k_apical_junction: 1, k_cytos: 5, max_cytoskeleton_length: 0,
+            run: 0, running_speed: 1, running_mode: 0,
+            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
+            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
+            stiffness_repulsion: 1, stiffness_straightness: 15,
+            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
+            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
+            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.333333333333333,
+            cytos_init: 1.5, basal_membrane_repulsion: 0, apical_junction_init: 0.333333333333333,
+          },
+        },
+      }),
+    },
+    {
+      key: 'cuboidal',
+      label: 'Cuboidal',
+      create: (): EHTParams => ({
+        metadata: { model: 'EHT', version: '1.0.0' },
+        general: {
+          t_end: 80, dt: 0.05, random_seed: 0, full_circle: false,
+          w_init: 20, h_init: 2, mu: 0.1, n_substeps: 40, alg_dt: 0.01,
+          w_screen: 30, h_screen: 0, p_div_out: 0.9, perimeter: 40, aspect_ratio: 0,
+        },
+        cell_prop: {},
+        cell_types: {
+          control: {
+            N_init: 29, location: '', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
+            color: { r: 0, g: 128, b: 0 }, dur_G2: 0.5, dur_mitosis: 0.5,
+            k_apical_junction: 5, k_cytos: 5, max_cytoskeleton_length: 0,
+            run: 0, running_speed: 1, running_mode: 0,
+            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
+            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
+            stiffness_repulsion: 4, stiffness_straightness: 15,
+            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
+            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
+            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 2,
+            cytos_init: 1.5, basal_membrane_repulsion: 0.1, apical_junction_init: 0.333333333333333,
+          },
+          emt: {
+            N_init: 1, location: 'bottom', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
+            color: { r: 255, g: 0, b: 255 }, dur_G2: 0.5, dur_mitosis: 0.5,
+            k_apical_junction: 5, k_cytos: 5, max_cytoskeleton_length: 0,
+            run: 0, running_speed: 1, running_mode: 0,
+            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
+            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
+            stiffness_repulsion: 4, stiffness_straightness: 15,
+            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
+            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
+            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 2,
+            cytos_init: 1.5, basal_membrane_repulsion: 0.1, apical_junction_init: 0.333333333333333,
+          },
+        },
+      }),
+    },
+    {
+      key: 'pseudo_stratified',
+      label: 'Pseudo Stratified',
+      create: (): EHTParams => ({
+        metadata: { model: 'EHT', version: '1.0.0' },
+        general: {
+          t_end: 80, dt: 0.05, random_seed: 0, full_circle: false,
+          w_init: 20, h_init: 2, mu: 0.5, n_substeps: 40, alg_dt: 0.01,
+          w_screen: 30, h_screen: 0, p_div_out: 0.9, perimeter: 40, aspect_ratio: 0,
+        },
+        cell_prop: {},
+        cell_types: {
+          control: {
+            N_init: 29, location: '', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
+            color: { r: 0, g: 128, b: 0 }, dur_G2: 0.5, dur_mitosis: 0.5,
+            k_apical_junction: 0.01, k_cytos: 5, max_cytoskeleton_length: 0,
+            run: 0, running_speed: 1, running_mode: 0,
+            stiffness_apical_apical: 8, stiffness_apical_apical_div: 16,
+            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
+            stiffness_repulsion: 4, stiffness_straightness: 15,
+            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
+            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
+            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.6,
+            cytos_init: 1.5, basal_membrane_repulsion: 0.1, apical_junction_init: 0.333333333333333,
+          },
+          emt: {
+            N_init: 1, location: 'bottom', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
+            color: { r: 255, g: 0, b: 255 }, dur_G2: 0.5, dur_mitosis: 0.5,
+            k_apical_junction: 0.01, k_cytos: 5, max_cytoskeleton_length: 0,
+            run: 0, running_speed: 1, running_mode: 0,
+            stiffness_apical_apical: 8, stiffness_apical_apical_div: 16,
+            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
+            stiffness_repulsion: 4, stiffness_straightness: 15,
+            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
+            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
+            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.6,
+            cytos_init: 1.5, basal_membrane_repulsion: 0.1, apical_junction_init: 0.333333333333333,
+          },
+        },
+      }),
     },
   ];
 
