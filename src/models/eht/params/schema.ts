@@ -26,15 +26,18 @@ export const rangeSchema = z.object({
 
 /** EMT event times schema */
 export const emtEventTimesSchema = z.object({
-  time_A: rangeSchema,
-  time_B: rangeSchema,
-  time_S: rangeSchema,
-  time_P: rangeSchema,
+  time_A_start: z.number(),
+  time_A_end: z.number(),
+  time_B_start: z.number(),
+  time_B_end: z.number(),
+  time_S_start: z.number(),
+  time_S_end: z.number(),
+  time_P_start: z.number(),
+  time_P_end: z.number(),
 });
 
 /** Cell type schema */
 export const ehtCellTypeSchema = z.object({
-  name: z.string(),
   N_init: z.number().int().nonnegative(),
   location: z.string(),
   R_hard: z.number().positive(),
@@ -55,7 +58,8 @@ export const ehtCellTypeSchema = z.object({
   stiffness_nuclei_basal: z.number().nonnegative(),
   stiffness_repulsion: z.number().nonnegative(),
   stiffness_straightness: z.number().nonnegative(),
-  lifespan: rangeSchema,
+  lifespan_start: z.number(),
+  lifespan_end: z.number(),
   INM: z.number().min(0).max(1),
   hetero: z.boolean(),
   events: emtEventTimesSchema,

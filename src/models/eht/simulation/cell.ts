@@ -9,13 +9,20 @@ import type { EHTSimulationState, CellState } from '../types';
 import { CellPhase } from '../types';
 import type { EHTParams, EHTCellTypeParams } from '../params/types';
 
+/** Input for creating a new cell with pre-computed positions */
+export interface CreateCellInput {
+  basalPoint: Vector2;
+  apicalPoint: Vector2;
+  nucleusPosition: Vector2;
+}
+
 /**
  * Create a new EHT cell state.
  *
  * @param params - Simulation parameters
  * @param state - Current simulation state (for time reference)
  * @param rng - Seeded random number generator
- * @param position - Initial nucleus position
+ * @param input - Pre-computed positions (basal, apical, nucleus)
  * @param cellType - Cell type parameters
  * @param typeKey - Key in cell_types map (used as typeIndex)
  * @param parent - Parent cell (for cell division)
@@ -25,37 +32,30 @@ export function createCell(
   params: EHTParams,
   state: EHTSimulationState,
   rng: SeededRandom,
-  position: Vector2,
+  input: CreateCellInput,
   cellType: EHTCellTypeParams,
-  typeKey?: string,
+  typeKey: string,
   parent?: CellState
 ): CellState {
+  const { basalPoint, apicalPoint, nucleusPosition } = input;
   const h = params.general.h_init;
 
-  // Calculate apical and basal positions
-  const B = state.basalGeometry.projectPoint(position);
-  const normal = state.basalGeometry.getNormal(B);
-  const A = B.add(normal.scale(h));
-
   // Determine lifespan
-  const maxAge = rng.random(cellType.lifespan.min, cellType.lifespan.max);
+  const maxAge = rng.random(cellType.lifespan_start, cellType.lifespan_end);
 
   // Generate unique ID
   const id = state.cells.length > 0
     ? Math.max(...state.cells.map(c => c.id)) + 1
     : 0;
 
-  // Use typeKey if provided, otherwise use cellType.name
-  const cellTypeIndex = typeKey ?? cellType.name;
-
   if (parent === undefined) {
     // New cell (not from division)
     const birthTime = state.t - rng.random(0, maxAge);
 
     // Sample EMT event times
-    let time_A = rng.random(cellType.events.time_A.min, cellType.events.time_A.max);
-    let time_B = rng.random(cellType.events.time_B.min, cellType.events.time_B.max);
-    let time_S = rng.random(cellType.events.time_S.min, cellType.events.time_S.max);
+    let time_A = rng.random(cellType.events.time_A_start, cellType.events.time_A_end);
+    let time_B = rng.random(cellType.events.time_B_start, cellType.events.time_B_end);
+    let time_S = rng.random(cellType.events.time_S_start, cellType.events.time_S_end);
     const time_P = rng.random() <= cellType.run
       ? time_B
       : Infinity;
@@ -69,10 +69,10 @@ export function createCell(
 
     return {
       id,
-      typeIndex: cellTypeIndex,
-      pos: position.toObject(),
-      A: A.toObject(),
-      B: B.toObject(),
+      typeIndex: typeKey,
+      pos: nucleusPosition.toObject(),
+      A: apicalPoint.toObject(),
+      B: basalPoint.toObject(),
       R_soft: cellType.R_soft,
       R_hard: cellType.R_hard,
       eta_A: h / 2,
@@ -98,10 +98,10 @@ export function createCell(
     // Cell from division - inherit properties from parent
     return {
       id,
-      typeIndex: cellTypeIndex,
-      pos: position.toObject(),
-      A: { ...parent.A },
-      B: { ...parent.B },
+      typeIndex: typeKey,
+      pos: nucleusPosition.toObject(),
+      A: apicalPoint.toObject(),
+      B: basalPoint.toObject(),
       R_soft: cellType.R_soft,
       R_hard: cellType.R_hard,
       eta_A: parent.eta_A,

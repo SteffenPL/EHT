@@ -3,13 +3,12 @@
  * Sets up the initial state with cells and links.
  */
 
-import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
 import { createBasalGeometry } from '@/core/math';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 import { computeEllipseFromPerimeter, ramanujanPerimeter } from '../params/geometry';
-import { createCell } from './cell';
+import { createCell, type CreateCellInput } from './cell';
 
 /**
  * Initialize the EHT simulation with cells.
@@ -109,45 +108,56 @@ export function initializeEHTSimulation(
   // Sort locations back to original order
   locations.sort((a, b) => a[0] - b[0]);
 
-  const perimeter = ramanujanPerimeter(
-    Math.abs(1 / curvature_1),
-    Math.abs(1 / curvature_2)
-  );
+  // For line geometry (curvature = 0), use w_init directly
+  // For curved geometry, compute perimeter from curvatures
+  const isLineGeometry = curvature_1 === 0 && curvature_2 === 0;
+  const perimeter = isLineGeometry
+    ? pg.w_init * 4  // Use a finite value for arc length calculations
+    : ramanujanPerimeter(Math.abs(1 / curvature_1), Math.abs(1 / curvature_2));
+
   const w = pg.full_circle ? perimeter : pg.w_init;
   const h = pg.h_init;
 
-  // Generate initial positions for all cells
-  const positions: Vector2[] = [];
+  // For negative aspect ratio, flip normal direction to place cells outside the ellipse
+  const normalSign = pg.aspect_ratio < 0 ? -1 : 1;
+
+  // Generate initial cell inputs (basal, apical, nucleus positions)
+  const cellInputs: CreateCellInput[] = [];
   const typeAssignments: string[] = [];
   for (let i = 0; i < totalN; i++) {
-    const l = locations[i][0] * (w / 2) + perimeter/4;
-    if( !pg.full_circle ) {
+    // For line geometry, distribute cells along [-w/2, w/2]
+    // For curved geometry, use arc length parameterization
+    const arcLength = isLineGeometry
+      ? locations[i][0] * (w / 2)
+      : locations[i][0] * (w / 2) + perimeter / 4;
 
-    }
-    
-    const height = rng.random(h / 3, (2 * h) / 3);
-    const pos = state.basalGeometry.curvedToCartesian(l, height);
-    positions.push(pos);
+    // Get the basal point directly from arc length
+    const basalPoint = state.basalGeometry.getPointAtArcLength(arcLength);
+
+    // Get the normal at this basal point (flip for negative aspect ratio)
+    const normal = state.basalGeometry.getNormal(basalPoint).scale(normalSign);
+
+    // Compute apical point along normal at height h
+    const apicalPoint = basalPoint.add(normal.scale(h));
+
+    // Compute nucleus position at random height between basal and apical
+    const nucleusHeight = rng.random(h / 3, (2 * h) / 3);
+    const nucleusPosition = basalPoint.add(normal.scale(nucleusHeight));
+
+    cellInputs.push({
+      basalPoint,
+      apicalPoint,
+      nucleusPosition,
+    });
     typeAssignments.push(locations[i][1]);
   }
 
-
-
-  // // Sort by position along the basal curve (arc length)
-  // positions.sort((a, b) => {
-  //   const la = basalArcLength(basalCurve(a, curvature_1, curvature_2), curvature_1, curvature_2);
-  //   const lb = basalArcLength(basalCurve(b, curvature_1, curvature_2), curvature_1, curvature_2);
-  //   return la - lb;
-  // });
-
-  // Shuffle type assignments to distribute types, then sort positions
-  // Actually, keep contiguous for now (simpler, matches old behavior)
   // Create cells
   state.cells = [];
-  for(let i = 0; i < positions.length; i++) {
+  for (let i = 0; i < cellInputs.length; i++) {
     const typeKey = typeAssignments[i];
     const cellType = params.cell_types[typeKey];
-    if(!cellType) {
+    if (!cellType) {
       console.warn("No cell type found for key", typeKey);
       continue;
     }
@@ -155,7 +165,7 @@ export function initializeEHTSimulation(
       params,
       state,
       rng,
-      positions[i],
+      cellInputs[i],
       cellType,
       typeKey
     );

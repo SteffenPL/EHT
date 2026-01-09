@@ -8,7 +8,7 @@ import { SeededRandom } from '@/core/math/random';
 import type { EHTSimulationState } from '../types';
 import { CellPhase } from '../types';
 import type { EHTParams } from '../params/types';
-import { createCell, getCellType } from './cell';
+import { createCell, getCellType, type CreateCellInput } from './cell';
 
 /**
  * Process cell divisions for all cells in Division phase.
@@ -29,13 +29,20 @@ export function processCellDivisions(
 
     const cellType = getCellType(params, cell);
 
-    if (cellType.name === 'emt') {
+    // Build input from parent cell's current positions
+    const cellInput: CreateCellInput = {
+      basalPoint: Vector2.from(cell.B),
+      apicalPoint: Vector2.from(cell.A),
+      nucleusPosition: Vector2.from(cell.pos),
+    };
+
+    if (cell.typeIndex === 'emt') {
       // EMT cells just reset their cycle (no actual division)
       const newCell = createCell(
         params,
         state,
         rng,
-        Vector2.from(cell.pos),
+        cellInput,
         cellType,
         cell.typeIndex,
         cell
@@ -53,7 +60,7 @@ export function processCellDivisions(
           params,
           state,
           rng,
-          Vector2.from(cell.pos),
+          cellInput,
           cellType,
           cell.typeIndex,
           cell
@@ -69,7 +76,7 @@ export function processCellDivisions(
           params,
           state,
           rng,
-          Vector2.from(cell.pos),
+          cellInput,
           cellType,
           cell.typeIndex,
           cell
@@ -82,7 +89,7 @@ export function processCellDivisions(
           params,
           state,
           rng,
-          Vector2.from(cell.pos),
+          cellInput,
           cellType,
           cell.typeIndex,
           cell1

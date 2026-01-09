@@ -201,6 +201,7 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
   // Statistics
   computeStats: (state: ToySimulationState, _params?: ToyParams) => computeToyStatistics(state),
   statistics: TOY_STATISTICS,
+  generateStatistics: (_params: ToyParams) => TOY_STATISTICS,
 
   // Model-specific renderer
   renderer: toyRenderer,

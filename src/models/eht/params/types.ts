@@ -10,15 +10,18 @@ export type { RGBColor, Range };
 
 /** EMT event timing configuration */
 export interface EMTEventTimes {
-  time_A: Range; // Time to lose apical adhesion
-  time_B: Range; // Time to lose basal adhesion
-  time_S: Range; // Time to lose straightness
-  time_P: Range; // Time to start polarized running
+  time_A_start: number; // Time to lose apical adhesion (start)
+  time_A_end: number;   // Time to lose apical adhesion (end)
+  time_B_start: number; // Time to lose basal adhesion (start)
+  time_B_end: number;   // Time to lose basal adhesion (end)
+  time_S_start: number; // Time to lose straightness (start)
+  time_S_end: number;   // Time to lose straightness (end)
+  time_P_start: number; // Time to start polarized running (start)
+  time_P_end: number;   // Time to start polarized running (end)
 }
 
 /** Cell type definition - defines the properties of a cell type (e.g., control, emt) */
 export interface EHTCellTypeParams {
-  name: string;
   N_init: number;           // Initial number of cells of this type
   location: string;         // Optional predefined location along the basal membrane, "top", "bottom", "rest" or numeric value in [-1, 1]
   R_hard: number;           // Hard sphere radius
@@ -39,7 +42,8 @@ export interface EHTCellTypeParams {
   stiffness_nuclei_basal: number;
   stiffness_repulsion: number;
   stiffness_straightness: number;
-  lifespan: Range;
+  lifespan_start: number;
+  lifespan_end: number;
   INM: number;              // Interkinetic nuclear migration probability
   hetero: boolean;          // Heterogeneous EMT behavior
   events: EMTEventTimes;

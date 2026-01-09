@@ -3,7 +3,7 @@
  */
 import { cloneDeep } from 'lodash-es';
 import type { ModelUITabProps } from '@/core/registry';
-import type { EHTParams, EHTCellTypeParams, Range } from '../params/types';
+import type { EHTParams, EHTCellTypeParams } from '../params/types';
 import { DEFAULT_CONTROL_CELL } from '../params/defaults';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -37,7 +37,7 @@ interface NumberCellProps {
   max?: number;
 }
 
-function NumberCell({ value, onChange, disabled, step = 0.1, min, max }: NumberCellProps) {
+function NumberCell({ value, onChange, disabled, step, min, max }: NumberCellProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const parsed = parseFloat(e.target.value);
     if (!isNaN(parsed)) {
@@ -81,77 +81,75 @@ function StringCell({ value, onChange, disabled }: { value: string; onChange: (v
   );
 }
 
-interface RangeCellProps {
-  value: Range;
-  onChange: (value: Range) => void;
+interface SplitRangeCellProps {
+  valueStart: number;
+  valueEnd: number;
+  onChangeStart: (value: number) => void;
+  onChangeEnd: (value: number) => void;
   disabled?: boolean;
-  step?: number;
+  label: 'start' | 'end';
 }
 
-function RangeCell({ value, onChange, disabled, step = 0.1 }: RangeCellProps) {
-  const minVal = isFinite(value.min) ? value.min : '';
-  const maxVal = isFinite(value.max) ? value.max : '';
-  const isInfinite = !isFinite(value.min) && !isFinite(value.max);
+function SplitRangeCell({ valueStart, valueEnd, onChangeStart, onChangeEnd, disabled, label }: SplitRangeCellProps) {
+  const isStartActive = isFinite(valueStart);
+  const isEndActive = isFinite(valueEnd);
 
-  const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseFloat(e.target.value);
-    if (e.target.value === '') {
-      onChange({ ...value, min: Infinity });
-    } else if (!isNaN(parsed)) {
-      onChange({ ...value, min: parsed });
-    }
-  };
-
-  const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseFloat(e.target.value);
-    if (e.target.value === '') {
-      onChange({ ...value, max: Infinity });
-    } else if (!isNaN(parsed)) {
-      onChange({ ...value, max: parsed });
-    }
-  };
-
-  const handleInfiniteToggle = (checked: boolean) => {
-    if (checked) {
-      onChange({ min: Infinity, max: Infinity });
+  const handleActiveToggle = (checked: boolean) => {
+    if (label === 'start') {
+      if (checked) {
+        onChangeStart(0);
+      } else {
+        onChangeStart(Infinity);
+      }
     } else {
-      onChange({ min: 0, max: 1 });
+      if (checked) {
+        onChangeEnd(1);
+      } else {
+        onChangeEnd(Infinity);
+      }
     }
   };
+
+  const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const parsed = parseFloat(e.target.value);
+    if (e.target.value === '') {
+      if (label === 'start') {
+        onChangeStart(Infinity);
+      } else {
+        onChangeEnd(Infinity);
+      }
+    } else if (!isNaN(parsed)) {
+      if (label === 'start') {
+        onChangeStart(parsed);
+      } else {
+        onChangeEnd(parsed);
+      }
+    }
+  };
+
+  const isActive = label === 'start' ? isStartActive : isEndActive;
+  const value = label === 'start' ? valueStart : valueEnd;
+  const displayValue = isFinite(value) ? value : '';
 
   return (
     <td className="py-1 px-1">
       <div className="flex items-center gap-1">
         <Checkbox
-          checked={isInfinite}
-          onCheckedChange={handleInfiniteToggle}
+          checked={isActive}
+          onCheckedChange={handleActiveToggle}
           disabled={disabled}
-          title="Set to infinite (disabled)"
+          title="Active (enabled when checked)"
         />
-        {isInfinite ? (
-          <span className="text-xs text-muted-foreground">-</span>
+        {!isActive ? (
+          <span className="text-xs text-muted-foreground w-20">-</span>
         ) : (
-          <>
-            <Input
-              type="number"
-              value={minVal}
-              onChange={handleMinChange}
-              disabled={disabled}
-              step={step}
-              className="h-6 text-xs w-12"
-              placeholder="min"
-            />
-            <span className="text-xs">-</span>
-            <Input
-              type="number"
-              value={maxVal}
-              onChange={handleMaxChange}
-              disabled={disabled}
-              step={step}
-              className="h-6 text-xs w-12"
-              placeholder="max"
-            />
-          </>
+          <Input
+            type="number"
+            value={displayValue}
+            onChange={handleValueChange}
+            disabled={disabled}
+            className="h-6 text-xs w-20"
+          />
         )}
       </div>
     </td>
@@ -237,13 +235,23 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     onChange(newParams);
   };
 
-  const updateCellTypeEvent = (
+  const updateCellTypeEventStart = (
     cellType: string,
-    eventKey: keyof EHTCellTypeParams['events'],
-    value: Range
+    eventKey: 'time_A' | 'time_B' | 'time_S' | 'time_P',
+    value: number
   ) => {
     const newParams = cloneDeep(params);
-    (newParams.cell_types[cellType] as EHTCellTypeParams).events[eventKey] = value;
+    (newParams.cell_types[cellType] as EHTCellTypeParams).events[`${eventKey}_start`] = value;
+    onChange(newParams);
+  };
+
+  const updateCellTypeEventEnd = (
+    cellType: string,
+    eventKey: 'time_A' | 'time_B' | 'time_S' | 'time_P',
+    value: number
+  ) => {
+    const newParams = cloneDeep(params);
+    (newParams.cell_types[cellType] as EHTCellTypeParams).events[`${eventKey}_end`] = value;
     onChange(newParams);
   };
 
@@ -259,7 +267,6 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     // Create new cell type based on defaults
     const newCellType: EHTCellTypeParams = {
       ...cloneDeep(DEFAULT_CONTROL_CELL),
-      name: `New Type ${counter}`,
       N_init: 0,
       location: "",
       color: { r: Math.floor(Math.random() * 200) + 50, g: Math.floor(Math.random() * 200) + 50, b: Math.floor(Math.random() * 200) + 50 },
@@ -275,9 +282,16 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     onChange(newParams);
   };
 
-  const renameCellTypeKey = (oldKey: string, newName: string) => {
+  const renameCellTypeKey = (oldKey: string, newKey: string) => {
+    // Don't rename if key is empty or same as old key
+    if (!newKey.trim() || newKey === oldKey) return;
+    // Don't rename if key already exists
+    if (params.cell_types[newKey]) return;
+
     const newParams = cloneDeep(params);
-    (newParams.cell_types[oldKey] as EHTCellTypeParams).name = newName;
+    // Copy cell type to new key and delete old key
+    newParams.cell_types[newKey] = newParams.cell_types[oldKey];
+    delete newParams.cell_types[oldKey];
     onChange(newParams);
   };
 
@@ -306,8 +320,14 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               <th key={key} className="py-2 px-1 text-left">
                 <div className="flex items-center gap-1">
                   <Input
-                    value={getCellType(key).name || key}
-                    onChange={(e) => renameCellTypeKey(key, e.target.value)}
+                    defaultValue={key}
+                    onBlur={(e) => renameCellTypeKey(key, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        renameCellTypeKey(key, e.currentTarget.value);
+                        e.currentTarget.blur();
+                      }
+                    }}
                     disabled={disabled}
                     className="h-6 text-xs font-semibold w-24"
                   />
@@ -342,7 +362,6 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 onChange={(v) => updateCellType(key, 'N_init', Math.round(v))}
                 disabled={disabled}
                 min={0}
-                step={1}
               />
             ))}
           </CellTypeRow>
@@ -517,14 +536,29 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               Division & Lifecycle
             </td>
           </tr>
-          <CellTypeRow label="Lifespan">
+          <CellTypeRow label="Lifespan (start)">
             {cellTypeKeys.map((key) => (
-              <RangeCell
+              <SplitRangeCell
                 key={key}
-                value={getCellType(key).lifespan}
-                onChange={(v) => updateCellType(key, 'lifespan', v)}
+                valueStart={getCellType(key).lifespan_start}
+                valueEnd={getCellType(key).lifespan_end}
+                onChangeStart={(v) => updateCellType(key, 'lifespan_start', v)}
+                onChangeEnd={(v) => updateCellType(key, 'lifespan_end', v)}
                 disabled={disabled}
-                step={0.5}
+                label="start"
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Lifespan (end)">
+            {cellTypeKeys.map((key) => (
+              <SplitRangeCell
+                key={key}
+                valueStart={getCellType(key).lifespan_start}
+                valueEnd={getCellType(key).lifespan_end}
+                onChangeStart={(v) => updateCellType(key, 'lifespan_start', v)}
+                onChangeEnd={(v) => updateCellType(key, 'lifespan_end', v)}
+                disabled={disabled}
+                label="end"
               />
             ))}
           </CellTypeRow>
@@ -559,7 +593,6 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 disabled={disabled}
                 min={0}
                 max={1}
-                step={0.01}
               />
             ))}
           </CellTypeRow>
@@ -579,7 +612,6 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 disabled={disabled}
                 min={0}
                 max={1}
-                step={0.01}
               />
             ))}
           </CellTypeRow>
@@ -603,7 +635,6 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 disabled={disabled}
                 min={0}
                 max={3}
-                step={1}
               />
             ))}
           </CellTypeRow>
@@ -635,43 +666,107 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Time A (lose apical)">
+          <CellTypeRow label="Time A start">
             {cellTypeKeys.map((key) => (
-              <RangeCell
+              <SplitRangeCell
                 key={key}
-                value={getCellType(key).events.time_A}
-                onChange={(v) => updateCellTypeEvent(key, 'time_A', v)}
+                valueStart={getCellType(key).events.time_A_start}
+                valueEnd={getCellType(key).events.time_A_end}
+                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_A', v)}
+                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_A', v)}
                 disabled={disabled}
+                label="start"
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Time B (lose basal)">
+          <CellTypeRow label="Time A end">
             {cellTypeKeys.map((key) => (
-              <RangeCell
+              <SplitRangeCell
                 key={key}
-                value={getCellType(key).events.time_B}
-                onChange={(v) => updateCellTypeEvent(key, 'time_B', v)}
+                valueStart={getCellType(key).events.time_A_start}
+                valueEnd={getCellType(key).events.time_A_end}
+                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_A', v)}
+                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_A', v)}
                 disabled={disabled}
+                label="end"
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Time S (lose straightness)">
+          <CellTypeRow label="Time B start">
             {cellTypeKeys.map((key) => (
-              <RangeCell
+              <SplitRangeCell
                 key={key}
-                value={getCellType(key).events.time_S}
-                onChange={(v) => updateCellTypeEvent(key, 'time_S', v)}
+                valueStart={getCellType(key).events.time_B_start}
+                valueEnd={getCellType(key).events.time_B_end}
+                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_B', v)}
+                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_B', v)}
                 disabled={disabled}
+                label="start"
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Time P (start running)">
+          <CellTypeRow label="Time B end">
             {cellTypeKeys.map((key) => (
-              <RangeCell
+              <SplitRangeCell
                 key={key}
-                value={getCellType(key).events.time_P}
-                onChange={(v) => updateCellTypeEvent(key, 'time_P', v)}
+                valueStart={getCellType(key).events.time_B_start}
+                valueEnd={getCellType(key).events.time_B_end}
+                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_B', v)}
+                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_B', v)}
                 disabled={disabled}
+                label="end"
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Time S start">
+            {cellTypeKeys.map((key) => (
+              <SplitRangeCell
+                key={key}
+                valueStart={getCellType(key).events.time_S_start}
+                valueEnd={getCellType(key).events.time_S_end}
+                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_S', v)}
+                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_S', v)}
+                disabled={disabled}
+                label="start"
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Time S end">
+            {cellTypeKeys.map((key) => (
+              <SplitRangeCell
+                key={key}
+                valueStart={getCellType(key).events.time_S_start}
+                valueEnd={getCellType(key).events.time_S_end}
+                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_S', v)}
+                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_S', v)}
+                disabled={disabled}
+                label="end"
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Time P start">
+            {cellTypeKeys.map((key) => (
+              <SplitRangeCell
+                key={key}
+                valueStart={getCellType(key).events.time_P_start}
+                valueEnd={getCellType(key).events.time_P_end}
+                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_P', v)}
+                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_P', v)}
+                disabled={disabled}
+                label="start"
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Time P end">
+            {cellTypeKeys.map((key) => (
+              <SplitRangeCell
+                key={key}
+                valueStart={getCellType(key).events.time_P_start}
+                valueEnd={getCellType(key).events.time_P_end}
+                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_P', v)}
+                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_P', v)}
+                disabled={disabled}
+                label="end"
               />
             ))}
           </CellTypeRow>

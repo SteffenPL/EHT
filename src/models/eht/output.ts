@@ -178,7 +178,7 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
         else cell.stiffness_straightness = cellType.stiffness_straightness;
 
         // Recalculate division time
-        cell.division_time = cell.birth_time + (cellType.lifespan.max + cellType.lifespan.min) / 2; // Approx
+        cell.division_time = cell.birth_time + (cellType.lifespan_end + cellType.lifespan_start) / 2; // Approx
 
         state.cells.push(cell);
     }

@@ -102,9 +102,9 @@ function computeStatisticsFromSnapshots(
  */
 function statisticsToCSV(columns: string[], rows: (string | number)[][]): string {
   const lines: string[] = [];
-  lines.push(columns.join(','));
+  lines.push(columns.join('\t'));
   for (const row of rows) {
-    lines.push(row.join(','));
+    lines.push(row.join('\t'));
   }
   return lines.join('\n');
 }

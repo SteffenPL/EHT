@@ -29,7 +29,7 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
       <div className="space-y-2">
         <Label className="text-sm font-medium">General</Label>
         <div className="space-y-2 pl-2">
-          <NumberInput label="End Time (h)" value={g.t_end} onChange={(v) => update('t_end', v)} disabled={disabled} step={1} min={0} />
+          <NumberInput label="End Time (h)" value={g.t_end} onChange={(v) => update('t_end', v)} disabled={disabled} min={0} />
           <IntegerInput label="Random Seed" value={g.random_seed} onChange={(v) => update('random_seed', v)} disabled={disabled} />
         </div>
       </div>
@@ -39,19 +39,10 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
         <Label className="text-sm font-medium">Geometry</Label>
         <div className="space-y-2 pl-2">
           <BoolInput label="Full Circle" value={g.full_circle} onChange={(v) => update('full_circle', v)} disabled={disabled} />
-          <NumberInput label="Initial Width" value={g.w_init} onChange={(v) => update('w_init', v)} disabled={disabled} step={1} min={0} />
-          <NumberInput label="Initial Height" value={g.h_init} onChange={(v) => update('h_init', v)} disabled={disabled} step={0.1} min={0} />
-          <NumberInput label="Perimeter" value={g.perimeter} onChange={(v) => update('perimeter', v)} disabled={disabled} step={1} min={1} />
-          <NumberInput label="Aspect (0=line, b/a)" value={g.aspect_ratio} onChange={(v) => update('aspect_ratio', v)} disabled={disabled} step={0.1} />
-        </div>
-      </div>
-
-      {/* Physics */}
-      <div className="space-y-2">
-        <Label className="text-sm font-medium">Physics</Label>
-        <div className="space-y-2 pl-2">
-          <NumberInput label="Friction (mu)" value={g.mu} onChange={(v) => update('mu', v)} disabled={disabled} step={0.01} min={0} />
-          <NumberInput label="Division Prob." value={g.p_div_out} onChange={(v) => update('p_div_out', v)} disabled={disabled} step={0.01} min={0} max={1} />
+          <NumberInput label="Initial Width" value={g.w_init} onChange={(v) => update('w_init', v)} disabled={disabled} min={0} />
+          <NumberInput label="Initial Height" value={g.h_init} onChange={(v) => update('h_init', v)} disabled={disabled} min={0} />
+          <NumberInput label="Perimeter" value={g.perimeter} onChange={(v) => update('perimeter', v)} disabled={disabled} min={1} />
+          <NumberInput label="Aspect (0=line, b/a)" value={g.aspect_ratio} onChange={(v) => update('aspect_ratio', v)} disabled={disabled} />
         </div>
       </div>
 
@@ -59,14 +50,24 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
       <div className="space-y-2">
         <Label className="text-sm font-medium">Cell Properties</Label>
         <div className="space-y-2 pl-2">
-          <NumberInput label="Apical Junc Init" value={cp.apical_junction_init} onChange={(v) => updateCellProp('apical_junction_init', v)} disabled={disabled} step={0.1} />
-          <NumberInput label="Max Basal Dist" value={cp.max_basal_junction_dist} onChange={(v) => updateCellProp('max_basal_junction_dist', v)} disabled={disabled} step={0.1} min={0} />
-          <NumberInput label="Basal Damping" value={cp.basal_daming_ratio} onChange={(v) => updateCellProp('basal_daming_ratio', v)} disabled={disabled} step={0.1} min={0} />
-          <NumberInput label="Basal Repulsion" value={cp.basal_membrane_repulsion} onChange={(v) => updateCellProp('basal_membrane_repulsion', v)} disabled={disabled} step={0.1} min={0} />
-          <NumberInput label="Cytos Init" value={cp.cytos_init} onChange={(v) => updateCellProp('cytos_init', v)} disabled={disabled} step={0.1} />
-          <NumberInput label="Diffusion" value={cp.diffusion} onChange={(v) => updateCellProp('diffusion', v)} disabled={disabled} step={0.01} min={0} />
+          <NumberInput label="Out-of-plane Division Prob." value={g.p_div_out} onChange={(v) => update('p_div_out', v)} disabled={disabled} min={0} max={1} />
+          <NumberInput label="Apical Junc Init" value={cp.apical_junction_init} onChange={(v) => updateCellProp('apical_junction_init', v)} disabled={disabled} />
+          <NumberInput label="Max Basal Dist" value={cp.max_basal_junction_dist} onChange={(v) => updateCellProp('max_basal_junction_dist', v)} disabled={disabled} min={0} />
+          <NumberInput label="Basal Damping" value={cp.basal_daming_ratio} onChange={(v) => updateCellProp('basal_daming_ratio', v)} disabled={disabled} min={0} />
+          <NumberInput label="Basal Repulsion" value={cp.basal_membrane_repulsion} onChange={(v) => updateCellProp('basal_membrane_repulsion', v)} disabled={disabled} min={0} />
+          <NumberInput label="Cytos Init" value={cp.cytos_init} onChange={(v) => updateCellProp('cytos_init', v)} disabled={disabled} />
+          <NumberInput label="Diffusion" value={cp.diffusion} onChange={(v) => updateCellProp('diffusion', v)} disabled={disabled} min={0} />
         </div>
       </div>
+
+      {/* Physics */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Physics</Label>
+        <div className="space-y-2 pl-2">
+          <NumberInput label="Friction (mu)" value={g.mu} onChange={(v) => update('mu', v)} disabled={disabled} min={0} />
+        </div>
+      </div>
+
 
       {/* Display */}
       <div className="space-y-2">

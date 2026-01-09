@@ -83,7 +83,7 @@ export function batchSnapshotsToCSV(snapshots: BatchSnapshot[]): string {
     ...sortedDataKeys
   ];
 
-  return Papa.unparse(rows, { columns });
+  return Papa.unparse(rows, { columns, delimiter: '\t' });
 }
 
 /**
@@ -94,6 +94,7 @@ export function csvToBatchSnapshots(csv: string): BatchSnapshot[] {
     header: true,
     dynamicTyping: false, // We'll parse manually for type safety
     skipEmptyLines: true,
+    delimiter: '\t',
   });
 
   if (parsed.errors.length > 0) {
@@ -242,7 +243,7 @@ export function statisticsToCSV(
     return obj;
   });
 
-  return Papa.unparse(data, { columns });
+  return Papa.unparse(data, { columns, delimiter: '\t' });
 }
 
 /**

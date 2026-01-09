@@ -2,8 +2,8 @@
  * Combined parameter editor for base params, ranges, and batch sampling settings.
  * Handles unified load/save to TOML so all values stay together.
  */
-import { useRef } from 'react';
-import { Upload, Download } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Upload, Download, FileSpreadsheet } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { Button } from '../ui/button';
@@ -22,6 +22,7 @@ import { TimeSampleConfig } from '../batch/TimeSampleConfig';
 import type { SimulationConfig } from '@/core/params';
 import type { BaseSimulationParams } from '@/core/registry';
 import { PARAM_PRESETS, parseSimulationConfigToml, toSimulationConfigToml } from '@/core/params';
+import { importXLSXToParams } from '@/models/eht/params/legacy-import';
 
 export interface ParameterConfigViewProps {
   config: SimulationConfig;
@@ -31,6 +32,8 @@ export interface ParameterConfigViewProps {
 
 export function ParameterConfigView({ config, onConfigChange, disabled }: ParameterConfigViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const xlsxInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
   const presetOptions = PARAM_PRESETS;
 
   const applyPreset = (key: string) => {
@@ -89,6 +92,29 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleImportXLSX = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const params = await importXLSXToParams(file);
+      onConfigChange({
+        ...config,
+        params: params as SimulationConfig['params'],
+      });
+    } catch (err) {
+      console.error('Failed to import XLSX:', err);
+      alert('Failed to import legacy XLSX file. Check console for details.');
+    } finally {
+      setIsImporting(false);
+    }
+
+    if (xlsxInputRef.current) {
+      xlsxInputRef.current.value = '';
+    }
   };
 
   return (
@@ -160,34 +186,55 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
 
         <Separator />
 
-        <div className="flex gap-2 items-center">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".toml"
-            onChange={handleLoadConfig}
-            className="hidden"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled}
-            className="flex-1"
-          >
-            <Upload className="h-4 w-4 mr-2" />
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-2 items-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".toml"
+              onChange={handleLoadConfig}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled}
+              className="flex-1"
+            >
+              <Upload className="h-4 w-4 mr-2" />
             Load TOML
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSaveConfig}
-            disabled={disabled}
-            className="flex-1"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Save TOML
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveConfig}
+              disabled={disabled}
+              className="flex-1"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Save TOML
+            </Button>
+          </div>
+          <div className="flex gap-2 items-center">
+            <input
+              ref={xlsxInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImportXLSX}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => xlsxInputRef.current?.click()}
+              disabled={disabled || isImporting}
+              className="flex-1"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              {isImporting ? 'Importing...' : 'Import Legacy XLSX'}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -64,11 +64,12 @@ function rgbToHex(r: number, g: number, b: number): number {
 /**
  * Draw the basal membrane curve.
  */
-function drawBasalCurve(graphics: Graphics, curvature_1: number, curvature_2: number, theme: EHTThemeColors): void {
+function drawBasalCurve(graphics: Graphics, curvature_1: number, curvature_2: number, w_init: number, theme: EHTThemeColors): void {
   if (curvature_1 === 0 && curvature_2 === 0) {
-    // Straight line
-    graphics.moveTo(-50, 0);
-    graphics.lineTo(50, 0);
+    // Straight line - use w_init for extent
+    const halfWidth = w_init / 2 + 5;
+    graphics.moveTo(-halfWidth, 0);
+    graphics.lineTo(halfWidth, 0);
     graphics.stroke({ color: theme.membrane, alpha: 0.5, width: 0.05 });
   } else {
     // Ellipse
@@ -154,26 +155,49 @@ export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
   getBoundingBox(params: EHTParams, state?: EHTSimulationState): BoundingBox {
     const { curvature_1, curvature_2 } = getCurvatures(state, params);
     const h_init = params.general.h_init;
+    const w_init = params.general.w_init;
+    const w_screen = params.general.w_screen;
+    const h_screen = params.general.h_screen;
+
+    let minX: number, maxX: number, minY: number, maxY: number;
 
     if (curvature_1 === 0 && curvature_2 === 0) {
-      // Straight line case
-      return { minX: -20, maxX: 20, minY: -2, maxY: h_init + 2 };
+      // Straight line case - use w_init for width
+      const halfWidth = w_init / 2 + 2; // Add small padding
+      minX = -halfWidth;
+      maxX = halfWidth;
+      minY = -2;
+      maxY = h_init + 2;
+    } else {
+      const center = shapeCenter(curvature_1, curvature_2);
+      const a = curvature_1 !== 0 ? Math.abs(1 / curvature_1) : 20;
+      const b = curvature_2 !== 0 ? Math.abs(1 / curvature_2) : 20;
+
+      // Ellipse bounds with padding for cells
+      minX = center.x - a;
+      maxX = center.x + a;
+      const ellipseBottom = center.y - b;
+      const ellipseTop = center.y + b;
+
+      minY = Math.min(ellipseBottom, 0) - 2;
+      maxY = Math.max(ellipseTop, h_init) + 2;
     }
 
-    const center = shapeCenter(curvature_1, curvature_2);
-    const a = curvature_1 !== 0 ? Math.abs(1 / curvature_1) : 20;
-    const b = curvature_2 !== 0 ? Math.abs(1 / curvature_2) : 20;
+    // Apply minimum screen bounds (w_screen, h_screen) centered on the computed bounds
+    const computedWidth = maxX - minX;
+    const computedHeight = maxY - minY;
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
 
-    // Ellipse bounds with padding for cells
-    const minX = center.x - a;
-    const maxX = center.x + a;
-    const ellipseBottom = center.y - b;
-    const ellipseTop = center.y + b;
+    const finalWidth = Math.max(computedWidth, w_screen);
+    const finalHeight = Math.max(computedHeight, h_screen);
 
-    const minY = Math.min(ellipseBottom, 0) - 2;
-    const maxY = Math.max(ellipseTop, h_init) + 2;
-
-    return { minX, maxX, minY, maxY };
+    return {
+      minX: centerX - finalWidth / 2,
+      maxX: centerX + finalWidth / 2,
+      minY: centerY - finalHeight / 2,
+      maxY: centerY + finalHeight / 2,
+    };
   },
 
   render(ctx: ModelRenderContext, state: EHTSimulationState, params: EHTParams): void {
@@ -183,7 +207,7 @@ export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
     const { curvature_1, curvature_2 } = getCurvatures(state, params);
 
     // Draw basal membrane
-    drawBasalCurve(linksGraphics, curvature_1, curvature_2, theme);
+    drawBasalCurve(linksGraphics, curvature_1, curvature_2, params.general.w_init, theme);
 
     // Draw links (behind cells)
     drawBasalLinks(linksGraphics, state, theme);

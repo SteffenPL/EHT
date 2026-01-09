@@ -39,9 +39,9 @@ export function generateEHTBatchParameters(params: EHTParams): BatchParameterDef
   );
 
   // Cell type parameters - generated dynamically from actual cell types
-  for (const [typeKey, cellType] of Object.entries(params.cell_types)) {
+  for (const [typeKey, _cellType] of Object.entries(params.cell_types)) {
     const prefix = `cell_types.${typeKey}`;
-    const label = cellType.name || typeKey;
+    const label = typeKey;
 
     batchParams.push(
       { path: `${prefix}.N_init`, label: `${label}: N_init`, isInteger: true },
@@ -63,17 +63,17 @@ export function generateEHTBatchParameters(params: EHTParams): BatchParameterDef
       { path: `${prefix}.stiffness_nuclei_basal`, label: `${label}: stiff_nuclei_basal` },
       { path: `${prefix}.stiffness_repulsion`, label: `${label}: stiff_repulsion` },
       { path: `${prefix}.stiffness_straightness`, label: `${label}: stiff_straightness` },
-      { path: `${prefix}.lifespan.min`, label: `${label}: lifespan min` },
-      { path: `${prefix}.lifespan.max`, label: `${label}: lifespan max` },
+      { path: `${prefix}.lifespan_start`, label: `${label}: lifespan start` },
+      { path: `${prefix}.lifespan_end`, label: `${label}: lifespan end` },
       { path: `${prefix}.INM`, label: `${label}: INM probability` },
-      { path: `${prefix}.events.time_A.min`, label: `${label}: time_A min` },
-      { path: `${prefix}.events.time_A.max`, label: `${label}: time_A max` },
-      { path: `${prefix}.events.time_B.min`, label: `${label}: time_B min` },
-      { path: `${prefix}.events.time_B.max`, label: `${label}: time_B max` },
-      { path: `${prefix}.events.time_S.min`, label: `${label}: time_S min` },
-      { path: `${prefix}.events.time_S.max`, label: `${label}: time_S max` },
-      { path: `${prefix}.events.time_P.min`, label: `${label}: time_P min` },
-      { path: `${prefix}.events.time_P.max`, label: `${label}: time_P max` },
+      { path: `${prefix}.events.time_A_start`, label: `${label}: time_A start` },
+      { path: `${prefix}.events.time_A_end`, label: `${label}: time_A end` },
+      { path: `${prefix}.events.time_B_start`, label: `${label}: time_B start` },
+      { path: `${prefix}.events.time_B_end`, label: `${label}: time_B end` },
+      { path: `${prefix}.events.time_S_start`, label: `${label}: time_S start` },
+      { path: `${prefix}.events.time_S_end`, label: `${label}: time_S end` },
+      { path: `${prefix}.events.time_P_start`, label: `${label}: time_P start` },
+      { path: `${prefix}.events.time_P_end`, label: `${label}: time_P end` },
     );
   }
 

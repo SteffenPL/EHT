@@ -77,6 +77,7 @@ const EHTModelWorker: SimulationModel<EHTParams, EHTSimulationState> = {
   // Statistics
   computeStats: (state: EHTSimulationState, params?: EHTParams) => computeEHTStatistics(state, params),
   statistics: generateEHTStatistics(DEFAULT_EHT_PARAMS),
+  generateStatistics: (params: EHTParams) => generateEHTStatistics(params),
 
   // Batch parameters
   generateBatchParameters: (params: EHTParams) => generateEHTBatchParameters(params),
@@ -267,6 +268,7 @@ const ToyModelWorker: SimulationModel<ToyParams, ToySimulationState> = {
   // Statistics
   computeStats: (state: ToySimulationState, _params?: ToyParams) => computeToyStatistics(state),
   statistics: TOY_STATISTICS,
+  generateStatistics: (_params: ToyParams) => TOY_STATISTICS,
 
   // Batch parameters
   generateBatchParameters: (_params: ToyParams) => TOY_BATCH_PARAMETERS,

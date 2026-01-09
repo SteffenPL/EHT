@@ -31,7 +31,10 @@ export function StatsPanel({
   // Compute stats if state is available
   const stats = (state && currentModel) ? currentModel.computeStats(state, params) : {};
   // Also get list of stat definitions to show labels
-  const statDefs = currentModel?.statistics || [];
+  // Use dynamic generation if available to reflect current cell type names
+  const statDefs = currentModel?.generateStatistics
+    ? currentModel.generateStatistics(params)
+    : (currentModel?.statistics || []);
 
   return (
     <Card className="h-full">

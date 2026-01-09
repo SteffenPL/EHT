@@ -49,7 +49,11 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const abortRef = useRef(false);
 
   // Statistics - always use all available statistics
-  const selectedStats = (currentModel?.statistics || []).map(s => s.id);
+  // Use dynamic generation if available to reflect current cell type names
+  const statistics = currentModel?.generateStatistics
+    ? currentModel.generateStatistics(config.params)
+    : (currentModel?.statistics || []);
+  const selectedStats = statistics.map(s => s.id);
   const [outputMode, setOutputMode] = useState<'time_series' | 'terminal'>('time_series');
   const [resultsColumns, setResultsColumns] = useState<string[]>([]);
   const [resultsRows, setResultsRows] = useState<(string | number)[][]>([]);

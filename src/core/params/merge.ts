@@ -63,7 +63,6 @@ export function mergeWithDefaults(
       } else {
         // New custom type: merge over control defaults
         const newType = cloneDeep(DEFAULT_CONTROL_CELL);
-        newType.name = typeName;
         mergeWith(newType, partialType, customMerge);
         result.cell_types[typeName] = newType;
       }

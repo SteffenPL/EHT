@@ -110,6 +110,8 @@ export interface SimulationModel<Params = any, State = any> {
      * Definitions for statistics available in this model.
      */
     statistics?: StatisticDefinition<State>[];
+    /** Generate statistics dynamically from current params (e.g., for different cell types) */
+    generateStatistics?: (params: Params) => StatisticDefinition<State>[];
 
     // Rendering
     renderer: ModelRenderer<Params, State>;

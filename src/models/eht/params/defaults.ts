@@ -7,7 +7,6 @@ import type { EHTParams, EHTCellTypeParams } from './types';
 
 /** Default control cell type */
 export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
-  name: 'control',
   N_init: 25,
   location: "",
   R_hard: 0.4,
@@ -28,20 +27,24 @@ export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
   stiffness_nuclei_basal: 2.0,
   stiffness_repulsion: 2.0,
   stiffness_straightness: 5.0,
-  lifespan: { min: 5.5, max: 6.5 },
+  lifespan_start: 5.5,
+  lifespan_end: 6.5,
   INM: 0.0,
   hetero: false,
   events: {
-    time_A: { min: Infinity, max: Infinity },
-    time_B: { min: Infinity, max: Infinity },
-    time_S: { min: Infinity, max: Infinity },
-    time_P: { min: Infinity, max: Infinity },
+    time_A_start: Infinity,
+    time_A_end: Infinity,
+    time_B_start: Infinity,
+    time_B_end: Infinity,
+    time_S_start: Infinity,
+    time_S_end: Infinity,
+    time_P_start: Infinity,
+    time_P_end: Infinity,
   },
 };
 
 /** Default EMT cell type */
 export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
-  name: 'emt',
   N_init: 5,
   location: "bottom",
   R_hard: 0.4,
@@ -62,14 +65,19 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
   stiffness_nuclei_basal: 2.0,
   stiffness_repulsion: 4.0,
   stiffness_straightness: 2.0,
-  lifespan: { min: 5.5, max: 6.5 },
+  lifespan_start: 5.5,
+  lifespan_end: 6.5,
   INM: 0.0,
   hetero: true,
   events: {
-    time_A: { min: 3, max: 12 },
-    time_B: { min: 3, max: 12 },
-    time_S: { min: Infinity, max: Infinity },
-    time_P: { min: Infinity, max: Infinity },
+    time_A_start: 3,
+    time_A_end: 12,
+    time_B_start: 3,
+    time_B_end: 12,
+    time_S_start: Infinity,
+    time_S_end: Infinity,
+    time_P_start: Infinity,
+    time_P_end: Infinity,
   },
 };
 
@@ -89,8 +97,8 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     mu: 0.2,
     n_substeps: 30,
     alg_dt: 0.01,
-    w_screen: 70,
-    h_screen: 70,
+    w_screen: 50,      // Minimum visible width in simulation units
+    h_screen: 25,      // Minimum visible height in simulation units
     p_div_out: 1.0,
     perimeter: 105,    // ≈ 2π × 16.67 (equivalent to curvature 0.06)
     aspect_ratio: 1,   // Circle

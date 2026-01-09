@@ -94,6 +94,7 @@ export const EHTModel: SimulationModel<EHTParams, EHTSimulationState> = {
   // Statistics
   computeStats: (state: EHTSimulationState, params?: EHTParams) => computeEHTStatistics(state, params),
   statistics: generateEHTStatistics(DEFAULT_EHT_PARAMS),
+  generateStatistics: (params: EHTParams) => generateEHTStatistics(params),
 
   // Batch parameters - dynamic generation
   generateBatchParameters: (params: EHTParams) => generateEHTBatchParameters(params),
