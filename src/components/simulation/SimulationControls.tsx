@@ -75,9 +75,9 @@ export function SimulationControls({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="run">Run</SelectItem>
               <SelectItem value="init">Init</SelectItem>
               <SelectItem value="step">One step</SelectItem>
-              <SelectItem value="run">Run</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -21,7 +21,7 @@ export function SingleSimulationTab() {
 }
 
 function SingleSimulationTabInner() {
-  const [paramChangeBehavior, setParamChangeBehavior] = useState<ParamChangeBehavior>('init');
+  const [paramChangeBehavior, setParamChangeBehavior] = useState<ParamChangeBehavior>('run');
   const { currentModel, currentParams } = useModel();
 
   const {
