@@ -92,7 +92,7 @@ export const EHTModel: SimulationModel<EHTParams, EHTSimulationState> = {
   loadSnapshot: (rows: Record<string, any>[], params: EHTParams) => loadSnapshot(rows, params),
 
   // Statistics
-  computeStats: (state: EHTSimulationState) => computeEHTStatistics(state),
+  computeStats: (state: EHTSimulationState, params?: EHTParams) => computeEHTStatistics(state, params),
   statistics: generateEHTStatistics(DEFAULT_EHT_PARAMS),
 
   // Batch parameters - dynamic generation

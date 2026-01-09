@@ -134,6 +134,6 @@ export class SimulationEngine<Params = any, State = any> {
    * Get current statistics.
    */
   getStats(): Record<string, number> {
-    return this.model.computeStats(this.state);
+    return this.model.computeStats(this.state, this.params);
   }
 }

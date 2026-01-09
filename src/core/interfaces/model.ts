@@ -101,8 +101,10 @@ export interface SimulationModel<Params = any, State = any> {
     // Statistics
     /**
      * Compute instantaneous statistics for the current state.
+     * @param state The simulation state
+     * @param params Optional parameters (some models need params for group-based statistics)
      */
-    computeStats(state: State): Record<string, number>;
+    computeStats(state: State, params?: Params): Record<string, number>;
 
     /**
      * Definitions for statistics available in this model.

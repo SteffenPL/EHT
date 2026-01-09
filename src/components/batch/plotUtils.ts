@@ -153,8 +153,161 @@ export function aggregateByTimeWithCI(
 }
 
 /**
+ * Aggregates results data by a generic x-axis (time or parameter) and cell_group.
+ *
+ * @param columns - Column names from results table
+ * @param rows - Data rows from results table
+ * @param xAxisColumn - The x-axis column name (e.g., 'time_h' or parameter path)
+ * @param yAxisColumn - The y-axis statistic name
+ * @returns Array of {time, mean, lower, upper, n, cell_group} points for plotting
+ */
+export function aggregateByXAxisWithCI(
+  columns: string[],
+  rows: (string | number)[][],
+  xAxisColumn: string,
+  yAxisColumn: string
+): AggregatedDataWithCI[] {
+  // Find column indices
+  const xIdx = columns.indexOf(xAxisColumn);
+  const yIdx = columns.indexOf(yAxisColumn);
+  const groupIdx = columns.indexOf('cell_group');
+
+  if (xIdx === -1 || yIdx === -1) {
+    return [];
+  }
+
+  // Group by (x-value, cell_group) and collect y-values
+  const groups = new Map<string, { time: number; cell_group: string; values: number[] }>();
+
+  for (const row of rows) {
+    const xValue = Number(row[xIdx]);
+    const yValue = Number(row[yIdx]);
+    const cell_group = groupIdx !== -1 ? String(row[groupIdx]) : 'all';
+
+    if (!isNaN(xValue) && !isNaN(yValue)) {
+      const key = `${xValue}_${cell_group}`;
+      if (!groups.has(key)) {
+        groups.set(key, { time: xValue, cell_group, values: [] });
+      }
+      groups.get(key)!.values.push(yValue);
+    }
+  }
+
+  // Compute means, standard errors, and confidence intervals
+  const result: AggregatedDataWithCI[] = [];
+
+  for (const { time: xValue, cell_group, values } of groups.values()) {
+    const n = values.length;
+    const mean = values.reduce((sum, v) => sum + v, 0) / n;
+
+    if (n > 1) {
+      const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / (n - 1);
+      const sd = Math.sqrt(variance);
+      const se = sd / Math.sqrt(n);
+      const margin = 1.96 * se;
+
+      result.push({
+        time: xValue, // Using 'time' field name for compatibility
+        mean,
+        lower: mean - margin,
+        upper: mean + margin,
+        n,
+        cell_group,
+      });
+    } else {
+      result.push({
+        time: xValue,
+        mean,
+        lower: mean,
+        upper: mean,
+        n,
+        cell_group,
+      });
+    }
+  }
+
+  result.sort((a, b) => {
+    if (a.time !== b.time) return a.time - b.time;
+    return a.cell_group.localeCompare(b.cell_group);
+  });
+
+  return result;
+}
+
+/**
+ * Aggregates data for histogram plots (by cell_group only).
+ *
+ * @param columns - Column names from results table
+ * @param rows - Data rows from results table
+ * @param statisticColumn - The statistic to plot
+ * @returns Array of {group, mean, lower, upper, n} for histogram bars
+ */
+export function aggregateForHistogram(
+  columns: string[],
+  rows: (string | number)[][],
+  statisticColumn: string
+): Array<{ group: string; mean: number; lower: number; upper: number; n: number }> {
+  const statIdx = columns.indexOf(statisticColumn);
+  const groupIdx = columns.indexOf('cell_group');
+
+  if (statIdx === -1) {
+    return [];
+  }
+
+  // Group by cell_group and collect values
+  const groups = new Map<string, number[]>();
+
+  for (const row of rows) {
+    const value = Number(row[statIdx]);
+    const cell_group = groupIdx !== -1 ? String(row[groupIdx]) : 'all';
+
+    if (!isNaN(value)) {
+      if (!groups.has(cell_group)) {
+        groups.set(cell_group, []);
+      }
+      groups.get(cell_group)!.push(value);
+    }
+  }
+
+  // Compute statistics for each group
+  const result: Array<{ group: string; mean: number; lower: number; upper: number; n: number }> = [];
+
+  for (const [group, values] of groups.entries()) {
+    const n = values.length;
+    const mean = values.reduce((sum, v) => sum + v, 0) / n;
+
+    if (n > 1) {
+      const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / (n - 1);
+      const sd = Math.sqrt(variance);
+      const se = sd / Math.sqrt(n);
+      const margin = 1.96 * se;
+
+      result.push({
+        group,
+        mean,
+        lower: mean - margin,
+        upper: mean + margin,
+        n,
+      });
+    } else {
+      result.push({
+        group,
+        mean,
+        lower: mean,
+        upper: mean,
+        n,
+      });
+    }
+  }
+
+  result.sort((a, b) => a.group.localeCompare(b.group));
+
+  return result;
+}
+
+/**
  * Checks if the current results data is compatible with line plots.
- * 
+ *
  * @param columns - Column names from results table
  * @returns Object with isCompatible flag and error message if incompatible
  */
@@ -162,7 +315,7 @@ export function checkLinePlotCompatibility(
   columns: string[]
 ): { isCompatible: boolean; message?: string } {
   const hasTimeColumn = columns.includes('time_h');
-  
+
   if (!hasTimeColumn) {
     return {
       isCompatible: false,

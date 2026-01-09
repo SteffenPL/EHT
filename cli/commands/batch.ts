@@ -3,20 +3,111 @@
  */
 
 import * as fs from 'fs';
+import * as path from 'path';
 import { SimulationEngine } from '../../src/core/simulation/engine';
 import { parseSimulationConfigToml } from '../../src/core/params/toml';
 import { createDefaultSimulationConfig } from '../../src/core/params/config';
 import { setNestedValue } from '../../src/core/params/merge';
-// import { createSnapshot } from '../../src/core/snapshot';
 import { generateParameterConfigs, getTimeSamples } from '../../src/core/batch/types';
-// import type { SimulationParams, SimulationState } from '../../src/core/types';
 import type { BatchSnapshot } from '../../src/core/batch/types';
 import { parseArgs } from '../utils/args';
 import { snapshotsToCSV, writeOutput, formatProgress } from '../utils/output';
 import { cloneDeep } from 'lodash-es';
 
 import { EHTModel } from '../../src/models/eht';
+import { computeEHTStatistics } from '../../src/models/eht/statistics';
 import type { EHTParams } from '../../src/models/eht/params/types';
+
+/**
+ * Compute statistics from batch snapshots.
+ */
+function computeStatisticsFromSnapshots(
+  snapshots: BatchSnapshot[],
+  baseParams: EHTParams
+): { columns: string[]; rows: (string | number)[][] } {
+  // Get parameter paths
+  const paramPaths = new Set<string>();
+  for (const s of snapshots) {
+    for (const path of Object.keys(s.sampled_params)) {
+      paramPaths.add(path);
+    }
+  }
+  const sortedPaths = Array.from(paramPaths).sort();
+
+  // Extract cell groups and base stat names from statistics
+  const cellGroups = new Set<string>();
+  const baseStatNames = new Set<string>();
+
+  // Get all statistics from the model
+  const allStatIds = (EHTModel.statistics || []).map(s => s.id);
+  for (const statId of allStatIds) {
+    const lastUnderscoreIdx = statId.lastIndexOf('_');
+    if (lastUnderscoreIdx > 0) {
+      const baseName = statId.substring(0, lastUnderscoreIdx);
+      const group = statId.substring(lastUnderscoreIdx + 1);
+      baseStatNames.add(baseName);
+      cellGroups.add(group);
+    }
+  }
+
+  const sortedGroups = Array.from(cellGroups).sort();
+  const sortedBaseStats = Array.from(baseStatNames).sort();
+
+  // Build columns
+  const columns = [
+    ...sortedPaths,
+    'run_index',
+    'seed',
+    'time_h',
+    'cell_group',
+    ...sortedBaseStats,
+  ];
+
+  // Build rows - one row per (snapshot, cell_group)
+  const rows: (string | number)[][] = [];
+  for (const snapshot of snapshots) {
+    // Apply sampled parameter overrides
+    const snapshotParams = cloneDeep(baseParams);
+    for (const [path, value] of Object.entries(snapshot.sampled_params)) {
+      setNestedValue(snapshotParams, path, value);
+    }
+
+    const state = EHTModel.loadSnapshot(snapshot.data, snapshotParams);
+
+    // Use computeEHTStatistics directly with params to get per-group statistics
+    const allStats = computeEHTStatistics(state, snapshotParams);
+
+    // Create one row per cell group
+    for (const group of sortedGroups) {
+      const row: (string | number)[] = [
+        ...sortedPaths.map((p) => snapshot.sampled_params[p] ?? ''),
+        snapshot.run_index,
+        snapshot.seed,
+        snapshot.time_h,
+        group,
+        ...sortedBaseStats.map((baseName) => {
+          const fullStatId = `${baseName}_${group}`;
+          return allStats[fullStatId] ?? 0;
+        }),
+      ];
+      rows.push(row);
+    }
+  }
+
+  return { columns, rows };
+}
+
+/**
+ * Convert statistics to CSV format.
+ */
+function statisticsToCSV(columns: string[], rows: (string | number)[][]): string {
+  const lines: string[] = [];
+  lines.push(columns.join(','));
+  for (const row of rows) {
+    lines.push(row.join(','));
+  }
+  return lines.join('\n');
+}
 
 /**
  * Run a single simulation and collect snapshots at specified times.
@@ -153,7 +244,28 @@ export async function batchCommand(args: string[]): Promise<void> {
 
   console.error(`\nBatch complete. Collected ${allSnapshots.length} snapshots from ${totalRuns} runs.`);
 
-  // Output CSV
+  // Output snapshots CSV
   const csv = snapshotsToCSV(allSnapshots);
   writeOutput(csv, parsed.output);
+
+  // Compute and save statistics if requested or if output file is specified
+  if (parsed.stats || parsed.output) {
+    console.error('\nComputing statistics...');
+    const { columns, rows } = computeStatisticsFromSnapshots(allSnapshots, params);
+    const statsCSV = statisticsToCSV(columns, rows);
+
+    // Determine output filename for statistics
+    let statsOutput: string | undefined;
+    if (parsed.output) {
+      const outputPath = parsed.output;
+      const dir = path.dirname(outputPath);
+      const ext = path.extname(outputPath);
+      const base = path.basename(outputPath, ext);
+      statsOutput = path.join(dir, `${base}_statistics${ext}`);
+    }
+
+    writeOutput(statsCSV, statsOutput);
+    console.error(`Statistics saved${statsOutput ? ` to: ${statsOutput}` : ''}`);
+    console.error(`  ${rows.length} rows, ${columns.length} columns`);
+  }
 }

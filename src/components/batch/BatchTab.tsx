@@ -10,7 +10,7 @@ import { Progress } from '../ui/progress';
 import { Separator } from '../ui/separator';
 import { ResultsTable } from './ResultsTable';
 import { BatchPlot } from './BatchPlot';
-import { aggregateByTime, aggregateByTimeWithCI, checkLinePlotCompatibility } from './plotUtils';
+import { aggregateByTime, aggregateByXAxisWithCI, aggregateForHistogram } from './plotUtils';
 import type { SimulationConfig } from '@/core/params';
 import type {
   BatchData,
@@ -29,6 +29,7 @@ import {
   getTimeSamples,
   WorkerPool,
 } from '@/core/batch';
+import { setNestedValue } from '@/core/params';
 import { useModel } from '@/contexts/ModelContext';
 
 export interface BatchTabProps {
@@ -54,8 +55,9 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const [resultsRows, setResultsRows] = useState<(string | number)[][]>([]);
 
   // Plot configuration
-  const [plotStatistic, setPlotStatistic] = useState<string>('');
-  const plotType = 'line_ci'; // Always use line + CI plot
+  const [plotXAxis, setPlotXAxis] = useState<string>('time_h');
+  const [plotYAxis, setPlotYAxis] = useState<string>('');
+  const [plotType, setPlotType] = useState<'line_ci' | 'histogram'>('line_ci');
 
   // Parallel execution
   const [useParallel, setUseParallel] = useState(WorkerPool.isSupported());
@@ -212,9 +214,14 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
     const rows: (string | number)[][] = [];
     for (const snapshot of snapshots) {
       // Reconstruct state to compute stats
-      const snapshotParams = { ...config.params };
+      // IMPORTANT: Apply sampled parameter overrides to get correct params for this snapshot
+      const snapshotParams = JSON.parse(JSON.stringify(config.params)); // Deep clone
+      for (const [path, value] of Object.entries(snapshot.sampled_params)) {
+        setNestedValue(snapshotParams, path, value);
+      }
+
       const state = currentModel.loadSnapshot(snapshot.data, snapshotParams);
-      const allStats = currentModel.computeStats(state);
+      const allStats = currentModel.computeStats(state, snapshotParams);
 
       // Create one row per cell group
       for (const group of sortedGroups) {
@@ -236,9 +243,9 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
     setResultsColumns(columns);
     setResultsRows(rows);
 
-    // Set default plot statistic if not set (use first base stat name)
-    if (!plotStatistic && sortedBaseStats.length > 0) {
-      setPlotStatistic(sortedBaseStats[0]);
+    // Set default plot y-axis if not set (use first base stat name)
+    if (!plotYAxis && sortedBaseStats.length > 0) {
+      setPlotYAxis(sortedBaseStats[0]);
     }
   };
 
@@ -305,6 +312,12 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
       // The EHT model has exportCellMetrics in statistics.ts, but it's not exposed
       // through the model interface yet.
 
+      // Apply sampled parameter overrides
+      const snapshotParams = JSON.parse(JSON.stringify(config.params)); // Deep clone
+      for (const [path, value] of Object.entries(snapshot.sampled_params)) {
+        setNestedValue(snapshotParams, path, value);
+      }
+
       // Export basic snapshot data (raw cell positions from snapshot)
       for (let i = 0; i < snapshot.data.length; i++) {
         const cellData = snapshot.data[i];
@@ -360,16 +373,23 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
     col => !['run_index', 'seed', 'time_h', 'cell_group'].includes(col) && !col.includes('.')
   );
 
-  // Prepare plot data
-  const plotCompatibility = checkLinePlotCompatibility(resultsColumns);
-  const plotData =
-    plotCompatibility.isCompatible && plotStatistic
-      ? aggregateByTime(resultsColumns, resultsRows, plotStatistic)
-      : [];
-  const plotDataWithCI =
-    plotCompatibility.isCompatible && plotStatistic
-      ? aggregateByTimeWithCI(resultsColumns, resultsRows, plotStatistic)
-      : [];
+  // Extract available x-axis options (time_h and parameter paths)
+  const availableXAxisOptions = resultsColumns.filter(
+    col => col === 'time_h' || (col.includes('.') && !['run_index', 'seed', 'cell_group'].includes(col))
+  );
+
+  // Prepare plot data based on plot type
+  let plotData: any[] = [];
+  let plotDataWithCI: any[] = [];
+  let histogramData: any[] = [];
+
+  if (plotType === 'histogram' && plotYAxis) {
+    histogramData = aggregateForHistogram(resultsColumns, resultsRows, plotYAxis);
+  } else if (plotType === 'line_ci' && plotXAxis && plotYAxis) {
+    plotDataWithCI = aggregateByXAxisWithCI(resultsColumns, resultsRows, plotXAxis, plotYAxis);
+  } else if (plotXAxis && plotYAxis) {
+    plotData = aggregateByTime(resultsColumns, resultsRows, plotYAxis);
+  }
 
   return (
     <div className="space-y-4">
@@ -575,18 +595,54 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
             <div className="space-y-3">
               <h3 className="text-sm font-medium">Visualization</h3>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <Label htmlFor="plot-statistic" className="text-sm">
-                    Statistic to Plot
+                  <Label htmlFor="plot-type" className="text-sm">
+                    Plot Type
                   </Label>
                   <select
-                    id="plot-statistic"
-                    value={plotStatistic}
-                    onChange={(e) => setPlotStatistic(e.target.value)}
+                    id="plot-type"
+                    value={plotType}
+                    onChange={(e) => setPlotType(e.target.value as 'line_ci' | 'histogram')}
                     className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
                   >
-                    <option value="">Select a statistic...</option>
+                    <option value="line_ci">Line + CI</option>
+                    <option value="histogram">Histogram</option>
+                  </select>
+                </div>
+
+                {plotType !== 'histogram' && (
+                  <div className="space-y-1">
+                    <Label htmlFor="plot-x-axis" className="text-sm">
+                      X-Axis
+                    </Label>
+                    <select
+                      id="plot-x-axis"
+                      value={plotXAxis}
+                      onChange={(e) => setPlotXAxis(e.target.value)}
+                      className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                    >
+                      <option value="">Select x-axis...</option>
+                      {availableXAxisOptions.map((col) => (
+                        <option key={col} value={col}>
+                          {col}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <Label htmlFor="plot-y-axis" className="text-sm">
+                    Y-Axis (Statistic)
+                  </Label>
+                  <select
+                    id="plot-y-axis"
+                    value={plotYAxis}
+                    onChange={(e) => setPlotYAxis(e.target.value)}
+                    className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                  >
+                    <option value="">Select statistic...</option>
                     {availableBaseStats.map((stat) => (
                       <option key={stat} value={stat}>
                         {stat}
@@ -594,30 +650,32 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
                     ))}
                   </select>
                 </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">
-                    Plot type: Line + Confidence Band (95% CI) by cell group
-                  </p>
-                </div>
               </div>
 
-              {/* Compatibility message */}
-              {!plotCompatibility.isCompatible && (
-                <div className="p-3 rounded-md bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800">
-                  <p className="text-sm text-amber-900 dark:text-amber-100">
-                    {plotCompatibility.message}
-                  </p>
-                </div>
-              )}
-
               {/* Plot display */}
-              {plotCompatibility.isCompatible && plotStatistic && plotDataWithCI.length > 0 && (
+              {plotType === 'histogram' && plotYAxis && histogramData.length > 0 && (
                 <div className="mt-4 border rounded-md p-4 bg-muted/30">
                   <BatchPlot
                     data={plotData}
                     dataWithCI={plotDataWithCI}
-                    statisticName={plotStatistic}
+                    histogramData={histogramData}
+                    xAxisLabel="Cell Group"
+                    yAxisLabel={plotYAxis}
+                    plotType={plotType}
+                    width={640}
+                    height={400}
+                  />
+                </div>
+              )}
+
+              {plotType === 'line_ci' && plotXAxis && plotYAxis && plotDataWithCI.length > 0 && (
+                <div className="mt-4 border rounded-md p-4 bg-muted/30">
+                  <BatchPlot
+                    data={plotData}
+                    dataWithCI={plotDataWithCI}
+                    histogramData={histogramData}
+                    xAxisLabel={plotXAxis === 'time_h' ? 'Time (h)' : plotXAxis}
+                    yAxisLabel={plotYAxis}
                     plotType={plotType}
                     width={640}
                     height={400}

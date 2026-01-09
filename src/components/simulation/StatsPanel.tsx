@@ -29,7 +29,7 @@ export function StatsPanel({
   const { currentModel } = useModel();
 
   // Compute stats if state is available
-  const stats = (state && currentModel) ? currentModel.computeStats(state) : {};
+  const stats = (state && currentModel) ? currentModel.computeStats(state, params) : {};
   // Also get list of stat definitions to show labels
   const statDefs = currentModel?.statistics || [];
 

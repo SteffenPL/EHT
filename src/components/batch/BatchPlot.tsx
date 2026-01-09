@@ -7,8 +7,10 @@ import * as Plot from '@observablehq/plot';
 export interface BatchPlotProps {
   data: { time: number; value: number; cell_group?: string }[];
   dataWithCI?: { time: number; mean: number; lower: number; upper: number; n: number; cell_group: string }[];
-  statisticName: string;
-  plotType: 'line' | 'line_ci';
+  histogramData?: { group: string; mean: number; lower: number; upper: number; n: number }[];
+  xAxisLabel?: string;
+  yAxisLabel: string;
+  plotType: 'line' | 'line_ci' | 'histogram';
   width?: number;
   height?: number;
 }
@@ -16,7 +18,9 @@ export interface BatchPlotProps {
 export function BatchPlot({
   data,
   dataWithCI,
-  statisticName,
+  histogramData,
+  xAxisLabel = 'Time (h)',
+  yAxisLabel,
   plotType,
   width = 640,
   height = 400,
@@ -27,11 +31,48 @@ export function BatchPlot({
     if (!containerRef.current) return;
     if (plotType === 'line' && data.length === 0) return;
     if (plotType === 'line_ci' && (!dataWithCI || dataWithCI.length === 0)) return;
+    if (plotType === 'histogram' && (!histogramData || histogramData.length === 0)) return;
 
     let marks: any[];
     let colorScheme: any = { legend: true };
+    let xConfig: any = { label: xAxisLabel };
+    let yConfig: any = { label: yAxisLabel };
 
-    if (plotType === 'line_ci' && dataWithCI) {
+    if (plotType === 'histogram' && histogramData) {
+      // Histogram plot - bars by cell group with error bars
+      marks = [
+        // Bars
+        Plot.barY(histogramData, {
+          x: 'group',
+          y: 'mean',
+          fill: 'group',
+        }),
+        // Error bars using link to connect lower and upper bounds
+        Plot.link(
+          histogramData.flatMap(d => [
+            { group: d.group, y: d.lower, y2: d.upper }
+          ]),
+          Plot.pointer({
+            x: 'group',
+            y1: 'y',
+            y2: 'y2',
+            stroke: '#666',
+            strokeWidth: 2,
+          })
+        ),
+        // Cap lines for error bars
+        ...histogramData.flatMap(d => [
+          Plot.tickX([d], { x: 'group', y: d.lower, stroke: '#666' }),
+          Plot.tickX([d], { x: 'group', y: d.upper, stroke: '#666' }),
+        ]),
+      ];
+
+      xConfig = { label: 'Cell Group' };
+      yConfig = { label: yAxisLabel, grid: true };
+      colorScheme = {
+        color: { legend: true, label: 'Cell Group' }
+      };
+    } else if (plotType === 'line_ci' && dataWithCI) {
       // Line plot with confidence interval - separate lines for each cell_group
       marks = [
         // Confidence bands by cell_group
@@ -110,12 +151,8 @@ export function BatchPlot({
       marginBottom: 40,
       marginRight: 120, // Extra space for legend
       grid: true,
-      x: {
-        label: 'Time (h)',
-      },
-      y: {
-        label: statisticName,
-      },
+      x: xConfig,
+      y: yConfig,
       ...colorScheme,
       marks,
     });
@@ -125,7 +162,7 @@ export function BatchPlot({
     return () => {
       plot.remove();
     };
-  }, [data, dataWithCI, statisticName, plotType, width, height]);
+  }, [data, dataWithCI, histogramData, xAxisLabel, yAxisLabel, plotType, width, height]);
 
   return <div ref={containerRef} />;
 }
