@@ -44,44 +44,42 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
 
       <Tabs defaultValue="parameters" className="flex-1 flex flex-col min-h-0">
         <TabsList className="w-full justify-start shrink-0">
-        <TabsTrigger value="parameters">Parameters</TabsTrigger>
-        {hasCellTypes && <TabsTrigger value="celltypes">Cell Types</TabsTrigger>}
-        {hasSimulation && <TabsTrigger value="simulation">Simulation</TabsTrigger>}
-      </TabsList>
+          <TabsTrigger value="parameters">Parameters</TabsTrigger>
+          {hasCellTypes && <TabsTrigger value="celltypes">Cell Types</TabsTrigger>}
+          {hasSimulation && <TabsTrigger value="simulation">Simulation</TabsTrigger>}
+        </TabsList>
 
-      <TabsContent value="parameters" className="flex-1 overflow-hidden mt-0">
-        <ScrollArea className="h-full">
-          <div className="p-4 space-y-3">
-            {ParametersTab ? (
-              <ParametersTab params={params} onChange={onChange} disabled={disabled} />
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                No parameter UI defined for this model.
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </TabsContent>
-
-      {hasCellTypes && (
-        <TabsContent value="celltypes" className="flex-1 overflow-hidden mt-0">
+        <TabsContent value="parameters" className="flex-1 overflow-hidden mt-0">
           <ScrollArea className="h-full">
+            <div className="p-4 space-y-3">
+              {ParametersTab ? (
+                <ParametersTab params={params} onChange={onChange} disabled={disabled} />
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  No parameter UI defined for this model.
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        {hasCellTypes && (
+          <TabsContent value="celltypes" className="flex-1 mt-0 overflow-auto">
             <div className="p-4">
               <CellTypesTab params={params} onChange={onChange} disabled={disabled} />
             </div>
-          </ScrollArea>
-        </TabsContent>
-      )}
+          </TabsContent>
+        )}
 
-      {hasSimulation && (
-        <TabsContent value="simulation" className="flex-1 overflow-hidden mt-0">
-          <ScrollArea className="h-full">
-            <div className="p-4 space-y-3">
-              <SimulationTab params={params} onChange={onChange} disabled={disabled} />
-            </div>
-          </ScrollArea>
-        </TabsContent>
-      )}
+        {hasSimulation && (
+          <TabsContent value="simulation" className="flex-1 overflow-hidden mt-0">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-3">
+                <SimulationTab params={params} onChange={onChange} disabled={disabled} />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

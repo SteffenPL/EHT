@@ -469,7 +469,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
   }, [addCellType, copyFromType]);
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
       <div className="flex justify-end items-center gap-2 mb-2">
         <span className="text-xs text-muted-foreground">Copy from:</span>
         <Select value={copyFromType || '__new__'} onValueChange={setCopyFromType}>
@@ -494,7 +494,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           Add Cell Type
         </Button>
       </div>
-      <table className="w-full text-xs">
+      <table className="min-w-full text-xs">
         <thead>
           <tr className="border-b-2 border-border">
             <th className="py-2 px-2 text-left font-semibold">Parameter</th>
