@@ -147,6 +147,7 @@ export function projectMaxBasalDistanceConstraints(
 
 /**
  * Project basal points onto the basal curve.
+ * Only applies to cells that still have basal adhesion.
  */
 export function projectBasalCurveConstraints(
   state: EHTSimulationState,
@@ -155,6 +156,9 @@ export function projectBasalCurveConstraints(
   const cells = state.cells;
 
   for (const cell of cells) {
+    // Skip cells that have lost basal adhesion
+    if (!cell.has_B) continue;
+
     const B = Vector2.from(cell.B);
     const projected = state.basalGeometry.projectPoint(B);
     cell.B.x = projected.x;

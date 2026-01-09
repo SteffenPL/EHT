@@ -143,6 +143,7 @@ export function processEMTEvents(
 
     // Lose basal adhesion
     if (t <= cell.time_B && t + dt > cell.time_B) {
+      console.log("Event B")
       processLoseBasalAdhesion(state, i);
     }
 
