@@ -1,0 +1,65 @@
+model = "EHT"
+
+# === Simulation ===
+t_end = 54
+dt = 0.1
+seed = 0
+substeps = 40
+alg_dt = 0.05
+
+# === Tissue Geometry ===
+tissue_width = 10
+tissue_height = 8
+perimeter = 20
+aspect_ratio = 0
+full_circle = false
+
+# === Physics ===
+friction = 0.2
+p_division_in_plane = 0.8
+
+# === Display ===
+view_width = 15
+
+# === Cell Types ===
+
+[cells.default]
+radius_hard = 0.3
+radius_hard_div = 0.7
+radius_soft = 1
+lifespan = [10, 21]
+g2_duration = 0.5
+mitosis_duration = 0.5
+k_apical = 5
+k_apical_div = 10
+k_nuclei_apical = 2
+k_nuclei_basal = 2
+k_repulsion = 1
+k_straightness = 15
+k_junction = 1
+k_cytoskeleton = 5
+cytoskeleton_init = 1.5
+max_basal_junction_dist = 0.333333
+apical_junction_init = 0.333333
+diffusion = 0.1
+basal_damping = 1
+
+[cells.control]
+count = 44
+color = "#008000"
+
+[cells.emt]
+count = 1
+location = "bottom"
+color = "#FF00FF"
+heterogeneous = true
+
+# EMT events: lose adhesion between these times
+emt_lose_apical = [3, 12]
+emt_lose_basal = [3, 12]
+emt_lose_straightness = [5, 15]
+
+# Start running after losing adhesion
+p_running = 0.8
+running_mode = "after_extrusion"
+running_speed = 2.0

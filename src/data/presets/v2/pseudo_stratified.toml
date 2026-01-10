@@ -1,0 +1,66 @@
+# Pseudo-stratified epithelium configuration (v2 format)
+# Higher friction, weak apical junctions, tight basal junctions
+
+model = "EHT"
+t_end = 80
+dt = 0.05
+seed = 0
+substeps = 40
+alg_dt = 0.01
+
+# Tissue geometry
+tissue_width = 20
+tissue_height = 2
+perimeter = 40
+aspect_ratio = 0
+full_circle = false
+
+# Physics
+friction = 0.5
+p_division_in_plane = 0.9
+
+# Display
+view_width = 30
+
+# Default cell parameters (inherited by all types)
+[cells.default]
+radius_hard = 0.3
+radius_hard_div = 0.7
+radius_soft = 1
+lifespan = [10, 21]
+g2_duration = 0.5
+mitosis_duration = 0.5
+k_apical = 8
+k_apical_div = 16
+k_nuclei_apical = 2
+k_nuclei_basal = 2
+k_repulsion = 4
+k_straightness = 15
+k_junction = 0.01
+k_cytoskeleton = 5
+p_running = 0
+running_speed = 1
+running_mode = "none"
+p_inm = 0
+diffusion = 0.1
+basal_damping = 1
+max_basal_junction_dist = 0.6
+cytoskeleton_init = 1.5
+basal_membrane_repulsion = 0.1
+apical_junction_init = 0.333333333333333
+max_cytoskeleton_length = 0
+heterogeneous = false
+emt_lose_apical = "never"
+emt_lose_basal = "never"
+emt_lose_straightness = "never"
+emt_polarized_running = "never"
+
+[cells.control]
+count = 29
+location = ""
+color = "#008000"
+
+[cells.emt]
+count = 1
+location = "bottom"
+color = "#FF00FF"
