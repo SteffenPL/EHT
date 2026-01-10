@@ -12,7 +12,8 @@ import type { ToyCell, ToySimulationState } from './types';
  */
 export function initializeToySimulation(
   params: ToyParams,
-  rng: SeededRandom
+  rng: SeededRandom,
+  seed?: string
 ): ToySimulationState {
   const { N, domain_size, running_duration, tumbling_duration } = params.general;
   const [width, height] = domain_size;
@@ -42,7 +43,12 @@ export function initializeToySimulation(
     });
   }
 
-  return { time: 0, cells };
+  return {
+    time: 0,
+    cells,
+    stepCount: 0,
+    rngSeed: seed ?? String(params.general.random_seed)
+  };
 }
 
 /**
@@ -183,6 +189,8 @@ export function stepToySimulation(
   return {
     time: state.time + dt,
     cells,
+    stepCount: state.stepCount + 1,
+    rngSeed: state.rngSeed
   };
 }
 
@@ -193,8 +201,9 @@ export function runToySimulation(
   params: ToyParams,
   onStep?: (state: ToySimulationState) => void
 ): ToySimulationState {
-  const rng = new SeededRandom(params.general.random_seed);
-  let state = initializeToySimulation(params, rng);
+  const seed = String(params.general.random_seed);
+  const rng = new SeededRandom(seed);
+  let state = initializeToySimulation(params, rng, seed);
 
   while (state.time < params.general.t_end) {
     state = stepToySimulation(state, params, rng);

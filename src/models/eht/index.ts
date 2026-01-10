@@ -38,49 +38,17 @@ export const EHTModel: SimulationModel<EHTParams, EHTSimulationState> = {
 
   // Simulation Loop
   init: (params: EHTParams, seed?: string): EHTSimulationState => {
-    // If seed is provided override params seed, else use params seed
-    const effectiveSeed = seed ?? params.general.random_seed;
-    // We should probably update the params with the seed if it was passed?
-    // But init returns state, not params. The params object is usually immutable during run.
-    // However, the internal RNG needs to be seeded.
-    // In current logic, `initializeEHTSimulation` treats params as source of truth.
-    // So we assume params has the correct seed already or we construct a RNG from it.
-
-    // Note: If the runner manages the seed override, it should pass it in params.
+    const effectiveSeed = seed ?? String(params.general.random_seed);
     const rng = new SeededRandom(effectiveSeed);
-    const state = createInitialEHTState();
+    const state = createInitialEHTState(effectiveSeed);
     initializeEHTSimulation(params, state, rng);
     return state;
   },
 
   step: (state: EHTSimulationState, _dt: number, params: EHTParams): EHTSimulationState => {
-    // The EHT model uses a fixed time step logic inside "performTimestep" usually,
-    // but here we expose `dt` in the interface.
-    // `performTimestep` internalizes the dt from params.general.dt
-    // We should ensure consistency.
-    // For now we ignore the passed `dt` and use params' dt as per original logic, 
-    // or we should update `performTimestep` to use this dt.
-    // Given the physics is stiff, best to stick to fixed dt from params for now.
-
-    // Create a new RNG based on step (or carry over RNG state? generic interface doesn't pass RNG)
-    // This is a flaw in the functional `step` interface if we want determinism without passing RNG.
-    // EHT old logic stored RNG in the generic `SimulationEngine`.
-    // We might need to store RNG state in `EHTSimulationState` if we want full determinism on resume.
-    // For now, we'll re-instantiate RNG based on seed + step_count (perf hit?) or just use Math.random if generic.
-    // BUT we want seeded random.
-    // Best approach: Add `rng` to EHTSimulationState.
-
-    // Hack for now: Re-create RNG is expensive and incorrect for sequence.
-    // The `SimulationModel` interface `step` might need to accept an RNG or the state should hold it.
-    // Let's assume the state holds relevant RNG state, OR we rely on the fact that `step` is called sequentially.
-    // The `step` function should really perform the update.
-
-    // Construct RNG. 
-    // If we want to support true replay, we need to handle RNG state.
-    // For now, let's use a temporary new RNG seeded with (seed + step_count).
-    // This provides determinism for a specific step count.
-    const seed = params.general.random_seed + "_" + state.step_count;
-    const rng = new SeededRandom(seed);
+    // Create seeded RNG for this step (deterministic based on step count)
+    // Uses stored rngSeed for proper replay from loaded state
+    const rng = new SeededRandom(`${state.rngSeed}_step_${state.step_count}`);
 
     performTimestep(state, params, rng);
 

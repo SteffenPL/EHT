@@ -1,7 +1,8 @@
+import type { Graphics } from 'pixi.js';
 
 /**
  * Generic interface for a model renderer.
- * 
+ *
  * @template Params The type of the simulation parameters.
  * @template State The type of the simulation state.
  */
@@ -15,9 +16,9 @@ export interface BoundingBox {
 
 export interface ModelRenderContext {
     graphics: {
-        cells: any; // Pixi Graphics
-        links: any; // Pixi Graphics
-        overlay: any; // Pixi Graphics
+        cells: Graphics;
+        links: Graphics;
+        overlay: Graphics;
     };
     isDark: boolean;
     scale: number;

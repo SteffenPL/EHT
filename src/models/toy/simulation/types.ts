@@ -28,4 +28,8 @@ export interface ToySimulationState {
   time: number;
   /** All cells */
   cells: ToyCell[];
+  /** Step counter for deterministic RNG */
+  stepCount: number;
+  /** RNG state for reproducibility (stored as seed string for serialization) */
+  rngSeed: string;
 }

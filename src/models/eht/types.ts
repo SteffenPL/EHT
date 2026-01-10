@@ -90,10 +90,12 @@ export interface EHTSimulationState {
     step_count: number;
     geometry?: GeometryState; // Computed geometry (model-specific)
     basalGeometry: BasalGeometry; // Pre-computed basal curve geometry
+    /** RNG seed for reproducibility (stored for deterministic replay) */
+    rngSeed: string;
 }
 
 /** Initial state for a new simulation */
-export function createInitialEHTState(): EHTSimulationState {
+export function createInitialEHTState(seed: string = 'default'): EHTSimulationState {
     return {
         cells: [],
         ap_links: [],
@@ -101,5 +103,6 @@ export function createInitialEHTState(): EHTSimulationState {
         t: 0,
         step_count: 0,
         basalGeometry: new StraightLineGeometry(), // Placeholder, will be replaced during init
+        rngSeed: seed,
     };
 }

@@ -65,9 +65,9 @@ time_samples = "0,0.01"
         timeout: 60000, // 60 second timeout
       });
 
-      // Check that we got CSV output
+      // Check that we got TSV output (tab-separated)
       expect(result).toContain('run_index');
-      expect(result).toContain(',42,'); // seed is in a column, not header
+      expect(result).toContain('\t42\t'); // seed is in a column, not header
 
       // Check that we got at least 2 snapshots (t=0 and t=0.01)
       const lines = result.split('\n').filter(l => l.trim().length > 0);
@@ -109,12 +109,13 @@ time_samples = "0,0.01"
         timeout: 60000, // 60 second timeout
       });
 
-      // Check that we got CSV output
+      // Check that we got TSV output (tab-separated)
       expect(result).toContain('run_index');
 
       // Check that we have data from both runs (run_index 0 and 1)
-      expect(result).toContain(',0,');
-      expect(result).toContain(',1,');
+      // Output uses tabs as delimiter
+      expect(result).toContain('\t0\t');
+      expect(result).toContain('\t1\t');
     } finally {
       // Clean up
       fs.unlinkSync(tomlPath);

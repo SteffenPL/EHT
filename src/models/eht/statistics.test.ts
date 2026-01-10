@@ -60,6 +60,7 @@ function createTestState(cellTypes: string[]): EHTSimulationState {
       curvature_2: 0.06,
     },
     basalGeometry: new StraightLineGeometry(),
+    rngSeed: 'test-seed',
   };
 }
 

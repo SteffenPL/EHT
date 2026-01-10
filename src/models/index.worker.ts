@@ -56,16 +56,16 @@ const EHTModelWorker: SimulationModel<EHTParams, EHTSimulationState> = {
 
   // Simulation Loop
   init: (params: EHTParams, seed?: string): EHTSimulationState => {
-    const effectiveSeed = seed ?? params.general.random_seed;
+    const effectiveSeed = seed ?? String(params.general.random_seed);
     const rng = new SeededRandom(effectiveSeed);
-    const state = createInitialEHTState();
+    const state = createInitialEHTState(effectiveSeed);
     initializeEHTSimulation(params, state, rng);
     return state;
   },
 
   step: (state: EHTSimulationState, _dt: number, params: EHTParams): EHTSimulationState => {
-    const seed = params.general.random_seed + "_" + state.step_count;
-    const rng = new SeededRandom(seed);
+    // Create seeded RNG for this step (deterministic based on step count)
+    const rng = new SeededRandom(`${state.rngSeed}_step_${state.step_count}`);
     ehtPerformTimestep(state, params, rng);
     return state;
   },
@@ -84,8 +84,8 @@ const EHTModelWorker: SimulationModel<EHTParams, EHTSimulationState> = {
   batchParameters: EHT_BATCH_PARAMETERS,
 
   // No renderer or UI in worker context
-  renderer: null as any,
-  ui: null as any,
+  renderer: null!,
+  ui: undefined,
 };
 
 /**
@@ -107,7 +107,7 @@ const ToyModelWorker: SimulationModel<ToyParams, ToySimulationState> = {
 
   // Simulation Loop
   init: (params: ToyParams, seed?: string): ToySimulationState => {
-    const effectiveSeed = seed ?? params.general.random_seed;
+    const effectiveSeed = seed ?? String(params.general.random_seed);
     const rng = new SeededRandom(effectiveSeed);
 
     const { N, domain_size } = params.general;
@@ -133,11 +133,16 @@ const ToyModelWorker: SimulationModel<ToyParams, ToySimulationState> = {
 
     return {
       time: 0,
-      cells
+      cells,
+      stepCount: 0,
+      rngSeed: effectiveSeed
     };
   },
 
   step: (state: ToySimulationState, dt: number, params: ToyParams): ToySimulationState => {
+    // Create seeded RNG for this step (deterministic based on step count)
+    const rng = new SeededRandom(`${state.rngSeed}_step_${state.stepCount}`);
+
     // In-place mutation for performance
     const {
       soft_radius, repulsion_strength, running_speed, tumble_speed, mu,
@@ -156,15 +161,15 @@ const ToyModelWorker: SimulationModel<ToyParams, ToySimulationState> = {
           cell.phase = 'tumbling';
           cell.phaseTime = 0;
           cell.timeSinceLastTumble = 0;
-          // New random polarity
-          const angle = Math.random() * 2 * Math.PI;
+          // New random polarity (seeded)
+          const angle = rng.random(2 * Math.PI);
           cell.polarity = new Vector2(Math.cos(angle), Math.sin(angle));
         }
       } else {
         // Tumbling
         cell.timeSinceLastTumble += dt;
         if (cell.timeSinceLastTumble >= tumbling_period) {
-          const angle = Math.random() * 2 * Math.PI;
+          const angle = rng.random(2 * Math.PI);
           cell.polarity = new Vector2(Math.cos(angle), Math.sin(angle));
           cell.timeSinceLastTumble = 0;
         }
@@ -234,11 +239,12 @@ const ToyModelWorker: SimulationModel<ToyParams, ToySimulationState> = {
     }
 
     state.time += dt;
+    state.stepCount += 1;
     return state;
   },
 
   // I/O
-  getSnapshot: (state: ToySimulationState): Record<string, any>[] => {
+  getSnapshot: (state: ToySimulationState): Record<string, string | number | boolean>[] => {
     return state.cells.map(c => ({
       id: c.id,
       t: state.time,
@@ -250,8 +256,10 @@ const ToyModelWorker: SimulationModel<ToyParams, ToySimulationState> = {
     }));
   },
 
-  loadSnapshot: (rows: Record<string, any>[], _params: ToyParams): ToySimulationState => {
-    if (rows.length === 0) return { time: 0, cells: [] };
+  loadSnapshot: (rows: Record<string, string | number | boolean>[], params: ToyParams): ToySimulationState => {
+    if (rows.length === 0) {
+      return { time: 0, cells: [], stepCount: 0, rngSeed: String(params.general.random_seed) };
+    }
     const t = Number(rows[0].t);
     const cells: ToyCell[] = rows.map(r => ({
       id: Number(r.id),
@@ -262,7 +270,9 @@ const ToyModelWorker: SimulationModel<ToyParams, ToySimulationState> = {
       phaseTime: 0,
       timeSinceLastTumble: 0
     }));
-    return { time: t, cells };
+    // Note: stepCount is estimated from time and dt, rngSeed from params
+    const estimatedStepCount = Math.round(t / params.general.dt);
+    return { time: t, cells, stepCount: estimatedStepCount, rngSeed: String(params.general.random_seed) };
   },
 
   // Statistics
@@ -275,8 +285,8 @@ const ToyModelWorker: SimulationModel<ToyParams, ToySimulationState> = {
   batchParameters: TOY_BATCH_PARAMETERS,
 
   // No renderer or UI in worker context
-  renderer: null as any,
-  ui: null as any,
+  renderer: null!,
+  ui: undefined,
 };
 
 // Register models

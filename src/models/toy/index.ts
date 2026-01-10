@@ -3,7 +3,7 @@
  * A simple run-and-tumble model.
  */
 
-import type { SimulationModel } from '@/core/registry/types';
+import type { SimulationModel } from '@/core/interfaces/model';
 import type { ToySimulationState, ToyCell } from './simulation/types';
 import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
@@ -34,7 +34,7 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
 
   // Simulation Loop
   init: (params: ToyParams, seed?: string): ToySimulationState => {
-    const effectiveSeed = seed ?? params.general.random_seed;
+    const effectiveSeed = seed ?? String(params.general.random_seed);
     const rng = new SeededRandom(effectiveSeed);
 
     const { N, domain_size } = params.general;
@@ -53,18 +53,23 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
         prevPosition: new Vector2(x, y),
         polarity: new Vector2(Math.cos(angle), Math.sin(angle)),
         phase: initialPhase,
-        phaseTime: 0, // Should be randomized?
+        phaseTime: 0,
         timeSinceLastTumble: 0
       });
     }
 
     return {
       time: 0,
-      cells
+      cells,
+      stepCount: 0,
+      rngSeed: effectiveSeed
     };
   },
 
   step: (state: ToySimulationState, dt: number, params: ToyParams): ToySimulationState => {
+    // Create seeded RNG for this step (deterministic based on step count)
+    const rng = new SeededRandom(`${state.rngSeed}_step_${state.stepCount}`);
+
     // In-place mutation for performance
     const {
       soft_radius, repulsion_strength, running_speed, tumble_speed, mu,
@@ -83,15 +88,15 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
           cell.phase = 'tumbling';
           cell.phaseTime = 0;
           cell.timeSinceLastTumble = 0;
-          // New random polarity
-          const angle = Math.random() * 2 * Math.PI;
+          // New random polarity (seeded)
+          const angle = rng.random(2 * Math.PI);
           cell.polarity = new Vector2(Math.cos(angle), Math.sin(angle));
         }
       } else {
         // Tumbling
         cell.timeSinceLastTumble += dt;
         if (cell.timeSinceLastTumble >= tumbling_period) {
-          const angle = Math.random() * 2 * Math.PI;
+          const angle = rng.random(2 * Math.PI);
           cell.polarity = new Vector2(Math.cos(angle), Math.sin(angle));
           cell.timeSinceLastTumble = 0;
         }
@@ -166,6 +171,7 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
     }
 
     state.time += dt;
+    state.stepCount += 1;
     return state;
   },
 
@@ -183,8 +189,10 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
     }));
   },
 
-  loadSnapshot: (rows: Record<string, any>[], _params: ToyParams): ToySimulationState => {
-    if (rows.length === 0) return { time: 0, cells: [] };
+  loadSnapshot: (rows: Record<string, any>[], params: ToyParams): ToySimulationState => {
+    if (rows.length === 0) {
+      return { time: 0, cells: [], stepCount: 0, rngSeed: String(params.general.random_seed) };
+    }
     const t = Number(rows[0].t);
     const cells: ToyCell[] = rows.map(r => ({
       id: Number(r.id),
@@ -192,10 +200,12 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
       prevPosition: new Vector2(Number(r.pos_x), Number(r.pos_y)),
       polarity: new Vector2(Number(r.pol_x), Number(r.pol_y)),
       phase: r.phase as 'running' | 'tumbling',
-      phaseTime: 0, // Lost
-      timeSinceLastTumble: 0 // Lost
+      phaseTime: 0, // Lost on serialization
+      timeSinceLastTumble: 0 // Lost on serialization
     }));
-    return { time: t, cells };
+    // Note: stepCount is estimated from time and dt, rngSeed from params
+    const estimatedStepCount = Math.round(t / params.general.dt);
+    return { time: t, cells, stepCount: estimatedStepCount, rngSeed: String(params.general.random_seed) };
   },
 
   // Statistics

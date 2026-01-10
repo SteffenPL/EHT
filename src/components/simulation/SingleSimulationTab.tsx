@@ -68,24 +68,24 @@ function SingleSimulationTabInner() {
     }
   }, [isRecording, time]);
 
-  // Export CSV: use model's getSnapshot to export current state
+  // Export TSV: use model's getSnapshot to export current state
   const handleExportCSV = useCallback(() => {
     if (!state) return;
 
     const snapshot = currentModel.getSnapshot(state);
     if (snapshot.length === 0) return;
 
-    // Convert to CSV
+    // Convert to TSV (tab-separated)
     const headers = Object.keys(snapshot[0]);
-    const csvRows = [
-      headers.join(','),
-      ...snapshot.map(row => headers.map(h => row[h] ?? '').join(','))
+    const tsvRows = [
+      headers.join('\t'),
+      ...snapshot.map(row => headers.map(h => row[h] ?? '').join('\t'))
     ];
-    const csvContent = csvRows.join('\n');
+    const tsvContent = tsvRows.join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([tsvContent], { type: 'text/tab-separated-values' });
     const link = document.createElement('a');
-    link.download = `simulation_state_${time.toFixed(2)}h.csv`;
+    link.download = `simulation_state_${time.toFixed(2)}h.tsv`;
     link.href = URL.createObjectURL(blob);
     link.click();
     URL.revokeObjectURL(link.href);

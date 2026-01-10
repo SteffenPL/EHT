@@ -1,11 +1,12 @@
 import type { ComponentType } from 'react';
+import type { ZodType } from 'zod';
 import type { ModelRenderer } from './renderer';
 
 // We need StatisticDefinition but need to avoid circular deps if possible
 // Ideally core/interfaces/model shouldn't depend on registry/types.
 // But StatisticDefinition is generic enough.
 // Let's assume we can import it, or define it here.
-interface StatisticDefinition<State = any> {
+interface StatisticDefinition<State = unknown> {
     id: string;
     label: string;
     description: string;
@@ -15,13 +16,16 @@ interface BatchParameterDefinition {
     path: string;
     label: string;
     isInteger?: boolean;
-    options?: any[];
+    options?: (string | number | boolean)[];
 }
+
+/** Row type for CSV/snapshot serialization (inherently untyped) */
+type SnapshotRow = Record<string, string | number | boolean>;
 
 /**
  * Props passed to model-specific UI tab components.
  */
-export interface ModelUITabProps<Params = any> {
+export interface ModelUITabProps<Params = unknown> {
     params: Params;
     onChange: (params: Params) => void;
     disabled?: boolean;
@@ -30,7 +34,7 @@ export interface ModelUITabProps<Params = any> {
 /**
  * Props for warning banner component.
  */
-export interface ModelWarningProps<Params = any> {
+export interface ModelWarningProps<Params = unknown> {
     params: Params;
     onChange?: (params: Params) => void;
     disabled?: boolean;
@@ -40,7 +44,7 @@ export interface ModelWarningProps<Params = any> {
  * Model-specific UI components for parameter editing.
  * Each model can provide its own React components for the parameter panel tabs.
  */
-export interface ModelUI<Params = any> {
+export interface ModelUI<Params = unknown> {
     /** Warning banner - shown above the tabs, always visible */
     WarningBanner?: ComponentType<ModelWarningProps<Params>>;
     /** Parameters tab - general model parameters (T_end, N_init, etc.) */
@@ -53,10 +57,11 @@ export interface ModelUI<Params = any> {
 
 /**
  * Generic interface for a simulation model.
- * 
+ *
  * @template Params The type of the simulation parameters.
  * @template State The type of the simulation state.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface SimulationModel<Params = any, State = any> {
     // Metadata
     id: string;
@@ -68,7 +73,7 @@ export interface SimulationModel<Params = any, State = any> {
     // Parameter Management
     defaultParams: Params;
     validateParams(params: unknown): Params;
-    paramsSchema?: any; // Zod schema
+    paramsSchema?: ZodType<Params>;
 
     // Batch parameters for parameter sweeps
     batchParameters?: BatchParameterDefinition[];
@@ -93,12 +98,12 @@ export interface SimulationModel<Params = any, State = any> {
     /**
      * Convert the state into a flat list of objects suitable for CSV export.
      */
-    getSnapshot(state: State): Record<string, any>[];
+    getSnapshot(state: State): SnapshotRow[];
 
     /**
      * Reconstruct a state from loaded CSV rows.
      */
-    loadSnapshot(rows: Record<string, any>[], params: Params): State;
+    loadSnapshot(rows: SnapshotRow[], params: Params): State;
 
     // Statistics
     /**
@@ -117,12 +122,4 @@ export interface SimulationModel<Params = any, State = any> {
 
     // Rendering
     renderer: ModelRenderer<Params, State>;
-
-    // Hooks (Optional)
-    createCell?: any; // Legacy hook support
-    initializeSimulation?: any;
-    calcForces?: any;
-    applyConstraints?: any;
-    processEvents?: any;
-    processDivisions?: any;
 }
