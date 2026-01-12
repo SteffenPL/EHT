@@ -1,9 +1,15 @@
 /**
  * Toy model statistics definitions.
+ *
+ * Statistics API follows the same pattern as the EHT model:
+ * - TOY_STATISTICS: Static array of statistic definitions
+ * - generateToyStatistics(params): Returns statistics (for Toy, params are not used)
+ * - computeToyStatistics(state): Computes all statistics for a given state
  */
 
 import type { StatisticDefinition } from '@/core/registry/types';
 import type { ToySimulationState } from './simulation/types';
+import type { ToyParams } from './params/types';
 
 function mean(values: number[]): number {
   if (values.length === 0) return 0;
@@ -19,21 +25,10 @@ export const TOY_STATISTICS: StatisticDefinition<ToySimulationState>[] = [
     compute: (s) => s.cells.length,
   },
   {
-    id: 'mean_speed',
-    label: 'Mean Speed',
-    description: 'Average speed of all cells (microns/min) estimated from polarity',
-    compute: (s) => {
-      // Speed depends on phase.
-      // We don't have direct access to params here (only state).
-      // Approximating or using displacement if time step is known?
-      // Without dt, we can only report theoretical speed based on phase, or we need velocity in state.
-      // ToyCell stores prevPosition. We need dt to compute speed.
-      // But computeStats only gets State.
-      // If we want actual speed, we should store velocity in cell state.
-      // For now, let's just count 'running' cells ratio as proxy or similar.
-      // OR update ToyCell to store current speed.
-      return s.cells.filter(c => c.phase === 'running').length / (s.cells.length || 1);
-    },
+    id: 'running_fraction',
+    label: 'Running Fraction',
+    description: 'Fraction of cells currently in running phase',
+    compute: (s) => s.cells.filter(c => c.phase === 'running').length / (s.cells.length || 1),
   },
   {
     id: 'avg_x',
@@ -49,9 +44,20 @@ export const TOY_STATISTICS: StatisticDefinition<ToySimulationState>[] = [
   },
 ];
 
+/**
+ * Generate statistics definitions for the Toy model.
+ * For Toy, statistics are static and don't depend on params.
+ * This function exists for API consistency with models like EHT
+ * that generate dynamic statistics based on cell types.
+ */
+export function generateToyStatistics(_params?: ToyParams): StatisticDefinition<ToySimulationState>[] {
+  return TOY_STATISTICS;
+}
+
 /** Compute statistics for current state */
 export function computeToyStatistics(
-  state: ToySimulationState
+  state: ToySimulationState,
+  _params?: ToyParams
 ): Record<string, number> {
   const result: Record<string, number> = {};
   for (const stat of TOY_STATISTICS) {

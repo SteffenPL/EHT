@@ -70,7 +70,6 @@
  * - Most cell_events (handled differently now)
  */
 
-import { cloneDeep } from 'lodash-es';
 import type { EHTParams, EHTCellTypeParams, RGBColor } from './types';
 import { DEFAULT_EHT_PARAMS, DEFAULT_CONTROL_CELL } from './defaults';
 
@@ -142,7 +141,7 @@ function parseInitDistr(initDistr: string): Record<string, number> {
  * Import legacy XLSX data and convert to EHTParams.
  */
 export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
-  const params = cloneDeep(DEFAULT_EHT_PARAMS);
+  const params = structuredClone(DEFAULT_EHT_PARAMS);
   const p = data.parameters;
 
   // === General Parameters ===
@@ -240,7 +239,7 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
     const scaledNInit = Math.round((initDistr[typeName] || 0) * scaleFactor);
 
     const cellType: EHTCellTypeParams = {
-      ...cloneDeep(DEFAULT_CONTROL_CELL),
+      ...structuredClone(DEFAULT_CONTROL_CELL),
       N_init: scaledNInit,
       location: cellLocation,
       R_hard: parseNumber(legacyType["R_hard"], 0.3),

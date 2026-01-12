@@ -1,7 +1,6 @@
 /**
  * Toy Parameters Tab - General model parameters.
  */
-import { cloneDeep } from 'lodash-es';
 import type { ModelUITabProps } from '@/core/registry';
 import type { ToyParams, BoundaryType } from '../params/types';
 import { NumberInput, IntegerInput, ComboBox } from '@/components/params/inputs';
@@ -15,13 +14,13 @@ const BOUNDARY_OPTIONS = [
 
 export function ToyParametersTab({ params, onChange, disabled }: ModelUITabProps<ToyParams>) {
   const update = <K extends keyof ToyParams['general']>(key: K, value: ToyParams['general'][K]) => {
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     newParams.general[key] = value;
     onChange(newParams);
   };
 
   const updateDomainSize = (index: 0 | 1, value: number) => {
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     newParams.general.domain_size[index] = value;
     onChange(newParams);
   };

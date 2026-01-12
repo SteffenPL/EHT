@@ -219,7 +219,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
     for (const snapshot of snapshots) {
       // Reconstruct state to compute stats
       // IMPORTANT: Apply sampled parameter overrides to get correct params for this snapshot
-      const snapshotParams = JSON.parse(JSON.stringify(config.params)); // Deep clone
+      const snapshotParams = structuredClone(config.params); // Deep clone
       for (const [path, value] of Object.entries(snapshot.sampled_params)) {
         setNestedValue(snapshotParams, path, value);
       }
@@ -317,7 +317,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
       // through the model interface yet.
 
       // Apply sampled parameter overrides
-      const snapshotParams = JSON.parse(JSON.stringify(config.params)); // Deep clone
+      const snapshotParams = structuredClone(config.params); // Deep clone
       for (const [path, value] of Object.entries(snapshot.sampled_params)) {
         setNestedValue(snapshotParams, path, value);
       }

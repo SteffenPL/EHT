@@ -1,7 +1,6 @@
 /**
  * Toy Simulation Tab - Algorithmic parameters (dt, substeps, etc.)
  */
-import { cloneDeep } from 'lodash-es';
 import type { ModelUITabProps } from '@/core/registry';
 import type { ToyParams } from '../params/types';
 import { NumberInput, IntegerInput } from '@/components/params/inputs';
@@ -9,7 +8,7 @@ import { Label } from '@/components/ui/label';
 
 export function ToySimulationTab({ params, onChange, disabled }: ModelUITabProps<ToyParams>) {
   const update = <K extends keyof ToyParams['general']>(key: K, value: ToyParams['general'][K]) => {
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     newParams.general[key] = value;
     onChange(newParams);
   };

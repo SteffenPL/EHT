@@ -12,7 +12,6 @@ import { ParameterGroup } from './ParameterGroup';
 // import type { SimulationParams } from '@/core/types';
 type SimulationParams = any;
 import { parseTomlWithDefaults, toToml, setNestedValue } from '@/core/params';
-import { cloneDeep } from 'lodash-es';
 
 export interface ParameterPanelProps {
   params: SimulationParams;
@@ -30,7 +29,7 @@ export function ParameterPanel({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleParamChange = (path: string, value: unknown) => {
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     setNestedValue(newParams, path, value);
     onChange(newParams);
   };

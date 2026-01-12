@@ -2,7 +2,6 @@
  * Default parameter values for the EHT model.
  */
 
-import { cloneDeep } from 'lodash-es';
 import type { EHTParams, EHTCellTypeParams } from './types';
 
 /** Default control cell type */
@@ -130,10 +129,10 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
 /**
  * Create a deep copy of the default EHT parameters.
  * Useful for creating a fresh parameter set to modify.
- * Note: Uses cloneDeep instead of JSON to preserve Infinity values.
+ * Note: Uses structuredClone to preserve Infinity values.
  */
 export function createDefaultEHTParams(): EHTParams {
-  return cloneDeep(DEFAULT_EHT_PARAMS);
+  return structuredClone(DEFAULT_EHT_PARAMS);
 }
 
 /**
@@ -147,7 +146,7 @@ export const EHT_PRESETS: Array<{
     {
       key: 'default',
       label: 'Default',
-      create: () => cloneDeep(DEFAULT_EHT_PARAMS),
+      create: () => structuredClone(DEFAULT_EHT_PARAMS),
     },
     {
       key: 'chick_embryo_control',

@@ -2,7 +2,6 @@
  * EHT Cell Types Tab - Table with rows per parameter, columns per cell type.
  */
 import { useState, useCallback } from 'react';
-import { cloneDeep } from 'lodash-es';
 import type { ModelUITabProps } from '@/core/registry';
 import type { EHTParams, EHTCellTypeParams } from '../params/types';
 import { DEFAULT_CONTROL_CELL } from '../params/defaults';
@@ -301,7 +300,7 @@ function SectionHeader({ section, cellTypeKeys, disabled, params, onChange }: Se
     const data: Partial<EHTCellTypeParams> = {};
     for (const field of section.fields) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (data as any)[field] = serializeValue(cloneDeep(cellType[field]));
+      (data as any)[field] = serializeValue(structuredClone(cellType[field]));
     }
     const json = JSON.stringify({ section: section.key, cellType: cellTypeKey, data }, null, 2);
     await navigator.clipboard.writeText(json);
@@ -319,12 +318,12 @@ function SectionHeader({ section, cellTypeKeys, disabled, params, onChange }: Se
         return;
       }
 
-      const newParams = cloneDeep(params);
+      const newParams = structuredClone(params);
       const targetCellType = newParams.cell_types[cellTypeKey] as EHTCellTypeParams;
       for (const field of section.fields) {
         if (field in parsed.data) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (targetCellType as any)[field] = deserializeValue(cloneDeep(parsed.data[field]));
+          (targetCellType as any)[field] = deserializeValue(structuredClone(parsed.data[field]));
         }
       }
       onChange(newParams);
@@ -383,7 +382,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     key: K,
     value: EHTCellTypeParams[K]
   ) => {
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     (newParams.cell_types[cellType] as EHTCellTypeParams)[key] = value;
     onChange(newParams);
   };
@@ -393,7 +392,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     eventKey: 'time_A' | 'time_B' | 'time_S' | 'time_P',
     value: number
   ) => {
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     (newParams.cell_types[cellType] as EHTCellTypeParams).events[`${eventKey}_start`] = value;
     onChange(newParams);
   };
@@ -403,13 +402,13 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     eventKey: 'time_A' | 'time_B' | 'time_S' | 'time_P',
     value: number
   ) => {
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     (newParams.cell_types[cellType] as EHTCellTypeParams).events[`${eventKey}_end`] = value;
     onChange(newParams);
   };
 
   const addCellType = useCallback((sourceKey?: string) => {
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     // Generate unique key
     let counter = 1;
     let newKey = `type_${counter}`;
@@ -422,7 +421,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     if (sourceKey && params.cell_types[sourceKey]) {
       const source = params.cell_types[sourceKey] as EHTCellTypeParams;
       const newCellType: EHTCellTypeParams = {
-        ...cloneDeep(source),
+        ...structuredClone(source),
         N_init: 0, // Always start with 0
         color: { r: Math.floor(Math.random() * 200) + 50, g: Math.floor(Math.random() * 200) + 50, b: Math.floor(Math.random() * 200) + 50 },
       };
@@ -430,7 +429,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     } else {
       // Create new cell type based on defaults
       const newCellType: EHTCellTypeParams = {
-        ...cloneDeep(DEFAULT_CONTROL_CELL),
+        ...structuredClone(DEFAULT_CONTROL_CELL),
         N_init: 0,
         location: "",
         color: { r: Math.floor(Math.random() * 200) + 50, g: Math.floor(Math.random() * 200) + 50, b: Math.floor(Math.random() * 200) + 50 },
@@ -442,7 +441,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
   const deleteCellType = (key: string) => {
     if (cellTypeKeys.length <= 1) return; // Keep at least one cell type
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     delete newParams.cell_types[key];
     onChange(newParams);
   };
@@ -453,7 +452,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     // Don't rename if key already exists
     if (params.cell_types[newKey]) return;
 
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     // Copy cell type to new key and delete old key
     newParams.cell_types[newKey] = newParams.cell_types[oldKey];
     delete newParams.cell_types[oldKey];

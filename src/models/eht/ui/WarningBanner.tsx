@@ -2,7 +2,6 @@
  * EHT Warning Banner - Shows parameter validation warnings above the tabs.
  */
 import { useMemo, useCallback } from 'react';
-import { cloneDeep } from 'lodash-es';
 import type { ModelWarningProps } from '@/core/registry';
 import type { EHTParams } from '../params/types';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,7 @@ export function EHTWarningBanner({ params, onChange, disabled }: ModelWarningPro
 
     const scaleFactor = targetCoverage / currentCoverage;
 
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     for (const key of Object.keys(newParams.cell_types)) {
       newParams.cell_types[key].max_basal_junction_dist *= scaleFactor;
     }

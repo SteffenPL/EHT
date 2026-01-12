@@ -4,7 +4,6 @@
  * Supports both sequential and parallel (Web Worker) execution.
  */
 
-import { cloneDeep } from 'lodash-es';
 import { SimulationEngine } from '../simulation/engine';
 import { setNestedValue } from '../params';
 import { modelRegistry } from '../registry';
@@ -46,8 +45,8 @@ function runSingleSimulation(
   runIndex: number,
   callbacks?: BatchRunnerCallbacks
 ): BatchSnapshot[] {
-  // Apply parameter overrides (use cloneDeep to preserve Infinity values)
-  const params = cloneDeep(baseParams);
+  // Apply parameter overrides (structuredClone preserves Infinity values)
+  const params = structuredClone(baseParams);
   for (const [path, value] of Object.entries(overrides)) {
     setNestedValue(params, path, value);
   }

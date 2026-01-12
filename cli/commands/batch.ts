@@ -12,7 +12,6 @@ import { generateParameterConfigs, getTimeSamples } from '../../src/core/batch/t
 import type { BatchSnapshot } from '../../src/core/batch/types';
 import { parseArgs } from '../utils/args';
 import { snapshotsToCSV, writeOutput, formatProgress } from '../utils/output';
-import { cloneDeep } from 'lodash-es';
 
 import { EHTModel } from '../../src/models/eht';
 import { computeEHTStatistics } from '../../src/models/eht/statistics';
@@ -67,7 +66,7 @@ function computeStatisticsFromSnapshots(
   const rows: (string | number)[][] = [];
   for (const snapshot of snapshots) {
     // Apply sampled parameter overrides
-    const snapshotParams = cloneDeep(baseParams);
+    const snapshotParams = structuredClone(baseParams);
     for (const [path, value] of Object.entries(snapshot.sampled_params)) {
       setNestedValue(snapshotParams, path, value);
     }
@@ -122,7 +121,7 @@ function runSingleSimulation(
   endTime: number
 ): BatchSnapshot[] {
   // Apply parameter overrides
-  const params = cloneDeep(baseParams);
+  const params = structuredClone(baseParams);
   for (const [path, value] of Object.entries(overrides)) {
     setNestedValue(params, path, value);
   }

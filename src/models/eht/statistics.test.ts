@@ -68,7 +68,7 @@ function createTestState(cellTypes: string[]): EHTSimulationState {
  * Create test params with specified cell types.
  */
 function createTestParams(cellTypeKeys: string[]): EHTParams {
-  const params = JSON.parse(JSON.stringify(DEFAULT_EHT_PARAMS)) as EHTParams;
+  const params = structuredClone(DEFAULT_EHT_PARAMS);
 
   // Clear default cell types and add custom ones
   params.cell_types = {};
@@ -76,7 +76,7 @@ function createTestParams(cellTypeKeys: string[]): EHTParams {
 
   cellTypeKeys.forEach(key => {
     params.cell_types[key] = {
-      ...JSON.parse(JSON.stringify(baseType)),
+      ...structuredClone(baseType),
       N_init: 10,
     };
   });
@@ -235,7 +235,7 @@ describe('EHT Statistics - Cell Type Pairs', () => {
 
   it('should dynamically update when cell type names change', () => {
     // Start with default params (control, emt)
-    const params1 = JSON.parse(JSON.stringify(DEFAULT_EHT_PARAMS)) as EHTParams;
+    const params1 = structuredClone(DEFAULT_EHT_PARAMS) as EHTParams;
     const stats1 = generateEHTStatistics(params1);
     const groups1 = new Set<string>();
 
@@ -255,7 +255,7 @@ describe('EHT Statistics - Cell Type Pairs', () => {
     expect(Array.from(groups1).sort()).toContain('control+emt');
 
     // Now rename emt to emt2 and add a third type
-    const params2 = JSON.parse(JSON.stringify(DEFAULT_EHT_PARAMS)) as EHTParams;
+    const params2 = structuredClone(DEFAULT_EHT_PARAMS) as EHTParams;
     params2.cell_types = {
       control: params2.cell_types.control,
       emt2: { ...params2.cell_types.emt },

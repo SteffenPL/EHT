@@ -6,7 +6,7 @@
 type SimulationParams = any;
 type PartialSimulationParams = any;
 import { DEFAULT_PARAMS, DEFAULT_CONTROL_CELL } from './defaults';
-import { cloneDeep, mergeWith, isPlainObject } from 'lodash-es';
+import { mergeWith, isPlainObject } from 'lodash-es';
 
 /**
  * Custom merge function that handles nested objects properly.
@@ -42,7 +42,7 @@ export function mergeWithDefaults(
   defaults: SimulationParams = DEFAULT_PARAMS
 ): SimulationParams {
   // Start with a deep copy of defaults
-  const result = cloneDeep(defaults);
+  const result = structuredClone(defaults);
 
   // Merge general params
   if (partial.general) {
@@ -62,7 +62,7 @@ export function mergeWithDefaults(
         mergeWith(result.cell_types[typeName], partialType, customMerge);
       } else {
         // New custom type: merge over control defaults
-        const newType = cloneDeep(DEFAULT_CONTROL_CELL);
+        const newType = structuredClone(DEFAULT_CONTROL_CELL);
         mergeWith(newType, partialType, customMerge);
         result.cell_types[typeName] = newType;
       }

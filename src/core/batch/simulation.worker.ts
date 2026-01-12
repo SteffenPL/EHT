@@ -3,7 +3,6 @@
  * Each worker runs a single simulation and posts back snapshots.
  */
 
-import { cloneDeep } from 'lodash-es';
 import { SimulationEngine } from '../simulation/engine';
 import { modelRegistry } from '../registry';
 import { setNestedValue } from '../params';
@@ -44,8 +43,8 @@ function runSimulation(request: WorkerRequest): BatchSnapshot[] {
     throw new Error(`Model "${modelName}" not found in worker registry.`);
   }
 
-  // Apply parameter overrides (use cloneDeep to preserve Infinity values)
-  const params = cloneDeep(baseParams);
+  // Apply parameter overrides (structuredClone preserves Infinity values)
+  const params = structuredClone(baseParams);
   for (const [path, value] of Object.entries(overrides)) {
     setNestedValue(params, path, value);
   }

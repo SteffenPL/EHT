@@ -1,7 +1,6 @@
 /**
  * EHT Parameters Tab - General model parameters.
  */
-import { cloneDeep } from 'lodash-es';
 import type { ModelUITabProps } from '@/core/registry';
 import type { EHTParams } from '../params/types';
 import { NumberInput, IntegerInput, BoolInput } from '@/components/params/inputs';
@@ -9,7 +8,7 @@ import { Label } from '@/components/ui/label';
 
 export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps<EHTParams>) {
   const update = <K extends keyof EHTParams['general']>(key: K, value: EHTParams['general'][K]) => {
-    const newParams = cloneDeep(params);
+    const newParams = structuredClone(params);
     newParams.general[key] = value;
     onChange(newParams);
   };
