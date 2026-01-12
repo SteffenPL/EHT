@@ -158,7 +158,7 @@ function integrateForces(
             }
         } else {
             cell.B.x += (dt * f.fB.x) / mu;
-            cell.B.y += (dt * f.fB.y) / mu;
+            // cell.B.y += (dt * f.fB.y) / mu;
 
             // Extra basal motion for cells without basal adhesion
             if (!cell.has_B) {

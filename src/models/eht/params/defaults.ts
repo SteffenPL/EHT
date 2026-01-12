@@ -117,7 +117,7 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     p_div_out: 1.0,
     perimeter: 105,    // ≈ 2π × 16.67 (equivalent to curvature 0.06)
     aspect_ratio: 1,   // Circle
-    hard_sphere_nuclei: false,
+    hard_sphere_nuclei: true,
   },
   cell_prop: {
     // All properties moved to per-cell-type in cell_types
