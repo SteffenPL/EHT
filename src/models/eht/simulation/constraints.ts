@@ -49,57 +49,58 @@ export function projectHardSphereConstraints(
 
 /**
  * Project basal ordering constraints.
- * Ensures basal points maintain their left-right ordering along the arc length.
- * Uses arc length comparison instead of x-coordinate for curved membranes.
+ * Ensures basal points maintain their left-right ordering.
+ * Uses local tangent vector at the midpoint to determine ordering.
+ *
+ * Algorithm:
+ * 1. Compute center cij = 0.5 * (bi + bj)
+ * 2. Get normal nij at cij from geometry
+ * 3. Rotate normal 90° clockwise to get oriented tangent tij
+ * 4. Check constraint: (bi - cij) · tij < (bj - cij) · tij
+ * 5. If violated, move both points along tij to fix ordering
  */
 export function projectBasalOrderingConstraints(
   state: EHTSimulationState,
-  params: EHTParams
+  _params: EHTParams
 ): void {
   const cells = state.cells;
   const baLinks = state.ba_links;
-  const curvature_1 = state.geometry?.curvature_1 ?? 0;
-  const curvature_2 = state.geometry?.curvature_2 ?? 0;
 
   for (const link of baLinks) {
     const ci = cells[link.l];
     const cj = cells[link.r];
 
+    // Skip if either cell has lost basal adhesion
+    if (!ci.has_B || !cj.has_B) continue;
+
     const Bi = Vector2.from(ci.B);
     const Bj = Vector2.from(cj.B);
 
-    const li = state.basalGeometry.getArcLength(Bi);
-    const lj = state.basalGeometry.getArcLength(Bj);
+    // 1. Compute center point
+    const Cij = Bi.add(Bj).scale(0.5);
 
-    // Arc length delta: positive means j is "ahead" of i (correct ordering)
-    let deltaL = lj - li;
+    // 2. Get normal at center (project center onto curve first for better accuracy)
+    const CijProjected = state.basalGeometry.projectPoint(Cij);
+    const Nij = state.basalGeometry.getNormal(CijProjected);
 
-    // Compute modulo for periodic boundary if needed
-    if (params.general.full_circle && curvature_1 !== 0 && curvature_1 === curvature_2) {
-      const circumference = 2 * Math.PI * Math.abs(1 / curvature_1);
-      while (deltaL > circumference / 2) {
-        // j is too far ahead - wrap around
-        deltaL -= circumference;
-      }
+    // 3. Rotate normal 90° clockwise to get tangent: (nx, ny) -> (ny, -nx)
+    const Tij = new Vector2(Nij.y, -Nij.x);
 
-      while (deltaL < -circumference / 2) {
-        // j is too far behind - wrap around
-        deltaL += circumference;
-      }
-    }
+    // 4. Check constraint: (bi - cij) · tij < (bj - cij) · tij
+    const projI = Bi.sub(Cij).dot(Tij);
+    const projJ = Bj.sub(Cij).dot(Tij);
 
-    if (deltaL < 0) {
-      // Ordering violation - currently disabled
-      // TODO: Re-enable basal ordering correction when needed
-      // const correction = deltaL / 2;
-      // const newLi = li + correction;
-      // const newLj = lj - correction;
-      // const newBi = basalCurveParam(newLi, curvature_1, curvature_2);
-      // const newBj = basalCurveParam(newLj, curvature_1, curvature_2);
-      // ci.B.x = newBi.x;
-      // ci.B.y = newBi.y;
-      // cj.B.x = newBj.x;
-      // cj.B.y = newBj.y;
+    if (projI >= projJ) {
+      // 5. Ordering violation - move both points along tangent to fix
+      // We want projI < projJ, so we need to move bi in -tij direction
+      // and bj in +tij direction
+      const overlap = projI - projJ;
+      const correction = overlap / 2 + 1e-6; // Small epsilon to ensure strict inequality
+
+      ci.B.x -= correction * Tij.x;
+      ci.B.y -= correction * Tij.y;
+      cj.B.x += correction * Tij.x;
+      cj.B.y += correction * Tij.y;
     }
   }
 }
