@@ -26,7 +26,7 @@ export function projectHardSphereConstraints(
       const cj = cells[j];
 
       // Quick distance check
-      if (Math.abs(ci.pos.x - cj.pos.x) >= 1.5) continue;
+      // if (Math.abs(ci.pos.x - cj.pos.x) >= 1.5) continue;
 
       const Rij = ci.R_hard + cj.R_hard;
       const ciPos = Vector2.from(ci.pos);
