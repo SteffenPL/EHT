@@ -29,12 +29,14 @@ function SingleSimulationTabInner() {
   const {
     state,
     isRunning,
-    isComplete,
     time,
+    maxSimulatedTime,
+    isCatchingUp,
     start,
     pause,
     reset,
     step,
+    seekTo,
   } = useSimulation({ model: currentModel, params: currentParams, paramChangeBehavior });
 
   // Screenshot: download current canvas as PNG
@@ -106,13 +108,15 @@ function SingleSimulationTabInner() {
       {/* Controls */}
       <SimulationControls
         isRunning={isRunning}
-        isComplete={isComplete}
         time={time}
         endTime={currentParams.general.t_end}
+        maxSimulatedTime={maxSimulatedTime}
+        isCatchingUp={isCatchingUp}
         onStart={start}
         onPause={pause}
         onReset={reset}
         onStep={step}
+        onSeek={seekTo}
         paramChangeBehavior={paramChangeBehavior}
         onParamChangeBehaviorChange={setParamChangeBehavior}
         onSaveScreenshot={handleSaveScreenshot}

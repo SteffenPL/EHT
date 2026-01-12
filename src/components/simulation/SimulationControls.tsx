@@ -1,9 +1,9 @@
 /**
- * Simulation control buttons (play, pause, reset, step) and export actions.
+ * Simulation control buttons (play, pause, reset, step) and time slider.
  */
-import { Play, Pause, RotateCcw, SkipForward, Camera, Video, FileDown } from 'lucide-react';
+import { Play, Pause, RotateCcw, SkipForward, Camera, Video, FileDown, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
-import { Progress } from '../ui/progress';
+import { Slider } from '../ui/slider';
 import {
   Select,
   SelectContent,
@@ -15,13 +15,18 @@ import type { ParamChangeBehavior } from '@/hooks/useSimulation';
 
 export interface SimulationControlsProps {
   isRunning: boolean;
-  isComplete: boolean;
   time: number;
   endTime: number;
+  /** Maximum time that has been simulated (for slider track visualization) */
+  maxSimulatedTime: number;
+  /** Whether simulation is computing to catch up to a seek target */
+  isCatchingUp: boolean;
   onStart: () => void;
   onPause: () => void;
   onReset: () => void;
   onStep: () => void;
+  /** Seek to a specific time */
+  onSeek: (time: number) => void;
   paramChangeBehavior: ParamChangeBehavior;
   onParamChangeBehaviorChange: (behavior: ParamChangeBehavior) => void;
   // Export callbacks
@@ -33,13 +38,15 @@ export interface SimulationControlsProps {
 
 export function SimulationControls({
   isRunning,
-  isComplete,
   time,
   endTime,
+  maxSimulatedTime,
+  isCatchingUp,
   onStart,
   onPause,
   onReset,
   onStep,
+  onSeek,
   paramChangeBehavior,
   onParamChangeBehaviorChange,
   onSaveScreenshot,
@@ -47,29 +54,39 @@ export function SimulationControls({
   onExportCSV,
   isRecording = false,
 }: SimulationControlsProps) {
-  const progress = endTime > 0 ? (time / endTime) * 100 : 0;
+  // Calculate percentage of simulation that has been computed (for visual feedback)
+  const computedPercent = endTime > 0 ? (maxSimulatedTime / endTime) * 100 : 0;
+
+  const handleSliderChange = (values: number[]) => {
+    const newTime = values[0];
+    onSeek(newTime);
+  };
 
   return (
     <div className="space-y-3">
       <div className="flex gap-2 flex-wrap items-center">
-        {isRunning ? (
+        {isRunning || isCatchingUp ? (
           <Button onClick={onPause} variant="outline" size="sm">
             <Pause className="h-4 w-4 mr-1" />
             Pause
           </Button>
         ) : (
-          <Button onClick={onStart} disabled={isComplete} size="sm">
-            <Play className="h-4 w-4 mr-1" />
+          <Button onClick={onStart} size="sm">
+            {isCatchingUp ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4 mr-1" />
+            )}
             Start
           </Button>
         )}
 
-        <Button onClick={onStep} disabled={isRunning || isComplete} variant="outline" size="sm">
+        <Button onClick={onStep} disabled={isRunning || isCatchingUp} variant="outline" size="sm">
           <SkipForward className="h-4 w-4 mr-1" />
           Step
         </Button>
 
-        <Button onClick={onReset} variant="outline" size="sm">
+        <Button onClick={onReset} variant="outline" size="sm" disabled={isCatchingUp}>
           <RotateCcw className="h-4 w-4 mr-1" />
           Reset
         </Button>
@@ -96,7 +113,23 @@ export function SimulationControls({
         </span>
       </div>
 
-      <Progress value={progress} className="h-2" />
+      {/* Time Slider */}
+      <div className="relative">
+        {/* Background track showing computed portion */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 h-2 bg-muted/50 rounded-full pointer-events-none"
+          style={{ width: `${computedPercent}%` }}
+        />
+        <Slider
+          value={[time]}
+          min={0}
+          max={endTime}
+          step={endTime / 1000} // Fine-grained steps
+          onValueChange={handleSliderChange}
+          disabled={isCatchingUp}
+          className="cursor-pointer"
+        />
+      </div>
 
       {/* Export Actions */}
       <div className="flex gap-2 flex-wrap items-center pt-1 border-t border-border/40">
