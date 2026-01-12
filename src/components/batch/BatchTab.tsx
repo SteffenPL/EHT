@@ -29,7 +29,7 @@ import {
   getTimeSamples,
   WorkerPool,
 } from '@/core/batch';
-import { setNestedValue } from '@/core/params';
+import { setNestedValue, encodeParamsToUrl } from '@/core/params';
 import { useModel } from '@/contexts/ModelContext';
 
 export interface BatchTabProps {
@@ -57,6 +57,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const [outputMode, setOutputMode] = useState<'time_series' | 'terminal'>('time_series');
   const [resultsColumns, setResultsColumns] = useState<string[]>([]);
   const [resultsRows, setResultsRows] = useState<(string | number)[][]>([]);
+  const [resultsParamPaths, setResultsParamPaths] = useState<string[]>([]);
 
   // Plot configuration
   const [plotXAxis, setPlotXAxis] = useState<string>('time_h');
@@ -246,11 +247,39 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
 
     setResultsColumns(columns);
     setResultsRows(rows);
+    setResultsParamPaths(sortedPaths);
 
     // Set default plot y-axis if not set (use first base stat name)
     if (!plotYAxis && sortedBaseStats.length > 0) {
       setPlotYAxis(sortedBaseStats[0]);
     }
+  };
+
+  // Handle "Run" button click in results table - opens simulation with row's params in new tab
+  const handleRunRow = (rowIndex: number) => {
+    const row = resultsRows[rowIndex];
+    if (!row) return;
+
+    // Clone base params and apply the sampled values from this row
+    const rowParams = structuredClone(config.params);
+    resultsParamPaths.forEach((path, i) => {
+      const value = row[i];
+      if (value !== '' && value !== undefined) {
+        setNestedValue(rowParams, path, value);
+      }
+    });
+
+    // Row structure: [...paramPaths, run_index, seed, time_h, cell_group, ...stats]
+    // Extract and set the seed from this row
+    const seedIndex = resultsParamPaths.length + 1; // +1 to skip run_index
+    const seed = row[seedIndex];
+    if (typeof seed === 'number') {
+      rowParams.general.random_seed = seed;
+    }
+
+    // Generate URL and open in new tab
+    const url = encodeParamsToUrl(currentModel.name, rowParams);
+    window.open(url, '_blank');
   };
 
   // Export statistics CSV
@@ -587,7 +616,11 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <ResultsTable columns={resultsColumns} rows={resultsRows} />
+              <ResultsTable
+                columns={resultsColumns}
+                rows={resultsRows}
+                onRunRow={handleRunRow}
+              />
               <p className="text-xs text-muted-foreground mt-2">
                 {resultsRows.length} row{resultsRows.length !== 1 ? 's' : ''}
               </p>

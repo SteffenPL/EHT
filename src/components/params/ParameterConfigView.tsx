@@ -3,7 +3,7 @@
  * Handles unified load/save to TOML so all values stay together.
  */
 import { useRef, useState } from 'react';
-import { Upload, Download, FileSpreadsheet } from 'lucide-react';
+import { Upload, Download, FileSpreadsheet, Link2 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { Button } from '../ui/button';
@@ -21,8 +21,9 @@ import { ParameterRangeList } from '../batch/ParameterRangeList';
 import { TimeSampleConfig } from '../batch/TimeSampleConfig';
 import type { SimulationConfig } from '@/core/params';
 import type { BaseSimulationParams } from '@/core/registry';
-import { PARAM_PRESETS, parseSimulationConfigToml, toSimulationConfigToml } from '@/core/params';
+import { PARAM_PRESETS, parseSimulationConfigToml, toSimulationConfigToml, encodeParamsToUrl } from '@/core/params';
 import { importXLSXToParams } from '@/models/eht/params/legacy-import';
+import { useModel } from '@/contexts/ModelContext';
 
 export interface ParameterConfigViewProps {
   config: SimulationConfig;
@@ -31,9 +32,11 @@ export interface ParameterConfigViewProps {
 }
 
 export function ParameterConfigView({ config, onConfigChange, disabled }: ParameterConfigViewProps) {
+  const { currentModel } = useModel();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const presetOptions = PARAM_PRESETS;
 
   const applyPreset = (key: string) => {
@@ -117,6 +120,19 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
     }
   };
 
+  const handleCopyShareLink = async () => {
+    const url = encodeParamsToUrl(currentModel.name, config.params);
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      // Fallback: show the URL in a prompt
+      prompt('Copy this link:', url);
+    }
+  };
+
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
@@ -171,6 +187,16 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               {isImporting ? 'Importing...' : 'Import Legacy XLSX'}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyShareLink}
+              disabled={disabled}
+              className="flex-1"
+            >
+              <Link2 className="h-4 w-4 mr-2" />
+              {linkCopied ? 'Copied!' : 'Share Link'}
             </Button>
           </div>
         </div>

@@ -1,9 +1,9 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { AppLayout } from './components/layout';
 import { SingleSimulationTab } from './components/simulation';
 import { BatchTab } from './components/batch';
 import { ParameterConfigView } from './components/params';
-import { DEFAULT_TIME_SAMPLES } from './core/params';
+import { DEFAULT_TIME_SAMPLES, decodeParamsFromUrl, clearUrlParams } from './core/params';
 import type { SimulationConfig } from './core/params';
 import { ModelProvider, useModel, MessagesProvider } from './contexts';
 
@@ -11,7 +11,17 @@ import { ModelProvider, useModel, MessagesProvider } from './contexts';
 import './models';
 
 function AppContent() {
-  const { currentParams, setParams } = useModel();
+  const { currentParams, setParams, setModel } = useModel();
+
+  // Load params from URL on mount
+  useEffect(() => {
+    const urlData = decodeParamsFromUrl();
+    if (urlData) {
+      setModel(urlData.modelName);
+      setParams(urlData.params);
+      clearUrlParams();
+    }
+  }, [setModel, setParams]);
 
   // Batch-related config (ranges, time samples, seeds) - separate from core params
   const [batchConfig, setBatchConfig] = useState({
