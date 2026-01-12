@@ -2,8 +2,9 @@
  * Default parameter values for the EHT model.
  */
 
-import { cloneDeep } from 'lodash-es';
-import type { EHTParams, EHTCellTypeParams } from './types';
+import { cloneDeep, merge } from 'lodash-es';
+import TOML from '@iarna/toml';
+import type { EHTParams, EHTCellTypeParams, PartialEHTParams } from './types';
 
 /** Default control cell type */
 export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
@@ -136,188 +137,109 @@ export function createDefaultEHTParams(): EHTParams {
   return cloneDeep(DEFAULT_EHT_PARAMS);
 }
 
+// --- TOML Preset Loading ---
+
+interface PresetMeta {
+  key: string;
+  label: string;
+  params: PartialEHTParams;
+}
+
+/**
+ * Deep merge partial params with defaults, ensuring all cell types get proper defaults.
+ */
+function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
+  const base = cloneDeep(DEFAULT_EHT_PARAMS);
+
+  // Merge general params
+  if (partial.general) {
+    base.general = { ...base.general, ...partial.general };
+  }
+
+  // Merge metadata
+  if (partial.metadata) {
+    base.metadata = { ...base.metadata, ...partial.metadata };
+  }
+
+  // Merge cell types - each cell type gets merged with DEFAULT_CONTROL_CELL
+  if (partial.cell_types) {
+    for (const [typeName, typeParams] of Object.entries(partial.cell_types)) {
+      if (typeParams) {
+        // Use existing cell type as base if it exists, otherwise use DEFAULT_CONTROL_CELL
+        const baseType = base.cell_types[typeName] ?? cloneDeep(DEFAULT_CONTROL_CELL);
+        base.cell_types[typeName] = merge(baseType, typeParams);
+      }
+    }
+  }
+
+  return base;
+}
+
+// Load all TOML presets at build time using Vite's import.meta.glob
+// This MUST be at module level (not inside a function) for Vite to transform it
+// In non-Vite environments (Node.js CLI, tests), this will be an empty object
+let presetModules: Record<string, string> = {};
+try {
+  presetModules = import.meta.glob('./presets/*.toml', {
+    eager: true,
+    query: '?raw',
+    import: 'default',
+  }) as Record<string, string>;
+} catch {
+  // In Node.js environments, import.meta.glob doesn't exist
+  presetModules = {};
+}
+
+/**
+ * Parse all TOML preset files and return preset metadata.
+ */
+function parsePresets(): PresetMeta[] {
+  const presets: PresetMeta[] = [];
+
+  for (const [path, raw] of Object.entries(presetModules)) {
+    // Extract key from filename: ./presets/chick-embryo-control.toml → chick_embryo_control
+    const filename = path.split('/').pop()?.replace('.toml', '') ?? '';
+    const key = filename.replace(/-/g, '_');
+
+    try {
+      const parsed = TOML.parse(raw) as { label?: string } & PartialEHTParams;
+      const label = parsed.label ?? filename;
+      // Remove label from params (it's metadata, not a param)
+      delete (parsed as Record<string, unknown>).label;
+
+      presets.push({ key, label, params: parsed });
+    } catch (e) {
+      console.error(`Failed to parse preset ${path}:`, e);
+    }
+  }
+
+  // Sort by label for consistent ordering
+  return presets.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+// Parse presets once at module load time
+const loadedPresets = parsePresets();
+
 /**
  * EHT parameter presets.
+ * Includes the default preset plus all presets loaded from TOML files.
  */
 export const EHT_PRESETS: Array<{
   key: string;
   label: string;
   create: () => EHTParams;
 }> = [
-    {
-      key: 'default',
-      label: 'Default',
-      create: () => cloneDeep(DEFAULT_EHT_PARAMS),
-    },
-    {
-      key: 'chick_embryo_control',
-      label: 'Chick Embryo Control',
-      create: (): EHTParams => ({
-        metadata: { model: 'EHT', version: '1.0.0' },
-        general: {
-          t_end: 54, dt: 0.1, random_seed: 0, full_circle: false,
-          w_init: 8, h_init: 10, mu: 0.2, n_substeps: 30, alg_dt: 0.05,
-          w_screen: 15, h_screen: 0, p_div_out: 0.8, perimeter: 20, aspect_ratio: 0,
-          hard_sphere_nuclei: false,
-        },
-        cell_prop: {},
-        cell_types: {
-          control: {
-            N_init: 45, location: '', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
-            color: { r: 0, g: 128, b: 0 }, dur_G2: 0.5, dur_mitosis: 0.5,
-            k_apical_junction: 1, k_cytos: 5, max_cytoskeleton_length: 0,
-            run: 0, running_speed: 1, running_mode: 0,
-            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
-            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
-            stiffness_repulsion: 1, stiffness_straightness: 15,
-            lifespan_start: 10, lifespan_end: 21, INM: 1, hetero: false,
-            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
-            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.6,
-            cytos_init: 1.5, basal_membrane_repulsion: 0, apical_junction_init: 0.333333333333333,
-          },
-          emt: {
-            N_init: 0, location: 'bottom', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
-            color: { r: 255, g: 0, b: 255 }, dur_G2: 0.5, dur_mitosis: 0.5,
-            k_apical_junction: 1, k_cytos: 5, max_cytoskeleton_length: 0,
-            run: 0, running_speed: 1, running_mode: 0,
-            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
-            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
-            stiffness_repulsion: 1, stiffness_straightness: 15,
-            lifespan_start: 10, lifespan_end: 21, INM: 1, hetero: false,
-            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
-            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.6,
-            cytos_init: 1.5, basal_membrane_repulsion: 0, apical_junction_init: 0.333333333333333,
-          },
-        },
-      }),
-    },
-    {
-      key: 'chick_embryo_single_emt',
-      label: 'Chick Embryo Single EMT',
-      create: (): EHTParams => ({
-        metadata: { model: 'EHT', version: '1.0.0' },
-        general: {
-          t_end: 54, dt: 0.1, random_seed: 0, full_circle: false,
-          w_init: 10, h_init: 8, mu: 0.2, n_substeps: 40, alg_dt: 0.05,
-          w_screen: 15, h_screen: 0, p_div_out: 0.8, perimeter: 20, aspect_ratio: 0,
-          hard_sphere_nuclei: false,
-        },
-        cell_prop: {},
-        cell_types: {
-          control: {
-            N_init: 50, location: '', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
-            color: { r: 0, g: 128, b: 0 }, dur_G2: 0.5, dur_mitosis: 0.5,
-            k_apical_junction: 1, k_cytos: 5, max_cytoskeleton_length: 0,
-            run: 0, running_speed: 1, running_mode: 0,
-            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
-            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
-            stiffness_repulsion: 1, stiffness_straightness: 15,
-            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
-            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
-            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.333333333333333,
-            cytos_init: 1.5, basal_membrane_repulsion: 0, apical_junction_init: 0.333333333333333,
-          },
-          emt: {
-            N_init: 1, location: 'bottom', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
-            color: { r: 255, g: 0, b: 255 }, dur_G2: 0.5, dur_mitosis: 0.5,
-            k_apical_junction: 1, k_cytos: 5, max_cytoskeleton_length: 0,
-            run: 0, running_speed: 1, running_mode: 0,
-            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
-            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
-            stiffness_repulsion: 1, stiffness_straightness: 15,
-            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
-            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
-            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.333333333333333,
-            cytos_init: 1.5, basal_membrane_repulsion: 0, apical_junction_init: 0.333333333333333,
-          },
-        },
-      }),
-    },
-    {
-      key: 'cuboidal',
-      label: 'Cuboidal',
-      create: (): EHTParams => ({
-        metadata: { model: 'EHT', version: '1.0.0' },
-        general: {
-          t_end: 80, dt: 0.05, random_seed: 0, full_circle: false,
-          w_init: 20, h_init: 2, mu: 0.1, n_substeps: 40, alg_dt: 0.01,
-          w_screen: 30, h_screen: 0, p_div_out: 0.9, perimeter: 40, aspect_ratio: 0,
-          hard_sphere_nuclei: false,
-        },
-        cell_prop: {},
-        cell_types: {
-          control: {
-            N_init: 29, location: '', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
-            color: { r: 0, g: 128, b: 0 }, dur_G2: 0.5, dur_mitosis: 0.5,
-            k_apical_junction: 5, k_cytos: 5, max_cytoskeleton_length: 0,
-            run: 0, running_speed: 1, running_mode: 0,
-            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
-            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
-            stiffness_repulsion: 4, stiffness_straightness: 15,
-            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
-            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
-            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 2,
-            cytos_init: 1.5, basal_membrane_repulsion: 0.1, apical_junction_init: 0.333333333333333,
-          },
-          emt: {
-            N_init: 1, location: 'bottom', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
-            color: { r: 255, g: 0, b: 255 }, dur_G2: 0.5, dur_mitosis: 0.5,
-            k_apical_junction: 5, k_cytos: 5, max_cytoskeleton_length: 0,
-            run: 0, running_speed: 1, running_mode: 0,
-            stiffness_apical_apical: 5, stiffness_apical_apical_div: 10,
-            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
-            stiffness_repulsion: 4, stiffness_straightness: 15,
-            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
-            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
-            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 2,
-            cytos_init: 1.5, basal_membrane_repulsion: 0.1, apical_junction_init: 0.333333333333333,
-          },
-        },
-      }),
-    },
-    {
-      key: 'pseudo_stratified',
-      label: 'Pseudo Stratified',
-      create: (): EHTParams => ({
-        metadata: { model: 'EHT', version: '1.0.0' },
-        general: {
-          t_end: 80, dt: 0.05, random_seed: 0, full_circle: false,
-          w_init: 20, h_init: 2, mu: 0.5, n_substeps: 40, alg_dt: 0.01,
-          w_screen: 30, h_screen: 0, p_div_out: 0.9, perimeter: 40, aspect_ratio: 0,
-          hard_sphere_nuclei: false,
-        },
-        cell_prop: {},
-        cell_types: {
-          control: {
-            N_init: 29, location: '', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
-            color: { r: 0, g: 128, b: 0 }, dur_G2: 0.5, dur_mitosis: 0.5,
-            k_apical_junction: 0.01, k_cytos: 5, max_cytoskeleton_length: 0,
-            run: 0, running_speed: 1, running_mode: 0,
-            stiffness_apical_apical: 8, stiffness_apical_apical_div: 16,
-            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
-            stiffness_repulsion: 4, stiffness_straightness: 15,
-            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
-            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
-            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.6,
-            cytos_init: 1.5, basal_membrane_repulsion: 0.1, apical_junction_init: 0.333333333333333,
-          },
-          emt: {
-            N_init: 1, location: 'bottom', R_hard: 0.3, R_hard_div: 0.7, R_soft: 1,
-            color: { r: 255, g: 0, b: 255 }, dur_G2: 0.5, dur_mitosis: 0.5,
-            k_apical_junction: 0.01, k_cytos: 5, max_cytoskeleton_length: 0,
-            run: 0, running_speed: 1, running_mode: 0,
-            stiffness_apical_apical: 8, stiffness_apical_apical_div: 16,
-            stiffness_nuclei_apical: 2, stiffness_nuclei_basal: 2,
-            stiffness_repulsion: 4, stiffness_straightness: 15,
-            lifespan_start: 10, lifespan_end: 21, INM: 0, hetero: false,
-            events: { time_A_start: Infinity, time_A_end: Infinity, time_B_start: Infinity, time_B_end: Infinity, time_S_start: Infinity, time_S_end: Infinity, time_P_start: Infinity, time_P_end: Infinity },
-            diffusion: 0.1, basal_damping_ratio: 1, max_basal_junction_dist: 0.6,
-            cytos_init: 1.5, basal_membrane_repulsion: 0.1, apical_junction_init: 0.333333333333333,
-          },
-        },
-      }),
-    },
-  ];
+  {
+    key: 'default',
+    label: 'Default',
+    create: () => cloneDeep(DEFAULT_EHT_PARAMS),
+  },
+  ...loadedPresets.map(preset => ({
+    key: preset.key,
+    label: preset.label,
+    create: (): EHTParams => mergePresetWithDefaults(preset.params),
+  })),
+];
 
 // Legacy exports for backwards compatibility
 export const DEFAULT_PARAMS = DEFAULT_EHT_PARAMS;
