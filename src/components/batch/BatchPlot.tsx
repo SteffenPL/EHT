@@ -13,6 +13,8 @@ export interface BatchPlotProps {
   plotType: 'line' | 'line_ci' | 'histogram';
   width?: number;
   height?: number;
+  yMin?: number;
+  yMax?: number;
 }
 
 export function BatchPlot({
@@ -24,6 +26,8 @@ export function BatchPlot({
   plotType,
   width = 640,
   height = 400,
+  yMin,
+  yMax,
 }: BatchPlotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +40,12 @@ export function BatchPlot({
     let marks: any[];
     let colorScheme: any = { legend: true };
     let xConfig: any = { label: xAxisLabel };
-    let yConfig: any = { label: yAxisLabel };
+    let yConfig: any = {
+      label: yAxisLabel,
+      domain: yMin !== undefined || yMax !== undefined
+        ? [yMin ?? 0, yMax ?? undefined]
+        : undefined,
+    };
 
     if (plotType === 'histogram' && histogramData) {
       // Histogram plot - bars by cell group with error bars
@@ -68,7 +77,13 @@ export function BatchPlot({
       ];
 
       xConfig = { label: 'Cell Group' };
-      yConfig = { label: yAxisLabel, grid: true };
+      yConfig = {
+        label: yAxisLabel,
+        grid: true,
+        domain: yMin !== undefined || yMax !== undefined
+          ? [yMin ?? 0, yMax ?? undefined]
+          : [0, undefined], // Always start histogram y-axis from 0
+      };
       colorScheme = {
         color: { legend: true, label: 'Cell Group', type: 'ordinal' }
       };
@@ -162,7 +177,7 @@ export function BatchPlot({
     return () => {
       plot.remove();
     };
-  }, [data, dataWithCI, histogramData, xAxisLabel, yAxisLabel, plotType, width, height]);
+  }, [data, dataWithCI, histogramData, xAxisLabel, yAxisLabel, plotType, width, height, yMin, yMax]);
 
   return <div ref={containerRef} />;
 }

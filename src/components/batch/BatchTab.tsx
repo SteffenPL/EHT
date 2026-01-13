@@ -63,6 +63,8 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const [plotXAxis, setPlotXAxis] = useState<string>('time_h');
   const [plotYAxis, setPlotYAxis] = useState<string>('');
   const [plotType, setPlotType] = useState<'line_ci' | 'histogram'>('line_ci');
+  const [plotYMin, setPlotYMin] = useState<string>('');
+  const [plotYMax, setPlotYMax] = useState<string>('');
 
   // Parallel execution
   const [useParallel, setUseParallel] = useState(WorkerPool.isSupported());
@@ -689,6 +691,35 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4 max-w-xs">
+                <div className="space-y-1">
+                  <Label htmlFor="plot-y-min" className="text-sm">
+                    Y Min
+                  </Label>
+                  <input
+                    id="plot-y-min"
+                    type="number"
+                    value={plotYMin}
+                    onChange={(e) => setPlotYMin(e.target.value)}
+                    placeholder="Auto"
+                    className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="plot-y-max" className="text-sm">
+                    Y Max
+                  </Label>
+                  <input
+                    id="plot-y-max"
+                    type="number"
+                    value={plotYMax}
+                    onChange={(e) => setPlotYMax(e.target.value)}
+                    placeholder="Auto"
+                    className="w-full h-9 px-3 rounded-md border border-input bg-background text-sm"
+                  />
+                </div>
+              </div>
+
               {/* Plot display */}
               {plotType === 'histogram' && plotYAxis && histogramData.length > 0 && (
                 <div className="mt-4 border rounded-md p-4 bg-muted/30">
@@ -701,6 +732,8 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
                     plotType={plotType}
                     width={640}
                     height={400}
+                    yMin={plotYMin !== '' ? parseFloat(plotYMin) : undefined}
+                    yMax={plotYMax !== '' ? parseFloat(plotYMax) : undefined}
                   />
                 </div>
               )}
@@ -716,6 +749,8 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
                     plotType={plotType}
                     width={640}
                     height={400}
+                    yMin={plotYMin !== '' ? parseFloat(plotYMin) : undefined}
+                    yMax={plotYMax !== '' ? parseFloat(plotYMax) : undefined}
                   />
                 </div>
               )}
