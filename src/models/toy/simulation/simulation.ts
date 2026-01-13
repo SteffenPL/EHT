@@ -44,9 +44,9 @@ export function initializeToySimulation(
   }
 
   return {
-    time: 0,
+    t: 0,
     cells,
-    stepCount: 0,
+    step_count: 0,
     rngSeed: seed ?? String(params.general.random_seed)
   };
 }
@@ -187,9 +187,9 @@ export function stepToySimulation(
   }
 
   return {
-    time: state.time + dt,
+    t: state.t + dt,
     cells,
-    stepCount: state.stepCount + 1,
+    step_count: state.step_count + 1,
     rngSeed: state.rngSeed
   };
 }
@@ -205,7 +205,7 @@ export function runToySimulation(
   const rng = new SeededRandom(seed);
   let state = initializeToySimulation(params, rng, seed);
 
-  while (state.time < params.general.t_end) {
+  while (state.t < params.general.t_end) {
     state = stepToySimulation(state, params, rng);
     onStep?.(state);
   }

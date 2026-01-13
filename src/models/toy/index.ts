@@ -59,16 +59,16 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
     }
 
     return {
-      time: 0,
+      t: 0,
       cells,
-      stepCount: 0,
+      step_count: 0,
       rngSeed: effectiveSeed
     };
   },
 
   step: (state: ToySimulationState, dt: number, params: ToyParams): ToySimulationState => {
     // Create seeded RNG for this step (deterministic based on step count)
-    const rng = new SeededRandom(`${state.rngSeed}_step_${state.stepCount}`);
+    const rng = new SeededRandom(`${state.rngSeed}_step_${state.step_count}`);
 
     // In-place mutation for performance
     const {
@@ -170,8 +170,8 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
       }
     }
 
-    state.time += dt;
-    state.stepCount += 1;
+    state.t += dt;
+    state.step_count += 1;
     return state;
   },
 
@@ -180,7 +180,7 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
     // Flatten
     return state.cells.map(c => ({
       id: c.id,
-      t: state.time,
+      t: state.t,
       pos_x: c.position.x,
       pos_y: c.position.y,
       phase: c.phase,
@@ -191,7 +191,7 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
 
   loadSnapshot: (rows: Record<string, any>[], params: ToyParams): ToySimulationState => {
     if (rows.length === 0) {
-      return { time: 0, cells: [], stepCount: 0, rngSeed: String(params.general.random_seed) };
+      return { t: 0, cells: [], step_count: 0, rngSeed: String(params.general.random_seed) };
     }
     const t = Number(rows[0].t);
     const cells: ToyCell[] = rows.map(r => ({
@@ -203,9 +203,9 @@ export const ToyModel: SimulationModel<ToyParams, ToySimulationState> = {
       phaseTime: 0, // Lost on serialization
       timeSinceLastTumble: 0 // Lost on serialization
     }));
-    // Note: stepCount is estimated from time and dt, rngSeed from params
+    // Note: step_count is estimated from time and dt, rngSeed from params
     const estimatedStepCount = Math.round(t / params.general.dt);
-    return { time: t, cells, stepCount: estimatedStepCount, rngSeed: String(params.general.random_seed) };
+    return { t, cells, step_count: estimatedStepCount, rngSeed: String(params.general.random_seed) };
   },
 
   // Statistics

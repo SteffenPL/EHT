@@ -82,10 +82,6 @@ function runSimulation(request: WorkerRequest): BatchSnapshot[] {
     // But I used `state.t` in my implementation of `isComplete`.
     // I should probably ensure `SimulationEngine` can provide time.
 
-    // Check if the state has time 't'. Generic model interface doesn't enforce 't'.
-    // BUT BaseSimulationParams has 't_end'.
-    // If the model is compatible with BaseSimulationParams, it likely has 't'.
-    // Let's assume state has 't'.
     const state = engine.getState() as any;
     const t = state.t ?? 0;
 
