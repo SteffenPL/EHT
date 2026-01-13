@@ -89,13 +89,20 @@ export function FrameStatsPanel({ snapshot }: FrameStatsPanelProps) {
 
       {/* Content */}
       {isOpen && (
-        <div className="border-t overflow-x-auto">
-          <table className="w-full text-xs">
+        <div className="border-t overflow-x-auto max-h-72">
+          <table className="w-full text-xs border-collapse">
             {/* Table Header */}
-            <thead className="bg-muted/30 sticky top-0">
+            <thead className="bg-muted/30 sticky top-0 z-20">
               <tr>
-                {columns.map((col) => (
-                  <th key={col} className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">
+                {columns.map((col, colIndex) => (
+                  <th
+                    key={col}
+                    className={`px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap ${
+                      colIndex === 0
+                        ? 'sticky left-0 z-30 bg-muted/80 border-r border-border/50'
+                        : ''
+                    }`}
+                  >
                     <button
                       type="button"
                       onClick={() => handleSort(col)}
@@ -111,14 +118,21 @@ export function FrameStatsPanel({ snapshot }: FrameStatsPanelProps) {
             </thead>
 
             {/* Table Body */}
-            <tbody className="max-h-64">
+            <tbody>
               {sortedRows.map((row, rowIndex) => (
                 <tr
                   key={rowIndex}
                   className="border-t border-border/50 hover:bg-muted/20"
                 >
-                  {columns.map((col) => (
-                    <td key={col} className="px-2 py-1 font-mono whitespace-nowrap">
+                  {columns.map((col, colIndex) => (
+                    <td
+                      key={col}
+                      className={`px-2 py-1 font-mono whitespace-nowrap ${
+                        colIndex === 0
+                          ? 'sticky left-0 z-10 bg-card border-r border-border/50'
+                          : ''
+                      }`}
+                    >
                       {formatValue(row[col])}
                     </td>
                   ))}
