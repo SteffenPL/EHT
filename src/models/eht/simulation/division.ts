@@ -95,14 +95,32 @@ export function processCellDivisions(
           cell1
         );
 
-        // Offset positions slightly
+        // Offset positions slightly along tangent direction
         const offset = 0.005 * cell1.R_soft;
-        cell1.pos.x -= offset;
-        cell2.pos.x += offset;
-        cell1.A.x -= offset;
-        cell2.A.x += offset;
-        cell1.B.x -= offset;
-        cell2.B.x += offset;
+
+        // Get basal point and project onto curve to get normal
+        const B = Vector2.from(cell1.B);
+        const BProjected = state.basalGeometry.projectPoint(B);
+        const N = state.basalGeometry.getNormal(BProjected);
+
+        // Rotate normal 90° clockwise to get tangent: (nx, ny) -> (ny, -nx)
+        const T = new Vector2(N.y, -N.x);
+
+        // Offset along tangent direction
+        cell1.pos.x -= offset * T.x;
+        cell1.pos.y -= offset * T.y;
+        cell2.pos.x += offset * T.x;
+        cell2.pos.y += offset * T.y;
+
+        cell1.A.x -= offset * T.x;
+        cell1.A.y -= offset * T.y;
+        cell2.A.x += offset * T.x;
+        cell2.A.y += offset * T.y;
+
+        cell1.B.x -= offset * T.x;
+        cell1.B.y -= offset * T.y;
+        cell2.B.x += offset * T.x;
+        cell2.B.y += offset * T.y;
 
         // Add the new cell
         const newCellIndex = state.cells.length;
