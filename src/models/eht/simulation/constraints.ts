@@ -92,7 +92,7 @@ export function projectBasalOrderingConstraints(
       // We want projI < projJ, so we need to move bi in -tij direction
       // and bj in +tij direction
       const overlap = projI - projJ;
-      const correction = overlap / 2 + 1e-6; // Small epsilon to ensure strict inequality
+      const correction = overlap / 2;
 
       ci.B.x -= correction * Tij.x;
       ci.B.y -= correction * Tij.y;
