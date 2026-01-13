@@ -96,7 +96,7 @@ export function processCellDivisions(
         );
 
         // Offset positions slightly
-        const offset = 0.05 * cell1.R_soft;
+        const offset = 0.005 * cell1.R_soft;
         cell1.pos.x -= offset;
         cell2.pos.x += offset;
         cell1.A.x -= offset;

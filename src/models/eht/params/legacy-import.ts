@@ -138,6 +138,54 @@ function parseInitDistr(initDistr: string): Record<string, number> {
 }
 
 /**
+ * Parse INM event sim_time_start to determine INM value.
+ * Format can be:
+ * - "Inf" → INM = 0
+ * - "0" or 0 → INM = 1
+ * - "(a, b, q% Inf)" → INM = 1 - q/100
+ */
+function parseINMFromEventStart(simTimeStart: string | number): number {
+  if (typeof simTimeStart === 'number') {
+    if (!isFinite(simTimeStart)) return 0; // Inf → INM = 0
+    if (simTimeStart === 0) return 1; // 0 → INM = 1
+    return 1; // Any other finite number → INM = 1
+  }
+
+  const str = String(simTimeStart).trim();
+
+  // Check for Inf
+  if (str.toLowerCase() === 'inf' || str.toLowerCase() === 'infinity') {
+    return 0;
+  }
+
+  // Check for simple 0
+  if (str === '0') {
+    return 1;
+  }
+
+  // Check for format "(a, b, q% Inf)"
+  // Remove parentheses and split by comma
+  if (str.startsWith('(') && str.endsWith(')')) {
+    const inner = str.slice(1, -1);
+    const parts = inner.split(',').map(s => s.trim());
+
+    // Look for the part with "% Inf"
+    for (const part of parts) {
+      const match = part.match(/^([\d.]+)%\s*Inf$/i);
+      if (match) {
+        const q = parseFloat(match[1]);
+        if (!isNaN(q)) {
+          return 1 - q / 100;
+        }
+      }
+    }
+  }
+
+  // Default to INM = 1 for any other format
+  return 1;
+}
+
+/**
  * Import legacy XLSX data and convert to EHTParams.
  */
 export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
@@ -277,7 +325,7 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
       ),
       lifespan_start: parseNumber(legacyType["life_span.min"], 5.5),
       lifespan_end: parseNumber(legacyType["life_span.max"], 6.5),
-      INM: 0, // Default
+      INM: 1, // Default (will be updated from cell_events if INM event exists)
       hetero: false, // Will be set based on events
       events: {
         time_A_start: Infinity,
@@ -292,7 +340,7 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
       // Per-cell-type properties (use value from XLSX or global value or default if zero/missing)
       diffusion: parseNumber(legacyType["diffusion"], 0) || DEFAULT_CONTROL_CELL.diffusion,
       basal_damping_ratio: parseNumber(legacyType["basal_damping_ratio"], 0) || DEFAULT_CONTROL_CELL.basal_damping_ratio,
-      max_basal_junction_dist: parseNumber(legacyType["max_basal_junction_dist"], 0) || globalMaxBasalJunctionDist || DEFAULT_CONTROL_CELL.max_basal_junction_dist,
+      max_basal_junction_dist: 2*parseNumber(legacyType["max_basal_junction_dist"], 0.5) || (globalMaxBasalJunctionDist ? 2*globalMaxBasalJunctionDist : DEFAULT_CONTROL_CELL.max_basal_junction_dist),
       cytos_init: parseNumber(legacyType["cytoskeleton_init"], DEFAULT_CONTROL_CELL.cytos_init),
       basal_membrane_repulsion: parseNumber(legacyType["basal_repulsion"], DEFAULT_CONTROL_CELL.basal_membrane_repulsion),
       apical_junction_init: parseNumber(legacyType["apical_junction_init"], 0) || globalApicalJunctionInit || DEFAULT_CONTROL_CELL.apical_junction_init,
@@ -300,6 +348,7 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
 
     params.cell_types[currentTypeName] = cellType;
   }
+
 
   // === Process Special Cell Events ===
   if (data.special_cell_events) {
@@ -329,7 +378,7 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
     }
   }
 
-  // === Process Cell Events (for loss_polarity / stiffness_straightness) ===
+  // === Process Cell Events (for loss_polarity / stiffness_straightness and INM) ===
   if (data.cell_events) {
     for (const event of data.cell_events) {
       const typeName = event.cell_type === 'exp' ? 'emt' : event.cell_type;
@@ -339,6 +388,11 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
       if (event.name === 'loss_polarity' && event.symbol === 'stiffness_straightness') {
         cellType.events.time_S_start = parseNumber(event.sim_time_start, Infinity);
         cellType.events.time_S_end = parseNumber(event.sim_time_end, Infinity);
+      }
+
+      // Parse INM event to set INM value
+      if (event.name === 'INM') {
+        cellType.INM = parseINMFromEventStart(event.sim_time_start);
       }
     }
   }
