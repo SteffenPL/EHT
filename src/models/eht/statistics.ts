@@ -24,23 +24,21 @@ interface CellMetrics {
   ax: number;    // Distance from X to projection a
   bx: number;    // Distance from X to projection b (also called xb)
   x: number;     // Position on b→a scale (0 at b, 1 at a)
-  below_basal: boolean;      // x < 0
-  above_apical: boolean;     // x > 1
-  below_neighbours: boolean; // bx < all neighbours' bx within 10*R_soft
+  below_basal: boolean;         // x < 0
+  above_apical: boolean;        // x > 1
+  below_control_cells: boolean; // bx < lowest control cell's bx
 }
 
 /**
  * Compute per-cell metrics for all cells.
  */
-function computeCellMetrics(state: EHTSimulationState, params: EHTParams): CellMetrics[] {
+function computeCellMetrics(state: EHTSimulationState, _params: EHTParams): CellMetrics[] {
   const cells = state.cells;
   const metrics: CellMetrics[] = [];
 
-  // Get minimum R_soft from all cell types
-  const R_soft = Math.min(...Object.values(params.cell_types).map(ct => ct.R_soft));
-  const neighbourRadius = 10 * R_soft;
+  // First pass: compute basic metrics for each cell and track lowest control cell bx
+  let lowestControlBx = Infinity;
 
-  // First pass: compute basic metrics for each cell
   for (const cell of cells) {
     const X = Vector2.from(cell.pos);
     const A = Vector2.from(cell.A);
@@ -55,6 +53,11 @@ function computeCellMetrics(state: EHTSimulationState, params: EHTParams): CellM
     const BX = B.dist(X);
     const ax = X.dist(a);
     const bx = X.dist(b);
+
+    // Track lowest control cell bx
+    if (cell.typeIndex === 'control' && bx < lowestControlBx) {
+      lowestControlBx = bx;
+    }
 
     // Compute x: position on b→a scale
     // If b and a are the same, x is undefined, set to 0.5
@@ -83,32 +86,15 @@ function computeCellMetrics(state: EHTSimulationState, params: EHTParams): CellM
       x,
       below_basal,
       above_apical,
-      below_neighbours: false, // Computed in second pass
+      below_control_cells: false, // Computed in second pass
     });
   }
 
-  // Second pass: compute below_neighbours
-  for (let i = 0; i < metrics.length; i++) {
-    const mi = metrics[i];
-    let isBelow = true;
-
-    // Check all cells within neighbourRadius
-    for (let j = 0; j < metrics.length; j++) {
-      if (i === j) continue;
-
-      const mj = metrics[j];
-      const dist = mi.X.dist(mj.X);
-
-      if (dist <= neighbourRadius) {
-        // If any neighbour has bx <= this cell's bx, then this cell is not below all
-        if (mj.bx <= mi.bx) {
-          isBelow = false;
-          break;
-        }
-      }
-    }
-
-    mi.below_neighbours = isBelow && metrics.length > 1; // Only true if there are neighbours
+  // Second pass: compute below_control_cells
+  // A cell is below_control_cells if its bx < lowest control cell's bx
+  const hasControlCells = lowestControlBx < Infinity;
+  for (const m of metrics) {
+    m.below_control_cells = hasControlCells && m.bx < lowestControlBx;
   }
 
   return metrics;
@@ -172,7 +158,7 @@ function aggregateMetrics(metrics: CellMetrics[]): Record<string, number> {
       x: 0,
       below_basal: 0,
       above_apical: 0,
-      below_neighbours: 0,
+      below_control_cells: 0,
     };
   }
 
@@ -188,7 +174,7 @@ function aggregateMetrics(metrics: CellMetrics[]): Record<string, number> {
     x: mean(metrics.map(m => m.x)),
     below_basal: fraction(metrics.map(m => m.below_basal)),
     above_apical: fraction(metrics.map(m => m.above_apical)),
-    below_neighbours: fraction(metrics.map(m => m.below_neighbours)),
+    below_control_cells: fraction(metrics.map(m => m.below_control_cells)),
   };
 }
 
@@ -265,7 +251,7 @@ export function exportCellMetrics(
     x: m.x,
     below_basal: m.below_basal ? 1 : 0,
     above_apical: m.above_apical ? 1 : 0,
-    below_neighbours: m.below_neighbours ? 1 : 0,
+    below_control_cells: m.below_control_cells ? 1 : 0,
   }));
 }
 
@@ -286,7 +272,7 @@ export function generateEHTStatistics(params: EHTParams): StatisticDefinition<EH
     { id: 'x', label: 'x Position', description: 'Position on basal-apical scale (0-1)' },
     { id: 'below_basal', label: 'Below Basal', description: 'Fraction of cells below basal layer' },
     { id: 'above_apical', label: 'Above Apical', description: 'Fraction of cells above apical layer' },
-    { id: 'below_neighbours', label: 'Below Neighbours', description: 'Fraction of cells below all neighbours' },
+    { id: 'below_control_cells', label: 'Below Control Cells', description: 'Fraction of cells below the lowest control cell' },
   ];
 
   for (const group of groups) {
