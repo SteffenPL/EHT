@@ -21,7 +21,8 @@ src/
 
 1. **Models are self-contained** - Each model in `src/models/<name>/` has its own types, params, simulation logic, statistics, and rendering
 2. **Minimal shared code** - Only registry, math utilities, and batch infrastructure shared between models
-3. **Core has no rendering deps** - Can run headless
+3. **Core and webpage has no rendering deps** - Can run headless
+
 
 ## Workflow
 
@@ -45,6 +46,20 @@ npm run cli -- run -c params.toml -o out.csv   # With config and output
 npm run cli -- batch -c batch.toml --stats all # Batch with all stats
 npm run cli -- stats                            # List available statistics
 ```
+
+## Documentation Pages
+
+Documentation is in `src/docs/` as markdown files with KaTeX math. Each doc page must be **fully static** - use direct imports, no dynamic loading:
+
+```tsx
+// Static page component (correct)
+import content from '../../docs/EHT/model.md?raw';
+export function EHTModelDoc() {
+  return <DocPage content={content} />;
+}
+```
+
+Routes: `/docs/eht/model`, `/docs/eht/statistics`
 
 ## Development
 
