@@ -70,7 +70,7 @@ export function BatchPlot({
       xConfig = { label: 'Cell Group' };
       yConfig = { label: yAxisLabel, grid: true };
       colorScheme = {
-        color: { legend: true, label: 'Cell Group' }
+        color: { legend: true, label: 'Cell Group', type: 'ordinal' }
       };
     } else if (plotType === 'line_ci' && dataWithCI) {
       // Line plot with confidence interval - separate lines for each cell_group
@@ -101,7 +101,7 @@ export function BatchPlot({
 
       // Use categorical color scheme
       colorScheme = {
-        color: { legend: true, label: 'Cell Group' }
+        color: { legend: true, label: 'Cell Group', type: 'ordinal' }
       };
     } else {
       // Simple line plot - check if we have cell_group data
@@ -123,7 +123,7 @@ export function BatchPlot({
           }),
         ];
         colorScheme = {
-          color: { legend: true, label: 'Cell Group' }
+          color: { legend: true, label: 'Cell Group', type: 'ordinal' }
         };
       } else {
         // Fallback to single color
