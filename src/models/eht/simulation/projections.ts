@@ -43,45 +43,35 @@ function getBasalGeometry(state: EHTSimulationState) {
 
 /**
  * Project a point onto the apical line strip.
- * The apical line strip is formed by connecting all apical points A_i in order.
+ * The apical line strip is formed by the segments defined by apical links.
+ * Only apical points that are part of a link belong to the apical strip.
  * Returns the closest point on any segment of the line strip.
  */
 export function projectOntoApicalStrip(point: Vector2, state: EHTSimulationState): Vector2 {
-  const cells = state.cells;
-  if (cells.length === 0) {
+  const { cells, ap_links } = state;
+
+  if (ap_links.length === 0) {
     return point;
   }
 
-  if (cells.length === 1) {
-    return Vector2.from(cells[0].A);
-  }
-
-  let closestPoint = Vector2.from(cells[0].A);
+  // Initialize with the first link's segment
+  const firstLink = ap_links[0];
+  const A_l = Vector2.from(cells[firstLink.l].A);
+  const A_r = Vector2.from(cells[firstLink.r].A);
+  let closestPoint = projectOntoSegment(point, A_l, A_r);
   let minDistSq = point.distSq(closestPoint);
 
-  // Check all segments in the apical line strip
-  for (let i = 0; i < cells.length - 1; i++) {
-    const A_i = Vector2.from(cells[i].A);
-    const A_next = Vector2.from(cells[i + 1].A);
+  // Check all segments defined by apical links
+  for (let i = 1; i < ap_links.length; i++) {
+    const link = ap_links[i];
+    const A_left = Vector2.from(cells[link.l].A);
+    const A_right = Vector2.from(cells[link.r].A);
 
-    const proj = projectOntoSegment(point, A_i, A_next);
+    const proj = projectOntoSegment(point, A_left, A_right);
     const distSq = point.distSq(proj);
 
     if (distSq < minDistSq) {
       minDistSq = distSq;
-      closestPoint = proj;
-    }
-  }
-
-  // For closed curves, also check the closing segment
-  if (cells.length > 2) {
-    const A_last = Vector2.from(cells[cells.length - 1].A);
-    const A_first = Vector2.from(cells[0].A);
-
-    const proj = projectOntoSegment(point, A_last, A_first);
-    const distSq = point.distSq(proj);
-
-    if (distSq < minDistSq) {
       closestPoint = proj;
     }
   }
