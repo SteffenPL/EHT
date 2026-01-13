@@ -13,6 +13,7 @@ import { ModelProvider, useModel, MessagesProvider } from './contexts';
 import './models';
 
 // Static doc imports
+import docsIndex from './docs/index.md?raw';
 import ehtModel from './docs/EHT/model.md?raw';
 import ehtStatistics from './docs/EHT/statistics.md?raw';
 
@@ -77,6 +78,7 @@ function App() {
         <MessagesProvider>
           <Routes>
             <Route path="/" element={<AppContent />} />
+            <Route path="/docs" element={<MarkdownPage content={docsIndex} />} />
             <Route path="/docs/eht/model" element={<MarkdownPage content={ehtModel} />} />
             <Route path="/docs/eht/statistics" element={<MarkdownPage content={ehtStatistics} />} />
           </Routes>
