@@ -4,6 +4,7 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
+import { createBasalGeometry } from '@/core/math';
 import type { EHTSimulationState } from '../types';
 
 /**
@@ -21,6 +22,23 @@ function projectOntoSegment(point: Vector2, p1: Vector2, p2: Vector2): Vector2 {
 
   const t = Math.max(0, Math.min(1, toPoint.dot(segment) / segmentLengthSq));
   return p1.add(segment.scale(t));
+}
+
+/**
+ * Get a working BasalGeometry instance from state.
+ * Handles cases where state was cloned (structuredClone loses class methods).
+ */
+function getBasalGeometry(state: EHTSimulationState) {
+  // If basalGeometry has working methods, use it directly
+  if (typeof state.basalGeometry?.projectPoint === 'function') {
+    return state.basalGeometry;
+  }
+
+  // Otherwise, recreate from curvatures stored in geometry or basalGeometry
+  const curvature_1 = state.geometry?.curvature_1 ?? state.basalGeometry?.curvature_1 ?? 0;
+  const curvature_2 = state.geometry?.curvature_2 ?? state.basalGeometry?.curvature_2 ?? 0;
+
+  return createBasalGeometry(curvature_1, curvature_2, 360);
 }
 
 /**
@@ -73,8 +91,9 @@ export function projectOntoApicalStrip(point: Vector2, state: EHTSimulationState
 
 /**
  * Project a point onto the basal curve using the basalGeometry object.
- * This is a convenience wrapper around the existing basalGeometry.projectPoint method.
+ * Handles cases where state was cloned and basalGeometry lost its methods.
  */
 export function projectOntoBasalCurve(point: Vector2, state: EHTSimulationState): Vector2 {
-  return state.basalGeometry.projectPoint(point);
+  const geometry = getBasalGeometry(state);
+  return geometry.projectPoint(point);
 }

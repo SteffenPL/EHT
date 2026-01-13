@@ -28,6 +28,8 @@ export interface SimulationCanvasProps {
   aspectRatio?: number;
   className?: string;
   style?: React.CSSProperties;
+  /** Model-specific render options */
+  renderOptions?: Record<string, boolean>;
 }
 
 export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvasProps>(({
@@ -37,6 +39,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   aspectRatio = 1,
   className,
   style,
+  renderOptions = {},
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -221,6 +224,17 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
       }
     }
   }, [currentModel, isReady, state, params]);
+
+  // Update render options when they change
+  useEffect(() => {
+    if (rendererRef.current && isReady) {
+      rendererRef.current.setRenderOptions(renderOptions);
+      // Re-render with new options
+      if (state) {
+        rendererRef.current.render(state);
+      }
+    }
+  }, [renderOptions, isReady, state]);
 
   return (
     <div

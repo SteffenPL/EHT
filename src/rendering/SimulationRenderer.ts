@@ -14,7 +14,6 @@ export interface RendererConfig {
   width: number;
   height: number;
   isDark?: boolean;
-  showScaleBar?: boolean;
 }
 
 /**
@@ -30,7 +29,7 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
   private uiContainer: Container;
 
   private isDark: boolean;
-  private showScaleBar: boolean;
+  private renderOptions: Record<string, boolean> = {};
 
   private model: SimulationModel<Params, State> | null = null;
   private params: Params | null = null;
@@ -42,7 +41,6 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
 
   constructor(config: RendererConfig) {
     this.isDark = config.isDark ?? false;
-    this.showScaleBar = config.showScaleBar ?? true;
 
     // Create Pixi application
     this.app = new Application();
@@ -110,6 +108,13 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
       const backgroundColor = this.model.renderer.getBackgroundColor(isDark);
       this.app.renderer.background.color = backgroundColor;
     }
+  }
+
+  /**
+   * Set render options (model-specific toggles like showCellIds, showScaleBar).
+   */
+  setRenderOptions(options: Record<string, boolean>): void {
+    this.renderOptions = options;
   }
 
   /**
@@ -181,21 +186,27 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
     this.overlayContainer.addChild(overlayGraphics);
 
     // Create render context
+    const canvasWidth = this.app.renderer?.width ?? 800;
+    const canvasHeight = this.app.renderer?.height ?? 600;
     const ctx: ModelRenderContext = {
       graphics: {
         cells: cellsGraphics,
         links: linksGraphics,
         overlay: overlayGraphics,
       },
+      uiContainer: this.uiContainer,
       isDark: this.isDark,
       scale: this.scale,
+      viewportCenter: { x: this.centerX, y: this.centerY },
+      canvasSize: { width: canvasWidth, height: canvasHeight },
+      renderOptions: this.renderOptions,
     };
 
     // Delegate rendering to the model
     this.model.renderer.render(ctx, state, this.params);
 
     // Draw UI overlays (in screen space)
-    if (this.showScaleBar) {
+    if (this.renderOptions.showScaleBar !== false) {
       this.drawScaleBar();
     }
   }

@@ -3,7 +3,7 @@
  * Handles all EHT-specific rendering: cells with apical/basal points, links, and curved membrane.
  */
 
-import { Graphics } from 'pixi.js';
+import { Graphics, Text, TextStyle } from 'pixi.js';
 import type { ModelRenderContext, BoundingBox } from '@/core/registry/types';
 import type { ModelRenderer } from '@/core/interfaces/renderer';
 import type { EHTSimulationState, GeometryState } from './types';
@@ -149,6 +149,32 @@ function drawBasalLinks(graphics: Graphics, state: EHTSimulationState, theme: EH
 }
 
 /**
+ * Draw cell IDs at the nucleus center of each cell.
+ * Text is rendered in screen space (uiContainer) for crisp display.
+ */
+function drawCellIds(ctx: ModelRenderContext, state: EHTSimulationState): void {
+  const style = new TextStyle({
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fill: ctx.isDark ? 0xffffff : 0x000000,
+    fontWeight: 'bold',
+  });
+
+  const { width: canvasWidth, height: canvasHeight } = ctx.canvasSize;
+  const { x: centerX, y: centerY } = ctx.viewportCenter;
+
+  for (const cell of state.cells) {
+    const text = new Text({ text: cell.id.toString(), style });
+    text.anchor.set(0.5, 0.5);
+    // Transform from simulation coordinates to screen coordinates
+    const screenX = canvasWidth / 2 + (cell.pos.x - centerX) * ctx.scale;
+    const screenY = canvasHeight / 2 - (cell.pos.y - centerY) * ctx.scale;
+    text.position.set(screenX, screenY);
+    ctx.uiContainer.addChild(text);
+  }
+}
+
+/**
  * EHT Model Renderer
  */
 export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
@@ -215,6 +241,11 @@ export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
 
     // Draw cells
     drawCells(cellsGraphics, state, params, theme);
+
+    // Draw cell IDs if enabled
+    if (ctx.renderOptions?.showCellIds) {
+      drawCellIds(ctx, state);
+    }
   },
 
   getBackgroundColor(isDark: boolean): number {

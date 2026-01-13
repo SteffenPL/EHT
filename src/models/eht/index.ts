@@ -11,7 +11,7 @@ import { createInitialEHTState } from './types';
 import type { EHTParams } from './params/types';
 import { ehtParamsSchema } from './params/schema';
 import { DEFAULT_EHT_PARAMS, EHT_PRESETS } from './params/defaults';
-import { computeEHTStatistics, generateEHTStatistics } from './statistics';
+import { computeEHTStatistics, generateEHTStatistics, exportCellMetrics } from './statistics';
 import { EHT_BATCH_PARAMETERS, generateEHTBatchParameters } from './ui/availableParams';
 import { ehtUI } from './ui';
 import { initializeEHTSimulation } from './simulation/init';
@@ -19,6 +19,7 @@ import { performTimestep } from './simulation/step';
 import { ehtRenderer } from './renderer';
 import { getSnapshot, loadSnapshot } from './output';
 import { SeededRandom } from '@/core/math/random';
+import { EHTRenderOptionsPanel, defaultEHTRenderOptions } from './renderOptions';
 
 /**
  * EHT Model Definition
@@ -58,6 +59,7 @@ export const EHTModel: SimulationModel<EHTParams, EHTSimulationState> = {
   // I/O
   getSnapshot: (state: EHTSimulationState) => getSnapshot(state),
   loadSnapshot: (rows: Record<string, any>[], params: EHTParams) => loadSnapshot(rows, params),
+  exportCellMetrics: (state: EHTSimulationState, params: EHTParams) => exportCellMetrics(state, params),
 
   // Statistics
   computeStats: (state: EHTSimulationState, params?: EHTParams) => computeEHTStatistics(state, params),
@@ -73,6 +75,12 @@ export const EHTModel: SimulationModel<EHTParams, EHTSimulationState> = {
 
   // Model-specific UI components
   ui: ehtUI,
+
+  // Model-specific render options
+  renderOptions: {
+    defaultOptions: defaultEHTRenderOptions,
+    RenderOptionsPanel: EHTRenderOptionsPanel,
+  },
 };
 
 // Re-export specific parts if needed

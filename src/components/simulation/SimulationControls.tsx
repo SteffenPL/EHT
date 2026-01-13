@@ -34,6 +34,8 @@ export interface SimulationControlsProps {
   onSaveMovie?: () => void;
   onExportCSV?: () => void;
   isRecording?: boolean;
+  /** Model-specific render options panel (optional) */
+  renderOptionsPanel?: React.ReactNode;
 }
 
 export function SimulationControls({
@@ -53,6 +55,7 @@ export function SimulationControls({
   onSaveMovie,
   onExportCSV,
   isRecording = false,
+  renderOptionsPanel,
 }: SimulationControlsProps) {
   // Calculate percentage of simulation that has been computed (for visual feedback)
   const computedPercent = endTime > 0 ? (maxSimulatedTime / endTime) * 100 : 0;
@@ -130,6 +133,9 @@ export function SimulationControls({
           className="cursor-pointer"
         />
       </div>
+
+      {/* Model-specific render options */}
+      {renderOptionsPanel}
 
       {/* Export Actions */}
       <div className="flex gap-2 flex-wrap items-center pt-1 border-t border-border/40">

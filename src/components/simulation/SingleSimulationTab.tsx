@@ -1,12 +1,13 @@
 /**
  * Single simulation tab - combines canvas, controls, params, and stats.
  */
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useSimulation, type ParamChangeBehavior } from '@/hooks';
 import { useModel } from '@/contexts';
 import { SimulationCanvas, type SimulationCanvasRef } from './SimulationCanvas';
 import { SimulationControls } from './SimulationControls';
 import { SimulationTerminal } from './SimulationTerminal';
+import { FrameStatsPanel } from './FrameStatsPanel';
 import { Card } from '../ui/card';
 
 /**
@@ -25,6 +26,23 @@ function SingleSimulationTabInner() {
   const [isRecording, setIsRecording] = useState(false);
   const { currentModel, currentParams } = useModel();
   const canvasRef = useRef<SimulationCanvasRef>(null);
+
+  // Model-specific render options
+  const renderOptionsConfig = currentModel.renderOptions;
+  const [renderOptions, setRenderOptions] = useState<Record<string, boolean>>(
+    () => renderOptionsConfig?.defaultOptions ?? {}
+  );
+
+  // Reset render options when model changes (component remounts via key, so this runs once)
+  useEffect(() => {
+    setRenderOptions(renderOptionsConfig?.defaultOptions ?? {});
+  }, [renderOptionsConfig]);
+
+  // Build the render options panel if the model provides one
+  const RenderOptionsPanel = renderOptionsConfig?.RenderOptionsPanel;
+  const renderOptionsPanel = RenderOptionsPanel ? (
+    <RenderOptionsPanel options={renderOptions} onChange={setRenderOptions} />
+  ) : null;
 
   const {
     state,
@@ -93,6 +111,40 @@ function SingleSimulationTabInner() {
     URL.revokeObjectURL(link.href);
   }, [state, currentModel, time]);
 
+  // Compute per-cell snapshot data for frame display, merged with computed metrics
+  const frameSnapshot = useMemo(() => {
+    if (!state) return [];
+
+    const snapshot = currentModel.getSnapshot(state);
+
+    // If model provides exportCellMetrics, merge computed metrics into snapshot
+    if (currentModel.exportCellMetrics) {
+      const metrics = currentModel.exportCellMetrics(state, currentParams);
+
+      // Merge metrics into snapshot rows (by index, assuming same order)
+      return snapshot.map((row, idx) => {
+        const metricRow = metrics[idx];
+        if (!metricRow) return row;
+
+        // Get metric keys (excluding cell_id and cell_type which are already in snapshot)
+        const metricKeys = Object.keys(metricRow).filter(
+          k => k !== 'cell_id' && k !== 'cell_type'
+        );
+
+        // Build merged row: id, typeIndex, then metrics, then rest of snapshot
+        const { id, typeIndex, ...restSnapshot } = row as Record<string, unknown>;
+        const metricValues: Record<string, unknown> = {};
+        for (const k of metricKeys) {
+          metricValues[k] = metricRow[k];
+        }
+
+        return { id, typeIndex, ...metricValues, ...restSnapshot };
+      });
+    }
+
+    return snapshot;
+  }, [state, currentModel, currentParams]);
+
   return (
     <div className="space-y-4">
       {/* Canvas */}
@@ -102,6 +154,7 @@ function SingleSimulationTabInner() {
           state={state}
           params={currentParams}
           minHeight={350}
+          renderOptions={renderOptions}
         />
       </Card>
 
@@ -123,10 +176,14 @@ function SingleSimulationTabInner() {
         onSaveMovie={handleSaveMovie}
         onExportCSV={handleExportCSV}
         isRecording={isRecording}
+        renderOptionsPanel={renderOptionsPanel}
       />
 
       {/* Terminal */}
       <SimulationTerminal />
+
+      {/* Frame Data Table */}
+      <FrameStatsPanel snapshot={frameSnapshot} />
     </div>
   );
 }

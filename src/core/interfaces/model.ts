@@ -56,6 +56,26 @@ export interface ModelUI<Params = unknown> {
 }
 
 /**
+ * Props for model-specific render options panel component.
+ */
+export interface RenderOptionsPanelProps<RenderOptions = Record<string, boolean>> {
+    options: RenderOptions;
+    onChange: (options: RenderOptions) => void;
+}
+
+/**
+ * Model-specific render options configuration.
+ * Each model can define its own render options with defaults and a UI component.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export interface ModelRenderOptionsConfig<RenderOptions = any> {
+    /** Default render options for this model */
+    defaultOptions: RenderOptions;
+    /** React component for the render options panel (collapsible) */
+    RenderOptionsPanel: ComponentType<RenderOptionsPanelProps<RenderOptions>>;
+}
+
+/**
  * Generic interface for a simulation model.
  *
  * @template Params The type of the simulation parameters.
@@ -105,6 +125,13 @@ export interface SimulationModel<Params = any, State = any> {
      */
     loadSnapshot(rows: SnapshotRow[], params: Params): State;
 
+    /**
+     * Export per-cell computed metrics (optional).
+     * Returns additional computed columns for each cell that aren't in the raw snapshot.
+     * Metrics are keyed by cell index and merged with snapshot data for display.
+     */
+    exportCellMetrics?(state: State, params: Params): SnapshotRow[];
+
     // Statistics
     /**
      * Compute instantaneous statistics for the current state.
@@ -122,4 +149,7 @@ export interface SimulationModel<Params = any, State = any> {
 
     // Rendering
     renderer: ModelRenderer<Params, State>;
+
+    /** Optional model-specific render options configuration */
+    renderOptions?: ModelRenderOptionsConfig;
 }
