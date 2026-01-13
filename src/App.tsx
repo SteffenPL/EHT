@@ -1,14 +1,20 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppLayout } from './components/layout';
 import { SingleSimulationTab } from './components/simulation';
 import { BatchTab } from './components/batch';
 import { ParameterConfigView } from './components/params';
+import { MarkdownPage } from './components/MarkdownPage';
 import { DEFAULT_TIME_SAMPLES, decodeParamsFromUrl, clearUrlParams } from './core/params';
 import type { SimulationConfig } from './core/params';
 import { ModelProvider, useModel, MessagesProvider } from './contexts';
 
 // Import models to register them
 import './models';
+
+// Static doc imports
+import ehtModel from './docs/EHT/model.md?raw';
+import ehtStatistics from './docs/EHT/statistics.md?raw';
 
 function AppContent() {
   const { currentParams, setParams, setModel } = useModel();
@@ -66,11 +72,17 @@ function AppContent() {
 
 function App() {
   return (
-    <ModelProvider>
-      <MessagesProvider>
-        <AppContent />
-      </MessagesProvider>
-    </ModelProvider>
+    <BrowserRouter>
+      <ModelProvider>
+        <MessagesProvider>
+          <Routes>
+            <Route path="/" element={<AppContent />} />
+            <Route path="/docs/eht/model" element={<MarkdownPage content={ehtModel} />} />
+            <Route path="/docs/eht/statistics" element={<MarkdownPage content={ehtStatistics} />} />
+          </Routes>
+        </MessagesProvider>
+      </ModelProvider>
+    </BrowserRouter>
   );
 }
 
