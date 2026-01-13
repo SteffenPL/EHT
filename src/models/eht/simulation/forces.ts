@@ -44,9 +44,6 @@ export function calcRepulsionForces(
     for (let j = 0; j < i; j++) {
       const cj = cells[j];
 
-      // Quick distance check (optimization)
-      if (Math.abs(ci.pos.x - cj.pos.x) >= 2) continue;
-
       const cjType = getCellType(params, cj);
       const cjPos = Vector2.from(cj.pos);
 
