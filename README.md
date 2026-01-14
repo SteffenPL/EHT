@@ -12,8 +12,9 @@
 - Fixed statistics, namely: Compute now below_control_cells instead of below_neighbours
 
 - Fixed asymmetry issue where basal points wrongly experienced a force on the x-axis instead of along the tangent of the basal curve.
+  <img width="342" height="316" alt="image" src="https://github.com/user-attachments/assets/499624e5-0620-4bc3-bb5e-a4a949331db3" />
+
 
 - Added documentation under `/docs/`
 
-
-- Internal: Changed
+- Internal: Changed deplayment method.
