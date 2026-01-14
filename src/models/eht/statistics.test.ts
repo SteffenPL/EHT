@@ -84,8 +84,8 @@ function createTestParams(cellTypeKeys: string[]): EHTParams {
   return params;
 }
 
-describe('EHT Statistics - Cell Type Pairs', () => {
-  it('should compute statistics for 2 cell types and their pair', () => {
+describe('EHT Statistics - Cell Type Groups', () => {
+  it('should compute statistics for 2 cell types without pairs', () => {
     const cellTypes = ['control', 'emt'];
     const state = createTestState(cellTypes);
     const params = createTestParams(cellTypes);
@@ -100,17 +100,16 @@ describe('EHT Statistics - Cell Type Pairs', () => {
     expect(statKeys).toContain('ab_distance_control');
     expect(statKeys).toContain('ab_distance_emt');
 
-    // Check for pair
-    expect(statKeys).toContain('ab_distance_control+emt');
+    // Verify pairs are NOT computed
+    expect(statKeys).not.toContain('ab_distance_control+emt');
 
     // Verify non-zero values
     expect(stats['ab_distance_all']).toBeGreaterThan(0);
     expect(stats['ab_distance_control']).toBeGreaterThan(0);
     expect(stats['ab_distance_emt']).toBeGreaterThan(0);
-    expect(stats['ab_distance_control+emt']).toBeGreaterThan(0);
   });
 
-  it('should compute statistics for 3 cell types and all 3 pairs', () => {
+  it('should compute statistics for 3 cell types without pairs', () => {
     const cellTypes = ['control', 'emt', 'counter_control'];
     const state = createTestState(cellTypes);
     const params = createTestParams(cellTypes);
@@ -126,19 +125,16 @@ describe('EHT Statistics - Cell Type Pairs', () => {
     expect(statKeys).toContain('ab_distance_emt');
     expect(statKeys).toContain('ab_distance_counter_control');
 
-    // Check for all 3 pairs
-    expect(statKeys).toContain('ab_distance_control+emt');
-    expect(statKeys).toContain('ab_distance_control+counter_control');
-    expect(statKeys).toContain('ab_distance_emt+counter_control');
+    // Verify pairs are NOT computed
+    expect(statKeys).not.toContain('ab_distance_control+emt');
+    expect(statKeys).not.toContain('ab_distance_control+counter_control');
+    expect(statKeys).not.toContain('ab_distance_emt+counter_control');
 
     // Verify non-zero values
     expect(stats['ab_distance_all']).toBeGreaterThan(0);
     expect(stats['ab_distance_control']).toBeGreaterThan(0);
     expect(stats['ab_distance_emt']).toBeGreaterThan(0);
     expect(stats['ab_distance_counter_control']).toBeGreaterThan(0);
-    expect(stats['ab_distance_control+emt']).toBeGreaterThan(0);
-    expect(stats['ab_distance_control+counter_control']).toBeGreaterThan(0);
-    expect(stats['ab_distance_emt+counter_control']).toBeGreaterThan(0);
   });
 
   it('should generate correct statistic definitions for 3 cell types', () => {
@@ -148,15 +144,12 @@ describe('EHT Statistics - Cell Type Pairs', () => {
     const statDefs = generateEHTStatistics(params);
     const statIds = statDefs.map(s => s.id);
 
-    // Expected groups: all, control, emt, counter_control, control+emt, control+counter_control, emt+counter_control
+    // Expected groups: all, control, emt, counter_control (no pairs)
     const expectedGroups = [
       'all',
       'control',
       'emt',
       'counter_control',
-      'control+emt',
-      'control+counter_control',
-      'emt+counter_control',
     ];
 
     // Check that ab_distance exists for all groups
@@ -164,8 +157,8 @@ describe('EHT Statistics - Cell Type Pairs', () => {
       expect(statIds).toContain(`ab_distance_${group}`);
     });
 
-    // Count total stats: 9 metrics × 7 groups = 63 statistics
-    expect(statDefs).toHaveLength(9 * 7);
+    // Count total stats: 9 metrics × 4 groups = 36 statistics
+    expect(statDefs).toHaveLength(9 * 4);
   });
 
   it('should compute correct values for each group', () => {
@@ -182,11 +175,6 @@ describe('EHT Statistics - Cell Type Pairs', () => {
     expect(stats['ab_distance_control']).toBeCloseTo(5, 0);
     expect(stats['ab_distance_emt']).toBeCloseTo(5, 0);
     expect(stats['ab_distance_counter_control']).toBeCloseTo(5, 0);
-
-    // Pair groups should each have 20 cells
-    expect(stats['ab_distance_control+emt']).toBeCloseTo(5, 0);
-    expect(stats['ab_distance_control+counter_control']).toBeCloseTo(5, 0);
-    expect(stats['ab_distance_emt+counter_control']).toBeCloseTo(5, 0);
   });
 
   it('should list all groups correctly for debugging', () => {
@@ -216,21 +204,18 @@ describe('EHT Statistics - Cell Type Pairs', () => {
     const groupsArray = Array.from(groups).sort();
     console.log('All unique groups:', groupsArray);
     console.log('Total statistics:', stats.length);
-    console.log('Expected:', 9, 'metrics ×', 7, 'groups =', 63);
+    console.log('Expected:', 9, 'metrics ×', 4, 'groups =', 36);
 
-    // Should have 7 groups: all + 3 individuals + 3 pairs
+    // Should have 4 groups: all + 3 individuals (no pairs)
     expect(groupsArray).toEqual([
       'all',
       'control',
-      'control+counter_control',
-      'control+emt',
       'counter_control',
       'emt',
-      'emt+counter_control'
     ]);
 
     // Verify count
-    expect(stats).toHaveLength(9 * 7);
+    expect(stats).toHaveLength(9 * 4);
   });
 
   it('should dynamically update when cell type names change', () => {
@@ -252,7 +237,8 @@ describe('EHT Statistics - Cell Type Pairs', () => {
 
     expect(Array.from(groups1).sort()).toContain('control');
     expect(Array.from(groups1).sort()).toContain('emt');
-    expect(Array.from(groups1).sort()).toContain('control+emt');
+    // Pairs are no longer computed
+    expect(Array.from(groups1).sort()).not.toContain('control+emt');
 
     // Now rename emt to emt2 and add a third type
     const params2 = structuredClone(DEFAULT_EHT_PARAMS) as EHTParams;
@@ -277,20 +263,19 @@ describe('EHT Statistics - Cell Type Pairs', () => {
 
     const groups2Array = Array.from(groups2).sort();
 
-    // Should NOT contain "emt"
+    // Should NOT contain "emt" or any pairs
     expect(groups2Array).not.toContain('emt');
-    expect(groups2Array).not.toContain('control+emt');
+    expect(groups2Array).not.toContain('control+emt2');
+    expect(groups2Array).not.toContain('control+counter_control');
+    expect(groups2Array).not.toContain('emt2+counter_control');
 
     // Should contain new names
     expect(groups2Array).toContain('control');
     expect(groups2Array).toContain('emt2');
     expect(groups2Array).toContain('counter_control');
-    expect(groups2Array).toContain('control+emt2');
-    expect(groups2Array).toContain('control+counter_control');
-    expect(groups2Array).toContain('emt2+counter_control');
 
-    // Should have 7 groups total
-    expect(groups2Array).toHaveLength(7);
+    // Should have 4 groups total (all + 3 individuals, no pairs)
+    expect(groups2Array).toHaveLength(4);
   });
 });
 
