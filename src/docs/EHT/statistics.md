@@ -1,6 +1,28 @@
 # EHT Statistics
 
-Statistics are computed per cell and then aggregated (mean or fraction) over cell groups. Groups include individual cell types (e.g., `control`, `emt`), combinations (`control+emt`), and `all`.
+Statistics are computed per cell and then aggregated (mean or fraction) over cell groups. Groups include individual cell types (e.g., `control`, `emt`) and `all`. **Note:** Pair combinations (e.g., `control+emt`) are not computed.
+
+## Cell Groups
+
+Statistics are computed for the following groups:
+
+- **`all`**: All cells, excluding boundary control cells (see Boundary Cell Handling below)
+- **Individual cell types**: One group per cell type defined in parameters (e.g., `control`, `emt`, `counter_control`)
+
+## Boundary Cell Handling
+
+When `full_circle = false`:
+- The leftmost and rightmost 10% of control cells (based on arc length along the basal curve) are identified as **boundary cells**
+- These cells are reclassified as `control_boundary` for statistics purposes
+- `control_boundary` cells are:
+  - Excluded from the `all` group
+  - Excluded from the `control` group
+  - Not included as a separate statistics group (no plots generated)
+- This exclusion helps remove edge effects from statistical analysis
+
+When `full_circle = true`:
+- No boundary detection is performed
+- All control cells remain in the `control` group
 
 ## Geometric Quantities
 
@@ -83,14 +105,21 @@ Binary indicator for whether the cell's nucleus is above the apical layer. Aggre
 
 **Fraction Below Lowest Control Cell**
 
-$$\text{below\_control\_cells} = \begin{cases} 1 & \text{if } bx < \min_{c \in \text{control}} bx_c \\ 0 & \text{otherwise} \end{cases}$$
+$$\text{below\_control\_cells} = \begin{cases} 1 & \text{if } bx < \min_{c \in \text{control (non-boundary)}} bx_c \\ 0 & \text{otherwise} \end{cases}$$
 
-Binary indicator for whether the cell's basal distance (bx) is less than the minimum bx among all control cells. This identifies cells that have migrated below the control cell population.
+Binary indicator for whether the cell's basal distance (bx) is less than the minimum bx among all non-boundary control cells. This identifies cells that have migrated below the control cell population. **Note:** Boundary control cells are excluded when computing the minimum control cell bx.
 
 ## Output Format
 
-Statistics are exported with the naming convention `{statistic}_{group}`, for example:
-- `ab_distance_all`: Mean AB distance across all cells
-- `x_control`: Mean x position for control cells
+Statistics are exported with the naming convention `{statistic}_{group}`.
+
+**Examples with 2 cell types (control, emt):**
+- `ab_distance_all`: Mean AB distance across all non-boundary cells
+- `x_control`: Mean x position for control cells (excluding boundary)
 - `below_basal_emt`: Fraction of emt cells below basal layer
 - `below_control_cells_emt`: Fraction of emt cells below the lowest control cell
+
+**Total statistics count:**
+- For N cell types: `9 metrics × (N + 1) groups`
+- Example: 2 cell types → 27 statistics (9 × 3 groups: all, control, emt)
+- Example: 3 cell types → 36 statistics (9 × 4 groups: all, control, emt, counter_control)
