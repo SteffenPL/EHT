@@ -116,11 +116,36 @@ export function processStartRunning(
 
 /**
  * Update running state for a cell.
+ * Checks that the basal point is at distance > 2 in the opposite normal direction.
  */
-export function updateRunningState(cell: CellState): void {
-  cell.is_running = !cell.has_B &&
-    cell.B.y > -2.0 &&
-    (cell.running_mode >= 3 || (cell.B.y < 0.0 && cell.running_mode >= 1));
+export function updateRunningState(
+  cell: CellState,
+  state: EHTSimulationState
+): void {
+  if (cell.has_B) {
+    cell.is_running = false;
+    return;
+  }
+
+  // Project cell.B onto basal curve
+  const B = Vector2.from(cell.B);
+  const projB = state.basalGeometry.projectPoint(B);
+
+  // Get normal at projected point (points away from curve)
+  const normal = state.basalGeometry.getNormal(projB);
+
+  // Compute signed distance in normal direction: (B - projB) · normal
+  const displacement = B.sub(projB);
+  const signedDistance = displacement.dot(normal);
+
+  // Check if distance in opposite normal direction is > 2 (i.e., signedDistance < -2)
+  const isFarEnough = signedDistance < -2.0;
+
+  // Additional running mode checks
+  const modeCheck = cell.running_mode >= 3 ||
+    (signedDistance > 0.0 && cell.running_mode >= 1);
+
+  cell.is_running = isFarEnough && modeCheck;
 }
 
 /**
@@ -162,6 +187,6 @@ export function processEMTEvents(
     }
 
     // Update running state
-    updateRunningState(cell);
+    updateRunningState(cell, state);
   }
 }
