@@ -6,7 +6,6 @@ import { useSimulation, type ParamChangeBehavior } from '@/hooks';
 import { useModel } from '@/contexts';
 import { SimulationCanvas, type SimulationCanvasRef } from './SimulationCanvas';
 import { SimulationControls } from './SimulationControls';
-import { SimulationTerminal } from './SimulationTerminal';
 import { FrameStatsPanel } from './FrameStatsPanel';
 import { Card } from '../ui/card';
 
@@ -178,9 +177,6 @@ function SingleSimulationTabInner() {
         isRecording={isRecording}
         renderOptionsPanel={renderOptionsPanel}
       />
-
-      {/* Terminal */}
-      <SimulationTerminal />
 
       {/* Frame Data Table */}
       <FrameStatsPanel snapshot={frameSnapshot} />

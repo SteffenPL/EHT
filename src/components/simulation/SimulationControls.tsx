@@ -67,6 +67,32 @@ export function SimulationControls({
 
   return (
     <div className="space-y-3">
+      {/* Time Slider - moved to top */}
+      <div className="space-y-1">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">
+            {time.toFixed(2)}h / {endTime}h
+          </span>
+        </div>
+        <div className="relative">
+          {/* Background track showing computed portion */}
+          <div
+            className="absolute top-1/2 -translate-y-1/2 h-2 bg-muted/50 rounded-full pointer-events-none"
+            style={{ width: `${computedPercent}%` }}
+          />
+          <Slider
+            value={[time]}
+            min={0}
+            max={endTime}
+            step={endTime / 1000} // Fine-grained steps
+            onValueChange={handleSliderChange}
+            disabled={isCatchingUp}
+            className="cursor-pointer"
+          />
+        </div>
+      </div>
+
+      {/* Control buttons */}
       <div className="flex gap-2 flex-wrap items-center">
         {isRunning || isCatchingUp ? (
           <Button onClick={onPause} variant="outline" size="sm">
@@ -110,28 +136,6 @@ export function SimulationControls({
             </SelectContent>
           </Select>
         </div>
-
-        <span className="ml-auto text-sm text-muted-foreground self-center">
-          {time.toFixed(2)}h / {endTime}h
-        </span>
-      </div>
-
-      {/* Time Slider */}
-      <div className="relative">
-        {/* Background track showing computed portion */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 h-2 bg-muted/50 rounded-full pointer-events-none"
-          style={{ width: `${computedPercent}%` }}
-        />
-        <Slider
-          value={[time]}
-          min={0}
-          max={endTime}
-          step={endTime / 1000} // Fine-grained steps
-          onValueChange={handleSliderChange}
-          disabled={isCatchingUp}
-          className="cursor-pointer"
-        />
       </div>
 
       {/* Model-specific render options */}
