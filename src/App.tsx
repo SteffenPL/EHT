@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { AppLayout } from './components/layout';
 import { SingleSimulationTab } from './components/simulation';
 import { BatchTab } from './components/batch';
@@ -73,7 +73,7 @@ function AppContent() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <ModelProvider>
         <MessagesProvider>
           <Routes>
@@ -84,7 +84,7 @@ function App() {
           </Routes>
         </MessagesProvider>
       </ModelProvider>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
