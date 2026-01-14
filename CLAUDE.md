@@ -23,6 +23,7 @@ src/
 2. **Minimal shared code** - Only registry, math utilities, and batch infrastructure shared between models
 3. **Core and webpage has no rendering deps** - Can run headless
 
+An overview of the model and statistics can also be found in `src/docs/eht/model.md` and `src/docs/eht/statistics.md`.
 
 ## Workflow
 

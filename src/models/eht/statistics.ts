@@ -7,6 +7,7 @@ import type { StatisticDefinition } from '@/core/registry/types';
 import type { EHTSimulationState, CellState } from './types';
 import type { EHTParams } from './params/types';
 import { Vector2 } from '@/core/math/vector2';
+import { createBasalGeometry } from '@/core/math';
 import { projectOntoApicalStrip, projectOntoBasalCurve } from './simulation/projections';
 
 /**
@@ -27,19 +28,97 @@ interface CellMetrics {
   below_basal: boolean;         // x < 0
   above_apical: boolean;        // x > 1
   below_control_cells: boolean; // bx < lowest control cell's bx
+  isBoundary: boolean;          // Is this control cell in the boundary (left/right 10%)
+  effectiveType: string;        // Effective type for statistics ('control_boundary' for boundary cells)
+}
+
+/**
+ * Get a working BasalGeometry instance from state.
+ * Handles cases where state was cloned (structuredClone loses class methods).
+ */
+function getBasalGeometry(state: EHTSimulationState) {
+  // If basalGeometry has working methods, use it directly
+  if (typeof state.basalGeometry?.getArcLength === 'function') {
+    return state.basalGeometry;
+  }
+
+  // Otherwise, recreate from curvatures stored in geometry or basalGeometry
+  const curvature_1 = state.geometry?.curvature_1 ?? state.basalGeometry?.curvature_1 ?? 0;
+  const curvature_2 = state.geometry?.curvature_2 ?? state.basalGeometry?.curvature_2 ?? 0;
+
+  return createBasalGeometry(curvature_1, curvature_2, 360);
+}
+
+/**
+ * Identify boundary control cells (left/right 10% when full_circle = false).
+ * For ellipse/circle geometries, use arc length along the basal curve.
+ * Returns a Set of cell indices that are boundary cells.
+ */
+function identifyBoundaryCells(
+  state: EHTSimulationState,
+  params: EHTParams
+): Set<number> {
+  const boundarySet = new Set<number>();
+
+  // Only apply when full_circle is false
+  if (params.general.full_circle) {
+    return boundarySet;
+  }
+
+  // Get working geometry (handles cloned states)
+  const geometry = getBasalGeometry(state);
+
+  // Find all control cells with their arc lengths
+  const controlCells: { index: number; arcLength: number }[] = [];
+
+  for (let i = 0; i < state.cells.length; i++) {
+    const cell = state.cells[i];
+    if (cell.typeIndex === 'control') {
+      // Get the basal point and find its arc length
+      const B = Vector2.from(cell.B);
+      const arcLength = geometry.getArcLength(B);
+      controlCells.push({ index: i, arcLength });
+    }
+  }
+
+  if (controlCells.length === 0) {
+    return boundarySet;
+  }
+
+  // Sort by arc length to find leftmost and rightmost
+  controlCells.sort((a, b) => a.arcLength - b.arcLength);
+
+  // Calculate 10% boundary threshold
+  const boundaryCount = Math.ceil(controlCells.length * 0.1);
+
+  // Mark left 10% as boundary
+  for (let i = 0; i < boundaryCount && i < controlCells.length; i++) {
+    boundarySet.add(controlCells[i].index);
+  }
+
+  // Mark right 10% as boundary
+  for (let i = Math.max(0, controlCells.length - boundaryCount); i < controlCells.length; i++) {
+    boundarySet.add(controlCells[i].index);
+  }
+
+  return boundarySet;
 }
 
 /**
  * Compute per-cell metrics for all cells.
  */
-function computeCellMetrics(state: EHTSimulationState, _params: EHTParams): CellMetrics[] {
+function computeCellMetrics(state: EHTSimulationState, params: EHTParams): CellMetrics[] {
   const cells = state.cells;
   const metrics: CellMetrics[] = [];
+
+  // Identify boundary control cells
+  const boundaryCells = identifyBoundaryCells(state, params);
 
   // First pass: compute basic metrics for each cell and track lowest control cell bx
   let lowestControlBx = Infinity;
 
-  for (const cell of cells) {
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i];
     const X = Vector2.from(cell.pos);
     const A = Vector2.from(cell.A);
     const B = Vector2.from(cell.B);
@@ -54,8 +133,14 @@ function computeCellMetrics(state: EHTSimulationState, _params: EHTParams): Cell
     const ax = X.dist(a);
     const bx = X.dist(b);
 
-    // Track lowest control cell bx
-    if (cell.typeIndex === 'control' && bx < lowestControlBx) {
+    // Check if this is a boundary cell
+    const isBoundary = boundaryCells.has(i);
+    const effectiveType = (cell.typeIndex === 'control' && isBoundary)
+      ? 'control_boundary'
+      : cell.typeIndex;
+
+    // Track lowest control cell bx (excluding boundary cells)
+    if (cell.typeIndex === 'control' && !isBoundary && bx < lowestControlBx) {
       lowestControlBx = bx;
     }
 
@@ -87,6 +172,8 @@ function computeCellMetrics(state: EHTSimulationState, _params: EHTParams): Cell
       below_basal,
       above_apical,
       below_control_cells: false, // Computed in second pass
+      isBoundary,
+      effectiveType,
     });
   }
 
@@ -131,17 +218,18 @@ function generateCellGroups(params: EHTParams): string[] {
  */
 function filterByGroup(metrics: CellMetrics[], group: string): CellMetrics[] {
   if (group === 'all') {
-    return metrics;
+    // Exclude control_boundary from 'all' group
+    return metrics.filter(m => m.effectiveType !== 'control_boundary');
   }
 
   // Check if it's a combination (contains '+')
   if (group.includes('+')) {
     const types = group.split('+');
-    return metrics.filter(m => types.includes(m.cell.typeIndex));
+    return metrics.filter(m => types.includes(m.effectiveType));
   }
 
-  // Single type
-  return metrics.filter(m => m.cell.typeIndex === group);
+  // Single type (use effectiveType for filtering)
+  return metrics.filter(m => m.effectiveType === group);
 }
 
 /**
@@ -232,7 +320,7 @@ export function exportCellMetrics(
 
   return cellMetrics.map((m, idx) => ({
     cell_id: idx,
-    cell_type: m.cell.typeIndex,
+    cell_type: m.effectiveType, // Use effectiveType instead of original typeIndex
     X_x: m.X.x,
     X_y: m.X.y,
     A_x: m.A.x,

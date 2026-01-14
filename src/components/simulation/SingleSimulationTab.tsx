@@ -125,17 +125,20 @@ function SingleSimulationTabInner() {
         const metricRow = metrics[idx];
         if (!metricRow) return row;
 
-        // Get metric keys (excluding cell_id and cell_type which are already in snapshot)
+        // Get metric keys (excluding cell_id, but including cell_type to override typeIndex)
         const metricKeys = Object.keys(metricRow).filter(
-          k => k !== 'cell_id' && k !== 'cell_type'
+          k => k !== 'cell_id'
         );
 
-        // Build merged row: id, typeIndex, then metrics, then rest of snapshot
-        const { id, typeIndex, ...restSnapshot } = row as Record<string, unknown>;
+        // Build merged row: id, then metrics (including cell_type), then rest of snapshot
+        const { id, typeIndex: _typeIndex, ...restSnapshot } = row as Record<string, unknown>;
         const metricValues: Record<string, unknown> = {};
         for (const k of metricKeys) {
           metricValues[k] = metricRow[k];
         }
+
+        // Use cell_type from metrics as typeIndex if available, otherwise use original
+        const typeIndex = metricRow.cell_type ?? _typeIndex;
 
         return { id, typeIndex, ...metricValues, ...restSnapshot };
       });
