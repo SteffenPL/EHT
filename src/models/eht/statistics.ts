@@ -189,7 +189,8 @@ function computeCellMetrics(state: EHTSimulationState, params: EHTParams): CellM
 
 /**
  * Generate all cell groups for statistics.
- * Returns: individual types + pairs + "all"
+ * Returns: individual types + "all"
+ * Note: Pair combinations are not computed.
  */
 function generateCellGroups(params: EHTParams): string[] {
   const cellTypeKeys = Object.keys(params.cell_types);
@@ -203,13 +204,6 @@ function generateCellGroups(params: EHTParams): string[] {
     groups.push(typeKey);
   }
 
-  // Add pairs
-  for (let i = 0; i < cellTypeKeys.length; i++) {
-    for (let j = i + 1; j < cellTypeKeys.length; j++) {
-      groups.push(`${cellTypeKeys[i]}+${cellTypeKeys[j]}`);
-    }
-  }
-
   return groups;
 }
 
@@ -220,12 +214,6 @@ function filterByGroup(metrics: CellMetrics[], group: string): CellMetrics[] {
   if (group === 'all') {
     // Exclude control_boundary from 'all' group
     return metrics.filter(m => m.effectiveType !== 'control_boundary');
-  }
-
-  // Check if it's a combination (contains '+')
-  if (group.includes('+')) {
-    const types = group.split('+');
-    return metrics.filter(m => types.includes(m.effectiveType));
   }
 
   // Single type (use effectiveType for filtering)
