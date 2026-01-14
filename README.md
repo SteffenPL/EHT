@@ -1,5 +1,9 @@
 # Changelog (from 2026-01-16)
 
+## 2026-01-17
+
+- Exlude left 10% and right 10% of cells from control cell type (effective cell type is control_boundary). These cells will not be part of the statistics and the cell type group "all".
+
 ## 2026-01-16
 
 - Fixed bug about statistics of position on basal-to-apical scale.
