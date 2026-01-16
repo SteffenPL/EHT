@@ -336,6 +336,8 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
         time_S_end: Infinity,
         time_P_start: Infinity,
         time_P_end: Infinity,
+        time_AC_start: Infinity,
+        time_AC_end: Infinity,
       },
       // Per-cell-type properties (use value from XLSX or global value or default if zero/missing)
       diffusion: parseNumber(legacyType["diffusion"], 0) || DEFAULT_CONTROL_CELL.diffusion,

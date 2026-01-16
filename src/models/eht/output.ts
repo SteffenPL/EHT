@@ -72,6 +72,7 @@ export function getSnapshot(state: EHTSimulationState): Record<string, any>[] {
             time_B: cell.time_B,
             time_S: cell.time_S,
             time_P: cell.time_P,
+            time_AC: cell.time_AC,
 
             // Network
             apical_neighbors: getNeighborIds(i, state.ap_links, state.cells),
@@ -155,6 +156,7 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
             time_B: Number(row.time_B),
             time_S: Number(row.time_S),
             time_P: Number(row.time_P),
+            time_AC: Number(row.time_AC ?? Infinity),
 
             // Stiffness constants - load from params (approximate for restart) 
             // or we'd need to save them all.

@@ -18,6 +18,8 @@ export interface EMTEventTimes {
   time_S_end: number;   // Time to lose straightness (end)
   time_P_start: number; // Time to start polarized running (start)
   time_P_end: number;   // Time to start polarized running (end)
+  time_AC_start: number; // Time for apical constriction (start)
+  time_AC_end: number;   // Time for apical constriction (end)
 }
 
 /** Cell type definition - defines the properties of a cell type (e.g., control, emt) */

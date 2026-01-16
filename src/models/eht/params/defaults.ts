@@ -41,6 +41,8 @@ export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
     time_S_end: Infinity,
     time_P_start: Infinity,
     time_P_end: Infinity,
+    time_AC_start: Infinity,
+    time_AC_end: Infinity,
   },
   // Per-cell-type properties
   diffusion: 0.2,
@@ -86,6 +88,8 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
     time_S_end: Infinity,
     time_P_start: Infinity,
     time_P_end: Infinity,
+    time_AC_start: Infinity,
+    time_AC_end: Infinity,
   },
   // Per-cell-type properties
   diffusion: 0.2,

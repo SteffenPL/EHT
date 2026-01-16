@@ -389,7 +389,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
   const updateCellTypeEventStart = (
     cellType: string,
-    eventKey: 'time_A' | 'time_B' | 'time_S' | 'time_P',
+    eventKey: 'time_A' | 'time_B' | 'time_S' | 'time_P' | 'time_AC',
     value: number
   ) => {
     const newParams = structuredClone(params);
@@ -399,7 +399,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
   const updateCellTypeEventEnd = (
     cellType: string,
-    eventKey: 'time_A' | 'time_B' | 'time_S' | 'time_P',
+    eventKey: 'time_A' | 'time_B' | 'time_S' | 'time_P' | 'time_AC',
     value: number
   ) => {
     const newParams = structuredClone(params);
@@ -949,6 +949,32 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 valueEnd={getCellType(key).events.time_P_end}
                 onChangeStart={(v) => updateCellTypeEventStart(key, 'time_P', v)}
                 onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_P', v)}
+                disabled={disabled}
+                label="end"
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Time AC start" tooltip="Apical Constriction - cuts links between this type and other types">
+            {cellTypeKeys.map((key) => (
+              <SplitRangeCell
+                key={key}
+                valueStart={getCellType(key).events.time_AC_start}
+                valueEnd={getCellType(key).events.time_AC_end}
+                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_AC', v)}
+                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_AC', v)}
+                disabled={disabled}
+                label="start"
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Time AC end">
+            {cellTypeKeys.map((key) => (
+              <SplitRangeCell
+                key={key}
+                valueStart={getCellType(key).events.time_AC_start}
+                valueEnd={getCellType(key).events.time_AC_end}
+                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_AC', v)}
+                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_AC', v)}
                 disabled={disabled}
                 label="end"
               />

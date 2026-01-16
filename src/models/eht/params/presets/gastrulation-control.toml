@@ -68,6 +68,8 @@ apical_junction_init = 0.333333333333333
   time_S_end = 1e+308
   time_P_start = 1e+308
   time_P_end = 1e+308
+  time_AC_start = 1e+308
+  time_AC_end = 1e+308
 
 [cell_types.emt]
 N_init = 1
@@ -114,6 +116,8 @@ apical_junction_init = 0.333333333333333
   time_S_end = 1e+308
   time_P_start = 1e+308
   time_P_end = 1e+308
+  time_AC_start = 1e+308
+  time_AC_end = 1e+308
 
 [time_samples]
 start = 0

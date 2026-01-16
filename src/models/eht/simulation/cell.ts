@@ -56,6 +56,7 @@ export function createCell(
     let time_A = rng.random(cellType.events.time_A_start, cellType.events.time_A_end);
     let time_B = rng.random(cellType.events.time_B_start, cellType.events.time_B_end);
     let time_S = rng.random(cellType.events.time_S_start, cellType.events.time_S_end);
+    let time_AC = rng.random(cellType.events.time_AC_start, cellType.events.time_AC_end);
     const time_P = rng.random() <= cellType.run
       ? time_B
       : Infinity;
@@ -65,6 +66,7 @@ export function createCell(
       if (rng.random() > 0.7) time_A = Infinity;
       if (rng.random() > 0.7) time_B = Infinity;
       if (rng.random() > 0.7) time_S = Infinity;
+      if (rng.random() > 0.7) time_AC = Infinity;
     }
 
     return {
@@ -89,6 +91,7 @@ export function createCell(
       time_B,
       time_S,
       time_P,
+      time_AC,
       stiffness_apical_apical: cellType.stiffness_apical_apical,
       stiffness_straightness: cellType.stiffness_straightness,
       stiffness_nuclei_apical: cellType.stiffness_nuclei_apical,
@@ -118,6 +121,7 @@ export function createCell(
       time_B: parent.time_B,
       time_S: parent.time_S,
       time_P: parent.time_P,
+      time_AC: parent.time_AC,
       stiffness_apical_apical: cellType.stiffness_apical_apical,
       stiffness_straightness: parent.stiffness_straightness,
       stiffness_nuclei_apical: parent.stiffness_nuclei_apical,

@@ -67,6 +67,7 @@ export interface CellState {
     time_B: number;
     time_S: number;
     time_P: number;
+    time_AC: number;
 
     // Stiffness values (can change dynamically)
     stiffness_apical_apical: number;

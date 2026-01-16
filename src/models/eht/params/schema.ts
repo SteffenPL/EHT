@@ -34,6 +34,8 @@ export const emtEventTimesSchema = z.object({
   time_S_end: z.number(),
   time_P_start: z.number(),
   time_P_end: z.number(),
+  time_AC_start: z.number(),
+  time_AC_end: z.number(),
 });
 
 /** Cell type schema */
