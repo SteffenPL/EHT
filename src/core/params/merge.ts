@@ -54,18 +54,17 @@ export function mergeWithDefaults(
     mergeWith(result.cell_prop, partial.cell_prop, customMerge);
   }
 
-  // Merge cell types - special handling for custom types
+  // Replace cell types entirely when provided in TOML
+  // This ensures that importing a TOML with different cell type names
+  // doesn't leave stale default types (e.g., importing 'EHT' shouldn't keep 'emt')
   if (partial.cell_types) {
+    // Clear default cell types and replace with imported ones
+    result.cell_types = {};
     for (const [typeName, partialType] of Object.entries(partial.cell_types)) {
-      if (typeName in result.cell_types) {
-        // Existing type: merge over existing defaults
-        mergeWith(result.cell_types[typeName], partialType, customMerge);
-      } else {
-        // New custom type: merge over control defaults
-        const newType = structuredClone(DEFAULT_CONTROL_CELL);
-        mergeWith(newType, partialType, customMerge);
-        result.cell_types[typeName] = newType;
-      }
+      // Each imported type is merged over control defaults for completeness
+      const newType = structuredClone(DEFAULT_CONTROL_CELL);
+      mergeWith(newType, partialType, customMerge);
+      result.cell_types[typeName] = newType;
     }
   }
 
