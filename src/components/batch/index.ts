@@ -9,3 +9,9 @@ export type { ResultsTableProps } from './ResultsTable';
 
 export { BatchTab } from './BatchTab';
 export type { BatchTabProps } from './BatchTab';
+
+export { ExtendedExportPanel } from './ExtendedExportPanel';
+export type { ExtendedExportPanelProps, ExtendedExportConfig } from './ExtendedExportPanel';
+
+export { ExportProgressModal } from './ExportProgressModal';
+export type { ExportProgressModalProps } from './ExportProgressModal';

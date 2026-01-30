@@ -59,17 +59,18 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
 
   /**
    * Initialize the renderer asynchronously.
+   * Accepts both HTMLCanvasElement and OffscreenCanvas for headless rendering.
    */
-  async init(canvas: HTMLCanvasElement): Promise<void> {
+  async init(canvas: HTMLCanvasElement | OffscreenCanvas): Promise<void> {
     const backgroundColor = this.model?.renderer.getBackgroundColor(this.isDark) ?? 0xffffff;
 
     await this.app.init({
-      canvas,
+      canvas: canvas as HTMLCanvasElement, // Pixi.js types accept HTMLCanvasElement but also work with OffscreenCanvas
       width: canvas.width,
       height: canvas.height,
       backgroundColor,
       antialias: true,
-      resolution: window.devicePixelRatio || 1,
+      resolution: typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1,
       autoDensity: true,
       // Required for screenshots and video recording
       preserveDrawingBuffer: true,

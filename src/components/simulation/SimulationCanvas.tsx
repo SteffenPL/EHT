@@ -6,17 +6,22 @@ import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHand
 import { SimulationRenderer } from '../../rendering';
 import { useTheme, useModel } from '@/contexts';
 import type { BaseSimulationParams } from '../../core/registry';
+import { MP4VideoEncoder, isMP4Supported } from '../../core/export/videoEncoder';
 
 /** Ref interface exposed by SimulationCanvas */
 export interface SimulationCanvasRef {
   /** Get a screenshot of the current canvas as a data URL */
   getScreenshot: () => string | null;
-  /** Start recording video */
-  startRecording: () => void;
+  /** Start recording video (MP4 format) */
+  startRecording: () => Promise<void>;
+  /** Capture current frame during recording */
+  captureFrame: (timestamp: number) => Promise<void>;
   /** Stop recording and return video blob */
   stopRecording: () => Promise<Blob | null>;
   /** Check if currently recording */
   isRecording: () => boolean;
+  /** Check if MP4 recording is supported */
+  isMP4Supported: () => boolean;
 }
 
 export interface SimulationCanvasProps {
@@ -44,8 +49,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<SimulationRenderer | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
+  const videoEncoderRef = useRef<MP4VideoEncoder | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [size, setSize] = useState({ width: 800, height: minHeight });
   const { isDark } = useTheme();
@@ -59,46 +63,43 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
       }
       return null;
     },
-    startRecording: () => {
-      if (!canvasRef.current || mediaRecorderRef.current) return;
+    startRecording: async () => {
+      if (!canvasRef.current || videoEncoderRef.current) return;
 
-      const stream = canvasRef.current.captureStream(30); // 30 FPS
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : 'video/webm';
-
-      const recorder = new MediaRecorder(stream, { mimeType });
-      recordedChunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          recordedChunksRef.current.push(e.data);
-        }
-      };
-
-      mediaRecorderRef.current = recorder;
-      recorder.start(100); // Capture every 100ms
-    },
-    stopRecording: () => {
-      return new Promise((resolve) => {
-        const recorder = mediaRecorderRef.current;
-        if (!recorder) {
-          resolve(null);
-          return;
-        }
-
-        recorder.onstop = () => {
-          const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-          recordedChunksRef.current = [];
-          mediaRecorderRef.current = null;
-          resolve(blob);
-        };
-
-        recorder.stop();
+      const canvas = canvasRef.current;
+      const encoder = new MP4VideoEncoder({
+        width: canvas.width,
+        height: canvas.height,
+        frameRate: 30, // 30 FPS
+        // Bitrate will be calculated automatically based on resolution
       });
+
+      await encoder.init();
+      videoEncoderRef.current = encoder;
+    },
+    captureFrame: async (timestamp: number) => {
+      const encoder = videoEncoderRef.current;
+      const canvas = canvasRef.current;
+
+      if (!encoder || !canvas) return;
+
+      await encoder.addFrame(canvas, timestamp);
+    },
+    stopRecording: async () => {
+      const encoder = videoEncoderRef.current;
+      if (!encoder) {
+        return null;
+      }
+
+      const blob = await encoder.finish();
+      videoEncoderRef.current = null;
+      return blob;
     },
     isRecording: () => {
-      return mediaRecorderRef.current?.state === 'recording';
+      return videoEncoderRef.current !== null;
+    },
+    isMP4Supported: () => {
+      return isMP4Supported();
     },
   }), []);
 
@@ -199,6 +200,13 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   useEffect(() => {
     if (rendererRef.current && state && isReady) {
       rendererRef.current.render(state);
+
+      // Capture frame if recording
+      if (videoEncoderRef.current && canvasRef.current) {
+        const timestamp = state.t !== undefined ? state.t * 1000 : 0; // Convert hours to milliseconds
+        videoEncoderRef.current.addFrame(canvasRef.current, timestamp)
+          .catch(err => console.error('Failed to capture frame:', err));
+      }
     }
   }, [state, isReady]);
 

@@ -67,7 +67,7 @@ function SingleSimulationTabInner() {
     }
   }, [time]);
 
-  // Movie recording: toggle recording mode using MediaRecorder
+  // Movie recording: toggle recording mode using MP4 encoder
   const handleSaveMovie = useCallback(async () => {
     if (isRecording) {
       // Stop recording and save
@@ -75,14 +75,14 @@ function SingleSimulationTabInner() {
       const blob = await canvasRef.current?.stopRecording();
       if (blob) {
         const link = document.createElement('a');
-        link.download = `simulation_${time.toFixed(2)}h.webm`;
+        link.download = `simulation_${time.toFixed(2)}h.mp4`;
         link.href = URL.createObjectURL(blob);
         link.click();
         URL.revokeObjectURL(link.href);
       }
     } else {
       // Start recording
-      canvasRef.current?.startRecording();
+      await canvasRef.current?.startRecording();
       setIsRecording(true);
     }
   }, [isRecording, time]);

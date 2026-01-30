@@ -10,6 +10,8 @@ import { Progress } from '../ui/progress';
 import { Separator } from '../ui/separator';
 import { ResultsTable } from './ResultsTable';
 import { BatchPlot } from './BatchPlot';
+import { ExtendedExportPanel } from './ExtendedExportPanel';
+import { ExportProgressModal } from './ExportProgressModal';
 import { aggregateByTime, aggregateByXAxisWithCI, aggregateForHistogram } from './plotUtils';
 import type { SimulationConfig } from '@/core/params';
 import type {
@@ -29,6 +31,8 @@ import {
   getTimeSamples,
   WorkerPool,
 } from '@/core/batch';
+import { runBatchExport, type BatchExportProgress } from '@/core/batch/exportRunner';
+import type { ExtendedExportConfig } from './ExtendedExportPanel';
 import { setNestedValue, encodeParamsToUrl } from '@/core/params';
 import { useModel } from '@/contexts/ModelContext';
 
@@ -72,6 +76,15 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
 
   // File input refs
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Extended export state
+  const [extendedExportConfig, setExtendedExportConfig] = useState<ExtendedExportConfig>({
+    exportMovie: true,
+    resolution: { width: 1920, height: 1920 },
+    frameRate: 30,
+  });
+  const [exportProgress, setExportProgress] = useState<BatchExportProgress | null>(null);
+  const exportAbortControllerRef = useRef<AbortController | null>(null);
 
   // Calculate total runs
   const totalRuns = computeTotalRuns(config.parameterRanges, config.seedsPerConfig);
@@ -154,6 +167,70 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
     const csv = batchSnapshotsToCSV(batchData.snapshots);
     downloadCSV(csv, 'batch_snapshots.csv');
   };
+
+  // Extended export with screenshots and movies
+  const handleExtendedExport = useCallback(async () => {
+    if (!config.params) return;
+
+    // Create abort controller
+    const controller = new AbortController();
+    exportAbortControllerRef.current = controller;
+
+    try {
+      const zipBlob = await runBatchExport(
+        {
+          batchConfig: {
+            parameter_ranges: config.parameterRanges,
+            time_samples: config.timeSamples,
+            seeds_per_config: config.seedsPerConfig,
+            sampling_mode: 'grid',
+          },
+          baseParams: config.params,
+          exportMovie: extendedExportConfig.exportMovie,
+          resolution: extendedExportConfig.resolution,
+          frameRate: extendedExportConfig.frameRate,
+          isDark: false, // TODO: Could get from theme context if needed
+          renderOptions: {}, // TODO: Could get from model render options if needed
+        },
+        {
+          onProgress: (progress) => {
+            setExportProgress(progress);
+          },
+        },
+        controller.signal
+      );
+
+      // Download ZIP
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filename = `batch_export_${timestamp}.zip`;
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+
+      setExportProgress(null);
+    } catch (err) {
+      if ((err as Error).message.includes('cancelled')) {
+        console.log('Export cancelled');
+      } else {
+        console.error('Export failed:', err);
+        alert('Export failed. Check console for details.');
+      }
+      setExportProgress(null);
+    } finally {
+      exportAbortControllerRef.current = null;
+    }
+  }, [config, extendedExportConfig]);
+
+  // Cancel extended export
+  const handleCancelExport = useCallback(() => {
+    if (exportAbortControllerRef.current) {
+      exportAbortControllerRef.current.abort();
+      exportAbortControllerRef.current = null;
+    }
+    setExportProgress(null);
+  }, []);
 
   // Load TOML (params + optional parameter ranges)
 
@@ -554,6 +631,14 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
         </CardContent>
       </Card>
 
+      {/* Extended Export */}
+      <ExtendedExportPanel
+        config={extendedExportConfig}
+        onChange={setExtendedExportConfig}
+        onExport={handleExtendedExport}
+        disabled={isRunning || !!exportProgress || config.parameterRanges.length === 0}
+      />
+
       {/* Compute Statistics */}
       {batchData && (
         <Card>
@@ -757,6 +842,14 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Export Progress Modal */}
+      {exportProgress && (
+        <ExportProgressModal
+          progress={exportProgress}
+          onCancel={handleCancelExport}
+        />
       )}
     </div>
   );
