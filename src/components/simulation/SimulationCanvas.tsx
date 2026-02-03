@@ -6,22 +6,30 @@ import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHand
 import { SimulationRenderer } from '../../rendering';
 import { useTheme, useModel } from '@/contexts';
 import type { BaseSimulationParams } from '../../core/registry';
-import { MP4VideoEncoder, isMP4Supported } from '../../core/export/videoEncoder';
+import {
+  createVideoEncoder,
+  isMP4Supported,
+  isWebMSupported,
+  type IVideoEncoder,
+  type VideoFormat,
+} from '../../core/export/videoEncoder';
 
 /** Ref interface exposed by SimulationCanvas */
 export interface SimulationCanvasRef {
   /** Get a screenshot of the current canvas as a data URL */
   getScreenshot: () => string | null;
-  /** Start recording video (MP4 format) */
-  startRecording: () => Promise<void>;
+  /** Start recording video in the specified format */
+  startRecording: (format: VideoFormat) => Promise<void>;
   /** Capture current frame during recording */
   captureFrame: (timestamp: number) => Promise<void>;
-  /** Stop recording and return video blob */
-  stopRecording: () => Promise<Blob | null>;
+  /** Stop recording and return video blob with MIME type */
+  stopRecording: () => Promise<{ blob: Blob; mimeType: string } | null>;
   /** Check if currently recording */
   isRecording: () => boolean;
   /** Check if MP4 recording is supported */
   isMP4Supported: () => Promise<boolean>;
+  /** Check if WebM recording is supported */
+  isWebMSupported: () => Promise<boolean>;
 }
 
 export interface SimulationCanvasProps {
@@ -49,7 +57,8 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<SimulationRenderer | null>(null);
-  const videoEncoderRef = useRef<MP4VideoEncoder | null>(null);
+  const videoEncoderRef = useRef<IVideoEncoder | null>(null);
+  const videoFormatRef = useRef<VideoFormat>('mp4'); // Store current recording format
   const [isReady, setIsReady] = useState(false);
   const [size, setSize] = useState({ width: 800, height: minHeight });
   const { isDark } = useTheme();
@@ -63,11 +72,13 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
       }
       return null;
     },
-    startRecording: async () => {
+    startRecording: async (format: VideoFormat) => {
       if (!canvasRef.current || videoEncoderRef.current) return;
 
       const canvas = canvasRef.current;
-      const encoder = new MP4VideoEncoder({
+      videoFormatRef.current = format; // Store format for stopRecording
+
+      const encoder = createVideoEncoder(format, {
         width: canvas.width,
         height: canvas.height,
         frameRate: 30, // 30 FPS
@@ -101,10 +112,15 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
         return null;
       }
 
+      const format = videoFormatRef.current;
+
       try {
         const blob = await encoder.finish();
         videoEncoderRef.current = null;
-        return blob;
+
+        // Return blob with appropriate MIME type
+        const mimeType = format === 'mp4' ? 'video/mp4' : 'video/webm';
+        return { blob, mimeType };
       } catch (error) {
         console.error('Failed to finalize video:', error);
         videoEncoderRef.current = null;
@@ -116,6 +132,9 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
     },
     isMP4Supported: async () => {
       return await isMP4Supported();
+    },
+    isWebMSupported: async () => {
+      return await isWebMSupported();
     },
   }), []);
 

@@ -8,6 +8,7 @@ import { SimulationCanvas, type SimulationCanvasRef } from './SimulationCanvas';
 import { SimulationControls } from './SimulationControls';
 import { FrameStatsPanel } from './FrameStatsPanel';
 import { Card } from '../ui/card';
+import type { VideoFormat } from '@/core/export/videoEncoder';
 
 /**
  * Wrapper that provides a key to force remount on model change.
@@ -23,6 +24,7 @@ export function SingleSimulationTab() {
 function SingleSimulationTabInner() {
   const [paramChangeBehavior, setParamChangeBehavior] = useState<ParamChangeBehavior>('run');
   const [isRecording, setIsRecording] = useState(false);
+  const [videoFormat, setVideoFormat] = useState<VideoFormat>('mp4');
   const { currentModel, currentParams } = useModel();
   const canvasRef = useRef<SimulationCanvasRef>(null);
 
@@ -67,16 +69,18 @@ function SingleSimulationTabInner() {
     }
   }, [time]);
 
-  // Movie recording: toggle recording mode using MP4 encoder
+  // Movie recording: toggle recording mode with selected format
   const handleSaveMovie = useCallback(async () => {
     if (isRecording) {
       // Stop recording and save
       setIsRecording(false);
       try {
-        const blob = await canvasRef.current?.stopRecording();
-        if (blob) {
+        const result = await canvasRef.current?.stopRecording();
+        if (result) {
+          const { blob } = result;
+          const extension = videoFormat === 'mp4' ? 'mp4' : 'webm';
           const link = document.createElement('a');
-          link.download = `simulation_${time.toFixed(2)}h.mp4`;
+          link.download = `simulation_${time.toFixed(2)}h.${extension}`;
           link.href = URL.createObjectURL(blob);
           link.click();
           URL.revokeObjectURL(link.href);
@@ -86,16 +90,17 @@ function SingleSimulationTabInner() {
         alert('Failed to save movie. Check console for details.');
       }
     } else {
-      // Start recording
+      // Start recording with selected format
       try {
-        await canvasRef.current?.startRecording();
+        await canvasRef.current?.startRecording(videoFormat);
         setIsRecording(true);
       } catch (error) {
         console.error('Failed to start recording:', error);
-        alert('Failed to start recording. Your browser may not support video encoding.\n\nSupported browsers: Chrome 94+, Safari 16.4+, Edge 94+');
+        const formatName = videoFormat === 'mp4' ? 'MP4' : 'WebM';
+        alert(`Failed to start ${formatName} recording. Your browser may not support this format.\n\nSupported browsers: Chrome 94+, Safari 16.4+ (MP4 only), Edge 94+`);
       }
     }
-  }, [isRecording, time]);
+  }, [isRecording, time, videoFormat]);
 
   // Export TSV: use model's getSnapshot to export current state
   const handleExportCSV = useCallback(() => {
@@ -188,6 +193,8 @@ function SingleSimulationTabInner() {
         onSaveMovie={handleSaveMovie}
         onExportCSV={handleExportCSV}
         isRecording={isRecording}
+        videoFormat={videoFormat}
+        onVideoFormatChange={setVideoFormat}
         renderOptionsPanel={renderOptionsPanel}
       />
 

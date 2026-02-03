@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import type { ParamChangeBehavior } from '@/hooks/useSimulation';
+import type { VideoFormat } from '@/core/export/videoEncoder';
 
 export interface SimulationControlsProps {
   isRunning: boolean;
@@ -34,6 +35,9 @@ export interface SimulationControlsProps {
   onSaveMovie?: () => void;
   onExportCSV?: () => void;
   isRecording?: boolean;
+  // Video format selection
+  videoFormat?: VideoFormat;
+  onVideoFormatChange?: (format: VideoFormat) => void;
   /** Model-specific render options panel (optional) */
   renderOptionsPanel?: React.ReactNode;
 }
@@ -55,6 +59,8 @@ export function SimulationControls({
   onSaveMovie,
   onExportCSV,
   isRecording = false,
+  videoFormat = 'mp4',
+  onVideoFormatChange,
   renderOptionsPanel,
 }: SimulationControlsProps) {
   // Calculate percentage of simulation that has been computed (for visual feedback)
@@ -150,15 +156,31 @@ export function SimulationControls({
           </Button>
         )}
         {onSaveMovie && (
-          <Button
-            onClick={onSaveMovie}
-            variant={isRecording ? "destructive" : "outline"}
-            size="sm"
-            className="text-xs"
-          >
-            <Video className="h-3.5 w-3.5 mr-1" />
-            {isRecording ? "Stop Recording" : "Record"}
-          </Button>
+          <>
+            <Button
+              onClick={onSaveMovie}
+              variant={isRecording ? "destructive" : "outline"}
+              size="sm"
+              className="text-xs"
+            >
+              <Video className="h-3.5 w-3.5 mr-1" />
+              {isRecording ? "Stop Recording" : "Record"}
+            </Button>
+            {onVideoFormatChange && !isRecording && (
+              <Select
+                value={videoFormat}
+                onValueChange={(v) => onVideoFormatChange(v as VideoFormat)}
+              >
+                <SelectTrigger className="h-7 w-32 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mp4">MP4 (H.264)</SelectItem>
+                  <SelectItem value="webm">WebM (VP9)</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </>
         )}
         {onExportCSV && (
           <Button onClick={onExportCSV} variant="outline" size="sm" className="text-xs">
