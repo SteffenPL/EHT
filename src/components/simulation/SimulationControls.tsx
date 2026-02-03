@@ -171,11 +171,12 @@ export function SimulationControls({
                 value={videoFormat}
                 onValueChange={(v) => onVideoFormatChange(v as VideoFormat)}
               >
-                <SelectTrigger className="h-7 w-32 text-xs">
+                <SelectTrigger className="h-7 w-36 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="mp4">MP4 (H.264)</SelectItem>
+                  <SelectItem value="mp4-av1">MP4 (AV1)</SelectItem>
                   <SelectItem value="webm">WebM (VP9)</SelectItem>
                 </SelectContent>
               </Select>

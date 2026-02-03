@@ -7,7 +7,7 @@ import {
   ArrayBufferTarget as WebMArrayBufferTarget,
 } from 'webm-muxer';
 
-export type VideoFormat = 'mp4' | 'webm';
+export type VideoFormat = 'mp4' | 'mp4-av1' | 'webm';
 
 export interface VideoEncoderOptions {
   width: number;
@@ -566,8 +566,254 @@ export class WebMVideoEncoder implements IVideoEncoder {
 }
 
 /**
+ * MP4 video encoder using AV1 codec.
+ * Produces AV1/MP4 files with better compression than H.264.
+ * Note: AV1 encoding may be slower and has more limited browser support.
+ */
+export class MP4AV1VideoEncoder implements IVideoEncoder {
+  private encoder: VideoEncoder | null = null;
+  private muxer: MP4Muxer<MP4ArrayBufferTarget> | null = null;
+  private options: VideoEncoderOptions;
+  private frameCount = 0;
+  private isFinished = false;
+  private encodePromises: Promise<void>[] = [];
+  private videoMetadata: any = null;
+
+  constructor(options: VideoEncoderOptions) {
+    this.options = options;
+  }
+
+  /**
+   * Initialize the encoder. Must be called before addFrame.
+   */
+  async init(): Promise<void> {
+    if (this.encoder) {
+      throw new Error('Encoder already initialized');
+    }
+
+    // Check if WebCodecs API is available
+    if (typeof VideoEncoder === 'undefined') {
+      throw new Error(
+        'WebCodecs API is not available in this browser. ' +
+        'Please use Chrome 94+, Edge 94+.'
+      );
+    }
+
+    console.log('Initializing MP4 AV1 encoder...');
+    console.log('Resolution:', this.options.width, 'x', this.options.height);
+    console.log('Frame rate:', this.options.frameRate);
+
+    // Calculate default bitrate if not provided
+    // AV1 needs less bitrate than H.264 for same quality
+    const defaultBitrate =
+      this.options.bitrate ||
+      this.options.width * this.options.height * this.options.frameRate * 0.07;
+
+    // Try AV1 codec configurations
+    const codecConfigs = [
+      {
+        codec: 'av01.0.04M.08', // AV1 Main Profile, Level 4.0
+        name: 'AV1 Main Profile',
+        hardwareAcceleration: 'prefer-hardware' as const,
+      },
+      {
+        codec: 'av01.0.04M.08',
+        name: 'AV1 (Software)',
+        hardwareAcceleration: 'prefer-software' as const,
+      },
+      {
+        codec: 'av01.0.00M.08', // Try lower level
+        name: 'AV1 Main Profile (Level 2.0)',
+        hardwareAcceleration: 'prefer-hardware' as const,
+      },
+    ];
+
+    let selectedConfig: VideoEncoderConfig | null = null;
+    let selectedName = '';
+
+    // Try each codec until we find one that's supported
+    for (const codecConfig of codecConfigs) {
+      let config: VideoEncoderConfig = {
+        codec: codecConfig.codec,
+        width: this.options.width,
+        height: this.options.height,
+        bitrate: defaultBitrate,
+        framerate: this.options.frameRate,
+        hardwareAcceleration: codecConfig.hardwareAcceleration,
+        latencyMode: 'quality',
+      };
+
+      try {
+        let support = await VideoEncoder.isConfigSupported(config);
+
+        // If full config not supported, try minimal config
+        if (!support.supported) {
+          console.log(`✗ ${codecConfig.name} (full config) not supported, trying minimal...`);
+          config = {
+            codec: codecConfig.codec,
+            width: this.options.width,
+            height: this.options.height,
+            bitrate: defaultBitrate,
+            framerate: this.options.frameRate,
+          };
+          support = await VideoEncoder.isConfigSupported(config);
+        }
+
+        if (support.supported) {
+          selectedConfig = config;
+          selectedName = codecConfig.name;
+          console.log(`✓ Using ${selectedName} codec for MP4 encoding`);
+          console.log('  Config:', config);
+          break;
+        } else {
+          console.log(`✗ ${codecConfig.name} not supported`);
+        }
+      } catch (err) {
+        console.log(`✗ ${codecConfig.name} threw error:`, err);
+      }
+    }
+
+    if (!selectedConfig) {
+      const triedCodecs = codecConfigs.map(c => c.name).join(', ');
+      throw new Error(
+        `No supported AV1 codec found. Tried: ${triedCodecs}\n\n` +
+        'Possible causes:\n' +
+        '• Browser version too old (need Chrome 90+, Edge 90+)\n' +
+        '• AV1 encoding not available on this system\n' +
+        '• Hardware encoding disabled in browser settings\n\n' +
+        'Try MP4 (H.264) format instead for maximum compatibility.\n\n' +
+        `Browser: ${navigator.userAgent}`
+      );
+    }
+
+    // Create MP4 muxer with AV1 codec
+    this.muxer = new MP4Muxer({
+      target: new MP4ArrayBufferTarget(),
+      video: {
+        codec: 'av1',
+        width: this.options.width,
+        height: this.options.height,
+      },
+      fastStart: 'in-memory',
+      firstTimestampBehavior: 'offset',
+    });
+
+    // Create VideoEncoder
+    this.encoder = new VideoEncoder({
+      output: (chunk, meta) => {
+        if (this.muxer) {
+          // Store metadata from first chunk
+          if (meta?.decoderConfig && !this.videoMetadata) {
+            this.videoMetadata = meta;
+            console.log('Captured video metadata:', meta);
+          }
+
+          const metadataToUse = this.videoMetadata || meta;
+
+          try {
+            this.muxer.addVideoChunk(chunk, metadataToUse);
+          } catch (err) {
+            console.error('Failed to add video chunk to muxer:', err);
+            throw err;
+          }
+        }
+      },
+      error: (error) => {
+        console.error('VideoEncoder error:', error);
+        throw error;
+      },
+    });
+
+    this.encoder.configure(selectedConfig);
+  }
+
+  /**
+   * Add a frame to the video from a canvas element.
+   * @param canvas The canvas to capture
+   * @param timestamp Timestamp in milliseconds
+   */
+  async addFrame(canvas: HTMLCanvasElement, timestamp: number): Promise<void> {
+    if (!this.encoder || !this.muxer) {
+      throw new Error('Encoder not initialized. Call init() first.');
+    }
+
+    if (this.isFinished) {
+      throw new Error('Cannot add frames after finish() has been called');
+    }
+
+    // Create VideoFrame from canvas
+    const frame = new VideoFrame(canvas, {
+      timestamp: timestamp * 1000, // Convert to microseconds
+    });
+
+    // Encode frame
+    const encodePromise = new Promise<void>((resolve, reject) => {
+      try {
+        const keyFrame = this.frameCount % (this.options.frameRate * 2) === 0; // Keyframe every 2 seconds
+        this.encoder!.encode(frame, { keyFrame });
+        frame.close();
+        resolve();
+      } catch (error) {
+        frame.close();
+        reject(error);
+      }
+    });
+
+    this.encodePromises.push(encodePromise);
+    this.frameCount++;
+
+    await encodePromise;
+  }
+
+  /**
+   * Finalize the video and return the MP4 blob.
+   * After calling this, the encoder cannot be reused.
+   */
+  async finish(): Promise<Blob> {
+    if (!this.encoder || !this.muxer) {
+      throw new Error('Encoder not initialized');
+    }
+
+    if (this.isFinished) {
+      throw new Error('finish() has already been called');
+    }
+
+    this.isFinished = true;
+
+    // Wait for all pending encodes
+    await Promise.all(this.encodePromises);
+
+    // Flush encoder
+    await this.encoder.flush();
+
+    // Finalize muxer
+    this.muxer.finalize();
+
+    // Get the MP4 data
+    const target = this.muxer.target as MP4ArrayBufferTarget;
+    const buffer = target.buffer;
+
+    // Clean up
+    this.encoder.close();
+    this.encoder = null;
+    this.muxer = null;
+    this.videoMetadata = null;
+
+    // Return as blob
+    return new Blob([buffer], { type: 'video/mp4' });
+  }
+
+  /**
+   * Get the number of frames encoded so far.
+   */
+  getFrameCount(): number {
+    return this.frameCount;
+  }
+}
+
+/**
  * Factory function to create a video encoder for the specified format.
- * @param format The video format ('mp4' or 'webm')
+ * @param format The video format ('mp4', 'mp4-av1', or 'webm')
  * @param options Encoder options (resolution, framerate, etc.)
  * @returns A video encoder instance
  */
@@ -575,6 +821,8 @@ export function createVideoEncoder(format: VideoFormat, options: VideoEncoderOpt
   switch (format) {
     case 'mp4':
       return new MP4VideoEncoder(options);
+    case 'mp4-av1':
+      return new MP4AV1VideoEncoder(options);
     case 'webm':
       return new WebMVideoEncoder(options);
     default:
@@ -596,6 +844,44 @@ export async function isMP4Supported(): Promise<boolean> {
     const testCodecs = [
       'avc1.42001f', // H.264
       'avc1.42001e', // H.264 lower level
+    ];
+
+    for (const codec of testCodecs) {
+      const config: VideoEncoderConfig = {
+        codec,
+        width: 640,
+        height: 480,
+        bitrate: 1000000,
+        framerate: 30,
+      };
+
+      const support = await VideoEncoder.isConfigSupported(config);
+      if (support.supported) {
+        return true;
+      }
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if MP4 AV1 encoding is supported in the current browser.
+ * Requires WebCodecs API with AV1 support (Chrome 90+, Edge 90+).
+ * Note: Safari does not support AV1.
+ */
+export async function isMP4AV1Supported(): Promise<boolean> {
+  if (typeof VideoEncoder === 'undefined') {
+    return false;
+  }
+
+  try {
+    // Try to find at least one AV1 codec
+    const testCodecs = [
+      'av01.0.04M.08', // AV1 Main Profile
+      'av01.0.00M.08', // AV1 lower level
     ];
 
     for (const codec of testCodecs) {

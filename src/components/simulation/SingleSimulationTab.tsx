@@ -78,7 +78,8 @@ function SingleSimulationTabInner() {
         const result = await canvasRef.current?.stopRecording();
         if (result) {
           const { blob } = result;
-          const extension = videoFormat === 'mp4' ? 'mp4' : 'webm';
+          // Get file extension based on format
+          const extension = videoFormat === 'webm' ? 'webm' : 'mp4';
           const link = document.createElement('a');
           link.download = `simulation_${time.toFixed(2)}h.${extension}`;
           link.href = URL.createObjectURL(blob);
@@ -96,8 +97,17 @@ function SingleSimulationTabInner() {
         setIsRecording(true);
       } catch (error) {
         console.error('Failed to start recording:', error);
-        const formatName = videoFormat === 'mp4' ? 'MP4' : 'WebM';
-        alert(`Failed to start ${formatName} recording. Your browser may not support this format.\n\nSupported browsers: Chrome 94+, Safari 16.4+ (MP4 only), Edge 94+`);
+        // Provide format-specific error messages
+        let formatName = 'MP4 (H.264)';
+        let supportInfo = 'Chrome 94+, Safari 16.4+, Edge 94+';
+        if (videoFormat === 'mp4-av1') {
+          formatName = 'MP4 (AV1)';
+          supportInfo = 'Chrome 90+, Edge 90+ (Safari not supported)';
+        } else if (videoFormat === 'webm') {
+          formatName = 'WebM (VP9)';
+          supportInfo = 'Chrome 94+, Edge 94+ (Safari not supported)';
+        }
+        alert(`Failed to start ${formatName} recording. Your browser may not support this format.\n\nSupported browsers: ${supportInfo}`);
       }
     }
   }, [isRecording, time, videoFormat]);

@@ -9,6 +9,7 @@ import type { BaseSimulationParams } from '../../core/registry';
 import {
   createVideoEncoder,
   isMP4Supported,
+  isMP4AV1Supported,
   isWebMSupported,
   type IVideoEncoder,
   type VideoFormat,
@@ -28,6 +29,8 @@ export interface SimulationCanvasRef {
   isRecording: () => boolean;
   /** Check if MP4 recording is supported */
   isMP4Supported: () => Promise<boolean>;
+  /** Check if MP4 AV1 recording is supported */
+  isMP4AV1Supported: () => Promise<boolean>;
   /** Check if WebM recording is supported */
   isWebMSupported: () => Promise<boolean>;
 }
@@ -132,6 +135,9 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
     },
     isMP4Supported: async () => {
       return await isMP4Supported();
+    },
+    isMP4AV1Supported: async () => {
+      return await isMP4AV1Supported();
     },
     isWebMSupported: async () => {
       return await isWebMSupported();
