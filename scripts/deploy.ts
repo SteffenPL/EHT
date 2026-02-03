@@ -8,7 +8,11 @@ const PAGES_REPO = '/Users/SteffenPlunder/Documents/Workspace/steffenpl.github.i
 interface DeployOptions {
   source: 'current' | 'tag' | 'commit';
   ref?: string;
-  target: 'primary' | 'beta' | 'alpha';
+  target: string;
+}
+
+function tagToVersionUrl(tag: string): string {
+  return 'v' + tag.replace(/\./g, '-');
 }
 
 async function getTags(): Promise<{ name: string; date: string }[]> {
@@ -48,15 +52,27 @@ async function selectInteractive(): Promise<DeployOptions> {
     ref = commitHash;
   }
 
+  // Build target choices
+  const targetChoices = [
+    { title: 'Primary (/internal/eht/)', value: 'primary' },
+    { title: 'Beta (/internal/eht/beta/)', value: 'beta' },
+    { title: 'Alpha (/internal/eht/alpha/)', value: 'alpha' }
+  ];
+
+  // Add versioned target option if a tag was selected
+  if (sourceChoice.source === 'tag' && ref) {
+    const versionUrl = tagToVersionUrl(ref);
+    targetChoices.push({
+      title: `Version ${ref} (/internal/eht/${versionUrl}/)`,
+      value: versionUrl
+    });
+  }
+
   const { target } = await prompts({
     type: 'select',
     name: 'target',
     message: 'Select target:',
-    choices: [
-      { title: 'Primary (/internal/eht/)', value: 'primary' },
-      { title: 'Beta (/internal/eht/beta/)', value: 'beta' },
-      { title: 'Alpha (/internal/eht/alpha/)', value: 'alpha' }
-    ]
+    choices: targetChoices
   });
 
   return { source: sourceChoice.source, ref, target };
