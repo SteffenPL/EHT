@@ -230,24 +230,26 @@ export class MP4VideoEncoder implements IVideoEncoder {
           const metadataToUse = this.videoMetadata || meta;
 
           // Firefox bug: EncodedVideoChunk.duration can be null
-          // Wrap chunk with computed duration if missing
-          let chunkToAdd: any = chunk;
+          // Monkey-patch the duration property if missing
           if (chunk.duration === null || chunk.duration === undefined) {
             // Duration per frame = 1/framerate seconds, converted to microseconds
             const durationUs = Math.round((1 / this.options.frameRate) * 1_000_000);
-            // Create a proxy that adds the duration property
-            chunkToAdd = new Proxy(chunk, {
-              get(target, prop) {
-                if (prop === 'duration') {
-                  return durationUs;
-                }
-                return (target as any)[prop];
-              }
-            });
+            try {
+              // Try to set duration property directly (works in Firefox)
+              Object.defineProperty(chunk, 'duration', {
+                value: durationUs,
+                writable: false,
+                enumerable: true,
+                configurable: true,
+              });
+            } catch (e) {
+              // If that fails, log warning
+              console.warn('Could not set chunk duration, video timing may be incorrect:', e);
+            }
           }
 
           try {
-            this.muxer.addVideoChunk(chunkToAdd, metadataToUse);
+            this.muxer.addVideoChunk(chunk, metadataToUse);
           } catch (err) {
             console.error('Failed to add video chunk to muxer:', err);
             console.error('Chunk:', chunk);
@@ -482,24 +484,26 @@ export class WebMVideoEncoder implements IVideoEncoder {
       output: (chunk, meta) => {
         if (this.muxer) {
           // Firefox bug: EncodedVideoChunk.duration can be null
-          // Wrap chunk with computed duration if missing
-          let chunkToAdd: any = chunk;
+          // Monkey-patch the duration property if missing
           if (chunk.duration === null || chunk.duration === undefined) {
             // Duration per frame = 1/framerate seconds, converted to microseconds
             const durationUs = Math.round((1 / this.options.frameRate) * 1_000_000);
-            // Create a proxy that adds the duration property
-            chunkToAdd = new Proxy(chunk, {
-              get(target, prop) {
-                if (prop === 'duration') {
-                  return durationUs;
-                }
-                return (target as any)[prop];
-              }
-            });
+            try {
+              // Try to set duration property directly (works in Firefox)
+              Object.defineProperty(chunk, 'duration', {
+                value: durationUs,
+                writable: false,
+                enumerable: true,
+                configurable: true,
+              });
+            } catch (e) {
+              // If that fails, log warning
+              console.warn('Could not set chunk duration, video timing may be incorrect:', e);
+            }
           }
 
           try {
-            this.muxer.addVideoChunk(chunkToAdd, meta);
+            this.muxer.addVideoChunk(chunk, meta);
           } catch (err) {
             console.error('Failed to add video chunk to WebM muxer:', err);
             throw err;
@@ -745,24 +749,26 @@ export class MP4AV1VideoEncoder implements IVideoEncoder {
           const metadataToUse = this.videoMetadata || meta;
 
           // Firefox bug: EncodedVideoChunk.duration can be null
-          // Wrap chunk with computed duration if missing
-          let chunkToAdd: any = chunk;
+          // Monkey-patch the duration property if missing
           if (chunk.duration === null || chunk.duration === undefined) {
             // Duration per frame = 1/framerate seconds, converted to microseconds
             const durationUs = Math.round((1 / this.options.frameRate) * 1_000_000);
-            // Create a proxy that adds the duration property
-            chunkToAdd = new Proxy(chunk, {
-              get(target, prop) {
-                if (prop === 'duration') {
-                  return durationUs;
-                }
-                return (target as any)[prop];
-              }
-            });
+            try {
+              // Try to set duration property directly (works in Firefox)
+              Object.defineProperty(chunk, 'duration', {
+                value: durationUs,
+                writable: false,
+                enumerable: true,
+                configurable: true,
+              });
+            } catch (e) {
+              // If that fails, log warning
+              console.warn('Could not set chunk duration, video timing may be incorrect:', e);
+            }
           }
 
           try {
-            this.muxer.addVideoChunk(chunkToAdd, metadataToUse);
+            this.muxer.addVideoChunk(chunk, metadataToUse);
           } catch (err) {
             console.error('Failed to add video chunk to muxer:', err);
             throw err;
