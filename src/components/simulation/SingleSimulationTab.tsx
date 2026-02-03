@@ -72,18 +72,28 @@ function SingleSimulationTabInner() {
     if (isRecording) {
       // Stop recording and save
       setIsRecording(false);
-      const blob = await canvasRef.current?.stopRecording();
-      if (blob) {
-        const link = document.createElement('a');
-        link.download = `simulation_${time.toFixed(2)}h.mp4`;
-        link.href = URL.createObjectURL(blob);
-        link.click();
-        URL.revokeObjectURL(link.href);
+      try {
+        const blob = await canvasRef.current?.stopRecording();
+        if (blob) {
+          const link = document.createElement('a');
+          link.download = `simulation_${time.toFixed(2)}h.mp4`;
+          link.href = URL.createObjectURL(blob);
+          link.click();
+          URL.revokeObjectURL(link.href);
+        }
+      } catch (error) {
+        console.error('Failed to save movie:', error);
+        alert('Failed to save movie. Check console for details.');
       }
     } else {
       // Start recording
-      await canvasRef.current?.startRecording();
-      setIsRecording(true);
+      try {
+        await canvasRef.current?.startRecording();
+        setIsRecording(true);
+      } catch (error) {
+        console.error('Failed to start recording:', error);
+        alert('Failed to start recording. Your browser may not support video encoding.\n\nSupported browsers: Chrome 94+, Safari 16.4+, Edge 94+');
+      }
     }
   }, [isRecording, time]);
 

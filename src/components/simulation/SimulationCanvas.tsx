@@ -21,7 +21,7 @@ export interface SimulationCanvasRef {
   /** Check if currently recording */
   isRecording: () => boolean;
   /** Check if MP4 recording is supported */
-  isMP4Supported: () => boolean;
+  isMP4Supported: () => Promise<boolean>;
 }
 
 export interface SimulationCanvasProps {
@@ -74,8 +74,13 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
         // Bitrate will be calculated automatically based on resolution
       });
 
-      await encoder.init();
-      videoEncoderRef.current = encoder;
+      try {
+        await encoder.init();
+        videoEncoderRef.current = encoder;
+      } catch (error) {
+        console.error('Failed to initialize video encoder:', error);
+        throw error; // Re-throw so caller can handle
+      }
     },
     captureFrame: async (timestamp: number) => {
       const encoder = videoEncoderRef.current;
@@ -83,7 +88,12 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
 
       if (!encoder || !canvas) return;
 
-      await encoder.addFrame(canvas, timestamp);
+      try {
+        await encoder.addFrame(canvas, timestamp);
+      } catch (error) {
+        console.error('Failed to capture frame:', error);
+        // Don't throw - just log and continue
+      }
     },
     stopRecording: async () => {
       const encoder = videoEncoderRef.current;
@@ -91,15 +101,21 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
         return null;
       }
 
-      const blob = await encoder.finish();
-      videoEncoderRef.current = null;
-      return blob;
+      try {
+        const blob = await encoder.finish();
+        videoEncoderRef.current = null;
+        return blob;
+      } catch (error) {
+        console.error('Failed to finalize video:', error);
+        videoEncoderRef.current = null;
+        throw error;
+      }
     },
     isRecording: () => {
       return videoEncoderRef.current !== null;
     },
-    isMP4Supported: () => {
-      return isMP4Supported();
+    isMP4Supported: async () => {
+      return await isMP4Supported();
     },
   }), []);
 
