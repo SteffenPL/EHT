@@ -9,6 +9,7 @@ import { SimulationControls } from './SimulationControls';
 import { FrameStatsPanel } from './FrameStatsPanel';
 import { Card } from '../ui/card';
 import type { VideoFormat } from '@/core/export/videoEncoder';
+import { getRecommendedVideoFormat, getFormatRecommendationMessage } from '@/core/export/browserDetection';
 
 /**
  * Wrapper that provides a key to force remount on model change.
@@ -24,9 +25,13 @@ export function SingleSimulationTab() {
 function SingleSimulationTabInner() {
   const [paramChangeBehavior, setParamChangeBehavior] = useState<ParamChangeBehavior>('run');
   const [isRecording, setIsRecording] = useState(false);
-  const [videoFormat, setVideoFormat] = useState<VideoFormat>('mp4');
+  // Initialize with recommended format for browser
+  const [videoFormat, setVideoFormat] = useState<VideoFormat>(() => getRecommendedVideoFormat());
   const { currentModel, currentParams } = useModel();
   const canvasRef = useRef<SimulationCanvasRef>(null);
+
+  // Get browser-specific recommendation message
+  const formatRecommendation = useMemo(() => getFormatRecommendationMessage(), []);
 
   // Model-specific render options
   const renderOptionsConfig = currentModel.renderOptions;
@@ -97,6 +102,10 @@ function SingleSimulationTabInner() {
         setIsRecording(true);
       } catch (error) {
         console.error('Failed to start recording:', error);
+
+        // Detect Firefox
+        const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+
         // Provide format-specific error messages
         let formatName = 'MP4 (H.264)';
         let supportInfo = 'Chrome 94+, Safari 16.4+, Edge 94+';
@@ -107,7 +116,18 @@ function SingleSimulationTabInner() {
           formatName = 'WebM (VP9)';
           supportInfo = 'Chrome 94+, Edge 94+ (Safari not supported)';
         }
-        alert(`Failed to start ${formatName} recording. Your browser may not support this format.\n\nSupported browsers: ${supportInfo}`);
+
+        let errorMessage = `Failed to start ${formatName} recording. Your browser may not support this format.\n\nSupported browsers: ${supportInfo}`;
+
+        // Add Firefox-specific guidance for H.264/AV1 failures
+        if (isFirefox && (videoFormat === 'mp4' || videoFormat === 'mp4-av1')) {
+          errorMessage += '\n\n⚠️ Firefox has known issues with H.264 and AV1 encoding.\n';
+          errorMessage += '✅ Solution: Select "WebM (VP9)" format instead.\n';
+          errorMessage += '\n💡 To convert WebM to MP4 later, use:\n';
+          errorMessage += 'ffmpeg -i video.webm -c:v libx264 -crf 23 video.mp4';
+        }
+
+        alert(errorMessage);
       }
     }
   }, [isRecording, time, videoFormat]);
@@ -184,6 +204,13 @@ function SingleSimulationTabInner() {
           renderOptions={renderOptions}
         />
       </Card>
+
+      {/* Browser-specific format recommendation */}
+      {formatRecommendation && (
+        <div className="px-3 py-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-md text-sm text-blue-800 dark:text-blue-200">
+          <span className="font-medium">ℹ️ Tip:</span> {formatRecommendation}
+        </div>
+      )}
 
       {/* Controls */}
       <SimulationControls

@@ -229,8 +229,25 @@ export class MP4VideoEncoder implements IVideoEncoder {
           // Always use stored metadata if available
           const metadataToUse = this.videoMetadata || meta;
 
+          // Firefox bug: EncodedVideoChunk.duration can be null
+          // Wrap chunk with computed duration if missing
+          let chunkToAdd: any = chunk;
+          if (chunk.duration === null || chunk.duration === undefined) {
+            // Duration per frame = 1/framerate seconds, converted to microseconds
+            const durationUs = Math.round((1 / this.options.frameRate) * 1_000_000);
+            // Create a proxy that adds the duration property
+            chunkToAdd = new Proxy(chunk, {
+              get(target, prop) {
+                if (prop === 'duration') {
+                  return durationUs;
+                }
+                return (target as any)[prop];
+              }
+            });
+          }
+
           try {
-            this.muxer.addVideoChunk(chunk, metadataToUse);
+            this.muxer.addVideoChunk(chunkToAdd, metadataToUse);
           } catch (err) {
             console.error('Failed to add video chunk to muxer:', err);
             console.error('Chunk:', chunk);
@@ -464,8 +481,25 @@ export class WebMVideoEncoder implements IVideoEncoder {
     this.encoder = new VideoEncoder({
       output: (chunk, meta) => {
         if (this.muxer) {
+          // Firefox bug: EncodedVideoChunk.duration can be null
+          // Wrap chunk with computed duration if missing
+          let chunkToAdd: any = chunk;
+          if (chunk.duration === null || chunk.duration === undefined) {
+            // Duration per frame = 1/framerate seconds, converted to microseconds
+            const durationUs = Math.round((1 / this.options.frameRate) * 1_000_000);
+            // Create a proxy that adds the duration property
+            chunkToAdd = new Proxy(chunk, {
+              get(target, prop) {
+                if (prop === 'duration') {
+                  return durationUs;
+                }
+                return (target as any)[prop];
+              }
+            });
+          }
+
           try {
-            this.muxer.addVideoChunk(chunk, meta);
+            this.muxer.addVideoChunk(chunkToAdd, meta);
           } catch (err) {
             console.error('Failed to add video chunk to WebM muxer:', err);
             throw err;
@@ -710,8 +744,25 @@ export class MP4AV1VideoEncoder implements IVideoEncoder {
 
           const metadataToUse = this.videoMetadata || meta;
 
+          // Firefox bug: EncodedVideoChunk.duration can be null
+          // Wrap chunk with computed duration if missing
+          let chunkToAdd: any = chunk;
+          if (chunk.duration === null || chunk.duration === undefined) {
+            // Duration per frame = 1/framerate seconds, converted to microseconds
+            const durationUs = Math.round((1 / this.options.frameRate) * 1_000_000);
+            // Create a proxy that adds the duration property
+            chunkToAdd = new Proxy(chunk, {
+              get(target, prop) {
+                if (prop === 'duration') {
+                  return durationUs;
+                }
+                return (target as any)[prop];
+              }
+            });
+          }
+
           try {
-            this.muxer.addVideoChunk(chunk, metadataToUse);
+            this.muxer.addVideoChunk(chunkToAdd, metadataToUse);
           } catch (err) {
             console.error('Failed to add video chunk to muxer:', err);
             throw err;

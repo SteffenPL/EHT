@@ -62,6 +62,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   const rendererRef = useRef<SimulationRenderer | null>(null);
   const videoEncoderRef = useRef<IVideoEncoder | null>(null);
   const videoFormatRef = useRef<VideoFormat>('mp4'); // Store current recording format
+  const isFinishingRef = useRef<boolean>(false); // Track if encoder is being finalized
   const [isReady, setIsReady] = useState(false);
   const [size, setSize] = useState({ width: 800, height: minHeight });
   const { isDark } = useTheme();
@@ -80,6 +81,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
 
       const canvas = canvasRef.current;
       videoFormatRef.current = format; // Store format for stopRecording
+      isFinishingRef.current = false; // Reset finishing flag
 
       const encoder = createVideoEncoder(format, {
         width: canvas.width,
@@ -117,9 +119,13 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
 
       const format = videoFormatRef.current;
 
+      // Set finishing flag BEFORE calling finish() to prevent race conditions
+      isFinishingRef.current = true;
+
       try {
         const blob = await encoder.finish();
         videoEncoderRef.current = null;
+        isFinishingRef.current = false;
 
         // Return blob with appropriate MIME type
         const mimeType = format === 'mp4' ? 'video/mp4' : 'video/webm';
@@ -127,6 +133,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
       } catch (error) {
         console.error('Failed to finalize video:', error);
         videoEncoderRef.current = null;
+        isFinishingRef.current = false;
         throw error;
       }
     },
@@ -242,8 +249,8 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
     if (rendererRef.current && state && isReady) {
       rendererRef.current.render(state);
 
-      // Capture frame if recording
-      if (videoEncoderRef.current && canvasRef.current) {
+      // Capture frame if recording (check finishing flag to prevent race conditions)
+      if (videoEncoderRef.current && canvasRef.current && !isFinishingRef.current) {
         const timestamp = state.t !== undefined ? state.t * 1000 : 0; // Convert hours to milliseconds
         videoEncoderRef.current.addFrame(canvasRef.current, timestamp)
           .catch(err => console.error('Failed to capture frame:', err));
