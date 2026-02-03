@@ -104,7 +104,12 @@ async function deploy(options: DeployOptions) {
 
     // Deploy
     execSync(`mkdir -p "${targetDir}"`, { stdio: 'inherit' });
-    execSync(`rm -rf "${targetDir}"/*`, { stdio: 'inherit' });
+
+    // Clean up only specific build artifacts (preserving subdirectories like alpha/, beta/, v*/)
+    execSync(`rm -f "${targetDir}"/index.html`, { stdio: 'inherit' });
+    execSync(`rm -rf "${targetDir}"/assets`, { stdio: 'inherit' });
+    execSync(`rm -rf "${targetDir}"/presets`, { stdio: 'inherit' });
+
     execSync(`cp -r dist/* "${targetDir}"/`, { stdio: 'inherit' });
 
     // Return to original state
