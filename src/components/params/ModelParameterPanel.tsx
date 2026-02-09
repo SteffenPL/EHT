@@ -27,10 +27,12 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
   const WarningBanner = currentModel.ui?.WarningBanner;
   const ParametersTab = currentModel.ui?.ParametersTab;
   const CellTypesTab = currentModel.ui?.CellTypesTab;
+  const CellEventsTab = currentModel.ui?.CellEventsTab;
   const SimulationTab = currentModel.ui?.SimulationTab;
 
   // Determine which tabs to show based on what the model provides
   const hasCellTypes = !!CellTypesTab;
+  const hasCellEvents = !!CellEventsTab;
   const hasSimulation = !!SimulationTab;
 
   return (
@@ -46,6 +48,7 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
         <TabsList className="w-full justify-start shrink-0">
           <TabsTrigger value="parameters">Parameters</TabsTrigger>
           {hasCellTypes && <TabsTrigger value="celltypes">Cell Types</TabsTrigger>}
+          {hasCellEvents && <TabsTrigger value="cellevents">Cell Events</TabsTrigger>}
           {hasSimulation && <TabsTrigger value="simulation">Simulation</TabsTrigger>}
         </TabsList>
 
@@ -67,6 +70,14 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
           <TabsContent value="celltypes" className="flex-1 mt-0 overflow-auto">
             <div className="p-4">
               <CellTypesTab params={params} onChange={onChange} disabled={disabled} />
+            </div>
+          </TabsContent>
+        )}
+
+        {hasCellEvents && (
+          <TabsContent value="cellevents" className="flex-1 mt-0 overflow-auto">
+            <div className="p-4">
+              <CellEventsTab params={params} onChange={onChange} disabled={disabled} />
             </div>
           </TabsContent>
         )}

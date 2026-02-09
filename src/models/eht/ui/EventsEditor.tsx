@@ -187,7 +187,7 @@ function TimeRangeInput({ start, end, onChangeStart, onChangeEnd, disabled }: Ti
 // Event Editor Component
 // =============================================================================
 
-function EventEditor({
+export function EventEditor({
   event,
   allEvents,
   onChange,
