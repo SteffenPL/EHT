@@ -13,6 +13,22 @@ export enum CellPhase {
     Division = 3, // Ready to divide (triggers division logic)
 }
 
+/**
+ * Cell event state - tracks per-cell event status for v1.1.0 event system.
+ */
+export interface CellEventState {
+    /** Event definition ID */
+    event_id: string;
+    /** Sampled trigger time (between event start/end, Infinity if skipped) */
+    trigger_time: number;
+    /** Whether the event has fired at least once */
+    has_fired: boolean;
+    /** Time of last fire (for periodic events) */
+    last_fire_time: number;
+    /** Number of times the event has fired */
+    fire_count: number;
+}
+
 /** Apical link between neighboring cells */
 export interface ApicalLink {
     l: number;  // Left cell index
@@ -62,7 +78,7 @@ export interface CellState {
     // INM (interkinetic nuclear migration)
     has_inm: boolean;
 
-    // EMT event times (sampled at cell creation)
+    // EMT event times (sampled at cell creation) - legacy v1.0.0
     time_A: number;
     time_B: number;
     time_S: number;
@@ -74,6 +90,14 @@ export interface CellState {
     stiffness_straightness: number;
     stiffness_nuclei_apical: number;
     stiffness_nuclei_basal: number;
+
+    // New v1.1.0 event system
+    /** Event states for v1.1.0 event system (keyed by event ID) */
+    event_states?: Record<string, CellEventState>;
+    /** True once cell has entered G2 phase (for cell_cycle_phase requirements) */
+    has_reached_G2?: boolean;
+    /** True once cell has entered Mitosis phase (for cell_cycle_phase requirements) */
+    has_reached_mitosis?: boolean;
 }
 
 /** Geometry parameters computed at initialization */

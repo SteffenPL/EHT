@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { CellCyclePhase } from './types';
 
 /** Metadata schema */
 export const metadataSchema = z.object({
@@ -24,7 +25,60 @@ export const rangeSchema = z.object({
   max: z.number(),
 });
 
-/** EMT event times schema */
+// =============================================================================
+// New Event System Schemas (v1.1.0)
+// =============================================================================
+
+/** Cell cycle phase enum schema */
+export const cellCyclePhaseSchema = z.nativeEnum(CellCyclePhase);
+
+/** Special event name schema */
+export const specialEventNameSchema = z.enum([
+  'lose_apical_adhesion',
+  'lose_basal_adhesion',
+  'apical_constriction',
+  'start_running',
+]);
+
+/** Base event definition schema (shared fields) */
+export const baseEventDefinitionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  start: z.number(),
+  end: z.number(),
+  period: z.number().nonnegative(),
+  probability: z.number().min(0).max(1),
+  prereq: z.string().nullable(),
+  cell_cycle_phase: cellCyclePhaseSchema,
+});
+
+/** Parameter change event schema */
+export const parameterChangeEventSchema = baseEventDefinitionSchema.extend({
+  type: z.literal('parameter_change'),
+  target_parameter: z.string(),
+  formula: z.string(),
+});
+
+/** Special event schema */
+export const specialEventSchema = baseEventDefinitionSchema.extend({
+  type: z.literal('special'),
+  special_name: specialEventNameSchema,
+});
+
+/** Union event definition schema */
+export const eventDefinitionSchema = z.discriminatedUnion('type', [
+  parameterChangeEventSchema,
+  specialEventSchema,
+]);
+
+/** Events array schema */
+export const eventsArraySchema = z.array(eventDefinitionSchema);
+
+// =============================================================================
+// Legacy Event System Schema (v1.0.0)
+// =============================================================================
+
+/** EMT event times schema (legacy) */
 export const emtEventTimesSchema = z.object({
   time_A_start: z.number(),
   time_A_end: z.number(),
@@ -65,6 +119,7 @@ export const ehtCellTypeSchema = z.object({
   INM: z.number().min(0).max(1),
   hetero: z.boolean(),
   events: emtEventTimesSchema,
+  events_v2: eventsArraySchema.optional(),  // New v1.1.0 event system
   // Per-cell-type properties
   diffusion: z.number().nonnegative(),
   basal_damping_ratio: z.number().nonnegative(),

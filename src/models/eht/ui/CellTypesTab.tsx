@@ -3,7 +3,7 @@
  */
 import { useState, useCallback } from 'react';
 import type { ModelUITabProps } from '@/core/registry';
-import type { EHTParams, EHTCellTypeParams } from '../params/types';
+import type { EHTParams, EHTCellTypeParams, EventDefinition } from '../params/types';
 import { DEFAULT_CONTROL_CELL } from '../params/defaults';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, Copy, ClipboardPaste } from 'lucide-react';
 import type { RGBColor } from '@/components/params/inputs/ColorInput';
+import { EventsSection } from './EventsEditor';
 
 // Section definitions for copy/paste
 type SectionKey = 'initial' | 'geometry' | 'appearance' | 'stiffness' | 'division' | 'cellTypeProps' | 'events' | 'running';
@@ -34,7 +35,7 @@ const SECTIONS: SectionDefinition[] = [
   { key: 'stiffness', label: 'Stiffness', fields: ['k_apical_junction', 'k_cytos', 'stiffness_apical_apical', 'stiffness_apical_apical_div', 'stiffness_nuclei_apical', 'stiffness_nuclei_basal', 'stiffness_repulsion', 'stiffness_straightness'] },
   { key: 'division', label: 'Division & Lifecycle', fields: ['lifespan_start', 'lifespan_end', 'dur_G2', 'dur_mitosis', 'INM'] },
   { key: 'cellTypeProps', label: 'Cell-Type Properties', fields: ['diffusion', 'basal_damping_ratio', 'max_basal_junction_dist', 'cytos_init', 'basal_membrane_repulsion', 'apical_junction_init', 'max_cytoskeleton_length'] },
-  { key: 'events', label: 'EMT Events (time ranges)', fields: ['hetero', 'events'] },
+  { key: 'events', label: 'Cell Events (v1.1.0)', fields: ['events_v2'] },
   { key: 'running', label: 'Running Behavior', fields: ['run', 'running_speed', 'running_mode'] },
 ];
 
@@ -179,24 +180,6 @@ function SplitRangeCell({ valueStart, valueEnd, onChangeStart, onChangeEnd, disa
           />
         )}
       </div>
-    </td>
-  );
-}
-
-interface BoolCellProps {
-  value: boolean;
-  onChange: (value: boolean) => void;
-  disabled?: boolean;
-}
-
-function BoolCell({ value, onChange, disabled }: BoolCellProps) {
-  return (
-    <td className="py-1 px-1">
-      <Checkbox
-        checked={value}
-        onCheckedChange={(checked) => onChange(checked === true)}
-        disabled={disabled}
-      />
     </td>
   );
 }
@@ -387,23 +370,12 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     onChange(newParams);
   };
 
-  const updateCellTypeEventStart = (
+  const updateCellTypeEvents = (
     cellType: string,
-    eventKey: 'time_A' | 'time_B' | 'time_S' | 'time_P' | 'time_AC',
-    value: number
+    events: EventDefinition[]
   ) => {
     const newParams = structuredClone(params);
-    (newParams.cell_types[cellType] as EHTCellTypeParams).events[`${eventKey}_start`] = value;
-    onChange(newParams);
-  };
-
-  const updateCellTypeEventEnd = (
-    cellType: string,
-    eventKey: 'time_A' | 'time_B' | 'time_S' | 'time_P' | 'time_AC',
-    value: number
-  ) => {
-    const newParams = structuredClone(params);
-    (newParams.cell_types[cellType] as EHTCellTypeParams).events[`${eventKey}_end`] = value;
+    (newParams.cell_types[cellType] as EHTCellTypeParams).events_v2 = events;
     onChange(newParams);
   };
 
@@ -838,148 +810,24 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
             ))}
           </CellTypeRow>
 
-          {/* EMT Events */}
+          {/* Cell Events (v1.1.0) */}
           <SectionHeader section={SECTIONS[6]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
-          <CellTypeRow label="Heterogeneous">
-            {cellTypeKeys.map((key) => (
-              <BoolCell
-                key={key}
-                value={getCellType(key).hetero}
-                onChange={(v) => updateCellType(key, 'hetero', v)}
-                disabled={disabled}
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Time A start">
-            {cellTypeKeys.map((key) => (
-              <SplitRangeCell
-                key={key}
-                valueStart={getCellType(key).events.time_A_start}
-                valueEnd={getCellType(key).events.time_A_end}
-                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_A', v)}
-                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_A', v)}
-                disabled={disabled}
-                label="start"
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Time A end">
-            {cellTypeKeys.map((key) => (
-              <SplitRangeCell
-                key={key}
-                valueStart={getCellType(key).events.time_A_start}
-                valueEnd={getCellType(key).events.time_A_end}
-                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_A', v)}
-                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_A', v)}
-                disabled={disabled}
-                label="end"
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Time B start">
-            {cellTypeKeys.map((key) => (
-              <SplitRangeCell
-                key={key}
-                valueStart={getCellType(key).events.time_B_start}
-                valueEnd={getCellType(key).events.time_B_end}
-                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_B', v)}
-                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_B', v)}
-                disabled={disabled}
-                label="start"
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Time B end">
-            {cellTypeKeys.map((key) => (
-              <SplitRangeCell
-                key={key}
-                valueStart={getCellType(key).events.time_B_start}
-                valueEnd={getCellType(key).events.time_B_end}
-                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_B', v)}
-                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_B', v)}
-                disabled={disabled}
-                label="end"
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Time S start">
-            {cellTypeKeys.map((key) => (
-              <SplitRangeCell
-                key={key}
-                valueStart={getCellType(key).events.time_S_start}
-                valueEnd={getCellType(key).events.time_S_end}
-                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_S', v)}
-                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_S', v)}
-                disabled={disabled}
-                label="start"
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Time S end">
-            {cellTypeKeys.map((key) => (
-              <SplitRangeCell
-                key={key}
-                valueStart={getCellType(key).events.time_S_start}
-                valueEnd={getCellType(key).events.time_S_end}
-                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_S', v)}
-                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_S', v)}
-                disabled={disabled}
-                label="end"
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Time P start">
-            {cellTypeKeys.map((key) => (
-              <SplitRangeCell
-                key={key}
-                valueStart={getCellType(key).events.time_P_start}
-                valueEnd={getCellType(key).events.time_P_end}
-                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_P', v)}
-                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_P', v)}
-                disabled={disabled}
-                label="start"
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Time P end">
-            {cellTypeKeys.map((key) => (
-              <SplitRangeCell
-                key={key}
-                valueStart={getCellType(key).events.time_P_start}
-                valueEnd={getCellType(key).events.time_P_end}
-                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_P', v)}
-                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_P', v)}
-                disabled={disabled}
-                label="end"
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Time AC start" tooltip="Apical Constriction - cuts links between this type and other types">
-            {cellTypeKeys.map((key) => (
-              <SplitRangeCell
-                key={key}
-                valueStart={getCellType(key).events.time_AC_start}
-                valueEnd={getCellType(key).events.time_AC_end}
-                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_AC', v)}
-                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_AC', v)}
-                disabled={disabled}
-                label="start"
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Time AC end">
-            {cellTypeKeys.map((key) => (
-              <SplitRangeCell
-                key={key}
-                valueStart={getCellType(key).events.time_AC_start}
-                valueEnd={getCellType(key).events.time_AC_end}
-                onChangeStart={(v) => updateCellTypeEventStart(key, 'time_AC', v)}
-                onChangeEnd={(v) => updateCellTypeEventEnd(key, 'time_AC', v)}
-                disabled={disabled}
-                label="end"
-              />
-            ))}
-          </CellTypeRow>
+          <tr>
+            <td className="py-2 px-2 text-xs" colSpan={cellTypeKeys.length + 1}>
+              <div className="grid gap-4" style={{ gridTemplateColumns: `140px repeat(${cellTypeKeys.length}, 1fr)` }}>
+                <div className="text-xs font-medium">Events</div>
+                {cellTypeKeys.map((key) => (
+                  <EventsSection
+                    key={key}
+                    cellType={getCellType(key)}
+                    cellTypeKey={key}
+                    onEventsChange={(events) => updateCellTypeEvents(key, events)}
+                    disabled={disabled}
+                  />
+                ))}
+              </div>
+            </td>
+          </tr>
 
           {/* Running Behavior - at the end */}
           <SectionHeader section={SECTIONS[7]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />

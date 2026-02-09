@@ -5,15 +5,73 @@
 
 import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
-import type { EHTSimulationState, CellState } from '../types';
+import type { EHTSimulationState, CellState, CellEventState } from '../types';
 import { CellPhase } from '../types';
-import type { EHTParams, EHTCellTypeParams } from '../params/types';
+import type { EHTParams, EHTCellTypeParams, EventDefinition } from '../params/types';
+import { CellCyclePhase } from '../params/types';
 
 /** Input for creating a new cell with pre-computed positions */
 export interface CreateCellInput {
   basalPoint: Vector2;
   apicalPoint: Vector2;
   nucleusPosition: Vector2;
+}
+
+/**
+ * Initialize event states for the v1.1.0 event system.
+ * Samples trigger times for each event based on probability.
+ */
+export function initializeEventStates(
+  events: EventDefinition[] | undefined,
+  rng: SeededRandom
+): Record<string, CellEventState> {
+  const eventStates: Record<string, CellEventState> = {};
+
+  if (!events || events.length === 0) {
+    return eventStates;
+  }
+
+  for (const event of events) {
+    // Determine if this event should be skipped based on probability
+    const shouldTrigger = rng.random() <= event.probability;
+
+    // Sample trigger time within [start, end] range
+    let triggerTime: number;
+    if (shouldTrigger && isFinite(event.start) && isFinite(event.end)) {
+      triggerTime = rng.random(event.start, event.end);
+    } else {
+      // Event is skipped or has invalid range
+      triggerTime = Infinity;
+    }
+
+    eventStates[event.id] = {
+      event_id: event.id,
+      trigger_time: triggerTime,
+      has_fired: false,
+      last_fire_time: -Infinity,
+      fire_count: 0,
+    };
+  }
+
+  return eventStates;
+}
+
+/**
+ * Copy event states from parent cell for cell division (v1.1.0).
+ * Preserves has_fired status and trigger times from parent.
+ */
+export function copyEventStates(
+  parentEventStates: Record<string, CellEventState> | undefined
+): Record<string, CellEventState> | undefined {
+  if (!parentEventStates) {
+    return undefined;
+  }
+
+  const copied: Record<string, CellEventState> = {};
+  for (const [id, state] of Object.entries(parentEventStates)) {
+    copied[id] = { ...state };
+  }
+  return copied;
 }
 
 /**
@@ -48,11 +106,14 @@ export function createCell(
     ? Math.max(...state.cells.map(c => c.id)) + 1
     : 0;
 
+  // Check if using v1.1.0 event system
+  const useV2Events = cellType.events_v2 !== undefined && cellType.events_v2.length > 0;
+
   if (parent === undefined) {
     // New cell (not from division)
     const birthTime = state.t - rng.random(0, maxAge);
 
-    // Sample EMT event times
+    // Sample EMT event times (legacy v1.0.0 system)
     let time_A = rng.random(cellType.events.time_A_start, cellType.events.time_A_end);
     let time_B = rng.random(cellType.events.time_B_start, cellType.events.time_B_end);
     let time_S = rng.random(cellType.events.time_S_start, cellType.events.time_S_end);
@@ -61,13 +122,18 @@ export function createCell(
       ? time_B
       : Infinity;
 
-    // Heterogeneous EMT behavior
-    if (cellType.hetero) {
+    // Heterogeneous EMT behavior (legacy)
+    if (cellType.hetero && !useV2Events) {
       if (rng.random() > 0.7) time_A = Infinity;
       if (rng.random() > 0.7) time_B = Infinity;
       if (rng.random() > 0.7) time_S = Infinity;
       if (rng.random() > 0.7) time_AC = Infinity;
     }
+
+    // Initialize v1.1.0 event states if available
+    const event_states = useV2Events
+      ? initializeEventStates(cellType.events_v2, rng)
+      : undefined;
 
     return {
       id,
@@ -96,6 +162,10 @@ export function createCell(
       stiffness_straightness: cellType.stiffness_straightness,
       stiffness_nuclei_apical: cellType.stiffness_nuclei_apical,
       stiffness_nuclei_basal: cellType.stiffness_nuclei_basal,
+      // v1.1.0 event system
+      event_states,
+      has_reached_G2: false,
+      has_reached_mitosis: false,
     };
   } else {
     // Cell from division - inherit properties from parent
@@ -126,6 +196,10 @@ export function createCell(
       stiffness_straightness: parent.stiffness_straightness,
       stiffness_nuclei_apical: parent.stiffness_nuclei_apical,
       stiffness_nuclei_basal: parent.stiffness_nuclei_basal,
+      // v1.1.0 event system - inherit from parent
+      event_states: copyEventStates(parent.event_states),
+      has_reached_G2: parent.has_reached_G2,
+      has_reached_mitosis: parent.has_reached_mitosis,
     };
   }
 }
@@ -142,6 +216,7 @@ export function getCellType(
 
 /**
  * Update cell phase based on time.
+ * Also tracks phase transitions for v1.1.0 cell_cycle_phase requirements.
  */
 export function updateCellPhase(
   cell: CellState,
@@ -152,6 +227,8 @@ export function updateCellPhase(
   const g2Start = divTime - cellType.dur_G2 - cellType.dur_mitosis;
   const mitosisStart = divTime - cellType.dur_mitosis;
 
+  const previousPhase = cell.phase;
+
   if (t < g2Start) {
     cell.phase = CellPhase.G1;
   } else if (t < mitosisStart) {
@@ -160,5 +237,36 @@ export function updateCellPhase(
     cell.phase = CellPhase.Mitosis;
   } else {
     cell.phase = CellPhase.Division;
+  }
+
+  // Track phase transitions for v1.1.0 event system
+  if (cell.phase === CellPhase.G2 && previousPhase !== CellPhase.G2) {
+    cell.has_reached_G2 = true;
+  }
+  if (cell.phase === CellPhase.Mitosis && previousPhase !== CellPhase.Mitosis) {
+    cell.has_reached_mitosis = true;
+  }
+}
+
+/**
+ * Check if a cell satisfies a cell cycle phase requirement.
+ */
+export function satisfiesCellCyclePhase(
+  cell: CellState,
+  requiredPhase: CellCyclePhase
+): boolean {
+  switch (requiredPhase) {
+    case CellCyclePhase.Any:
+      return true;
+    case CellCyclePhase.Birth:
+      return true; // Birth is always satisfied
+    case CellCyclePhase.G1:
+      return true; // G1 is satisfied after birth
+    case CellCyclePhase.G2:
+      return cell.has_reached_G2 === true;
+    case CellCyclePhase.Mitosis:
+      return cell.has_reached_mitosis === true;
+    default:
+      return true;
   }
 }

@@ -9,7 +9,7 @@ import { modelRegistry } from './registry';
 /** Default metadata for legacy params (pre-versioning) */
 const LEGACY_METADATA: ParamsMetadata = {
   model: 'EHT',
-  version: '1.0.0',
+  version: '1.1.0',
 };
 
 /**
