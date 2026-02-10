@@ -1,11 +1,17 @@
 /**
  * EHT model EMT events handling.
  * Processes time-based events like losing apical/basal adhesion.
+ *
+ * Supports both:
+ * - Legacy v1.0.0 event system (EMTEventTimes)
+ * - New v1.1.0 event system (events_v2 array)
  */
 
 import { Vector2 } from '@/core/math/vector2';
-import type { EHTSimulationState, ApicalLink, BasalLink, CellState } from '../types';
-import type { EHTParams } from '../params/types';
+import { evaluate } from 'mathjs';
+import type { EHTSimulationState, ApicalLink, BasalLink, CellState, CellEventState } from '../types';
+import type { EHTParams, EHTCellTypeParams, EventDefinition, ParameterChangeEvent, SpecialEvent, SpecialEventName } from '../params/types';
+import { satisfiesCellCyclePhase } from './cell';
 
 /**
  * Process apical adhesion loss event.
@@ -309,5 +315,394 @@ export function processEMTEvents(
       console.log(`Event AC for type ${typeIndex}`);
       processApicalConstriction(state, cellIdx);
     }
+  }
+}
+
+// =============================================================================
+// New v1.1.0 Event System
+// =============================================================================
+
+/**
+ * Special event handler registry.
+ * Maps special event names to their handler functions.
+ */
+const specialEventHandlers: Record<SpecialEventName, (state: EHTSimulationState, cellIndex: number) => void> = {
+  'lose_apical_adhesion': processLoseApicalAdhesionOnly,
+  'lose_basal_adhesion': processLoseBasalAdhesionOnly,
+  'apical_constriction': processApicalConstriction,
+  'start_running': processStartRunning,
+};
+
+/**
+ * Process apical adhesion loss (structural changes only, no stiffness change).
+ * For v1.1.0 event system - stiffness changes are handled by separate parameter events.
+ */
+export function processLoseApicalAdhesionOnly(
+  state: EHTSimulationState,
+  cellIndex: number
+): void {
+  const cell = state.cells[cellIndex];
+  cell.has_A = false;
+
+  // Find and remove apical links involving this cell
+  const inds: number[] = [];
+  let newCon: ApicalLink = { l: 0, r: 0, rl: 0.0 };
+
+  for (let e = 0; e < state.ap_links.length; e++) {
+    const con = state.ap_links[e];
+    if (con.l === cellIndex) {
+      inds.push(e);
+      newCon.r = con.r;
+    }
+    if (con.r === cellIndex) {
+      inds.push(e);
+      newCon.l = con.l;
+    }
+  }
+
+  if (inds.length === 1) {
+    // Cell at boundary - just remove the link
+    state.ap_links.splice(inds[0], 1);
+  } else if (inds.length === 2) {
+    // Cell in middle - connect neighbors
+    inds.sort((a, b) => b - a); // Sort descending for safe removal
+
+    state.ap_links.splice(inds[0], 1);
+    state.ap_links.splice(inds[1], 1);
+
+    // Calculate new rest length
+    const cellL = state.cells[newCon.l];
+    const cellR = state.cells[newCon.r];
+    newCon.rl = Vector2.from(cellL.A).dist(Vector2.from(cellR.A));
+
+    state.ap_links.push(newCon);
+  }
+}
+
+/**
+ * Process basal adhesion loss (structural changes only, no stiffness change).
+ * For v1.1.0 event system - stiffness changes are handled by separate parameter events.
+ */
+export function processLoseBasalAdhesionOnly(
+  state: EHTSimulationState,
+  cellIndex: number
+): void {
+  const cell = state.cells[cellIndex];
+  cell.has_B = false;
+
+  // Find and remove basal links involving this cell
+  const inds: number[] = [];
+  let newCon: BasalLink = { l: 0, r: 0 };
+
+  for (let e = 0; e < state.ba_links.length; e++) {
+    const con = state.ba_links[e];
+    if (con.l === cellIndex) {
+      inds.push(e);
+      newCon.r = con.r;
+    }
+    if (con.r === cellIndex) {
+      inds.push(e);
+      newCon.l = con.l;
+    }
+  }
+
+  if (inds.length === 1) {
+    state.ba_links.splice(inds[0], 1);
+  } else if (inds.length === 2) {
+    inds.sort((a, b) => b - a);
+    state.ba_links.splice(inds[0], 1);
+    state.ba_links.splice(inds[1], 1);
+    state.ba_links.push(newCon);
+  }
+}
+
+/**
+ * Evaluate a math.js formula for a parameter change event.
+ */
+function evaluateFormula(
+  formula: string,
+  oldValue: number,
+  t: number,
+  dt: number,
+  period: number
+): number {
+  try {
+    const scope = {
+      old_value: oldValue,
+      t,
+      dt,
+      period: period || 1, // Avoid division by zero
+    };
+    return evaluate(formula, scope);
+  } catch (error) {
+    console.error(`[Events] Failed to evaluate formula "${formula}":`, error);
+    return oldValue; // Return unchanged value on error
+  }
+}
+
+/**
+ * Get a cell parameter value by path.
+ */
+function getCellParameter(cell: CellState, path: string): number | undefined {
+  switch (path) {
+    case 'stiffness_nuclei_apical':
+      return cell.stiffness_nuclei_apical;
+    case 'stiffness_nuclei_basal':
+      return cell.stiffness_nuclei_basal;
+    case 'stiffness_straightness':
+      return cell.stiffness_straightness;
+    case 'stiffness_apical_apical':
+      return cell.stiffness_apical_apical;
+    case 'R_soft':
+      return cell.R_soft;
+    case 'R_hard':
+      return cell.R_hard;
+    case 'eta_A':
+      return cell.eta_A;
+    case 'eta_B':
+      return cell.eta_B;
+    case 'running_mode':
+      return cell.running_mode;
+    default:
+      console.warn(`[Events] Unknown cell parameter: ${path}`);
+      return undefined;
+  }
+}
+
+/**
+ * Set a cell parameter value by path.
+ */
+function setCellParameter(cell: CellState, path: string, value: number): void {
+  switch (path) {
+    case 'stiffness_nuclei_apical':
+      cell.stiffness_nuclei_apical = value;
+      break;
+    case 'stiffness_nuclei_basal':
+      cell.stiffness_nuclei_basal = value;
+      break;
+    case 'stiffness_straightness':
+      cell.stiffness_straightness = value;
+      break;
+    case 'stiffness_apical_apical':
+      cell.stiffness_apical_apical = value;
+      break;
+    case 'R_soft':
+      cell.R_soft = value;
+      break;
+    case 'R_hard':
+      cell.R_hard = value;
+      break;
+    case 'eta_A':
+      cell.eta_A = value;
+      break;
+    case 'eta_B':
+      cell.eta_B = value;
+      break;
+    case 'running_mode':
+      cell.running_mode = value;
+      break;
+    default:
+      console.warn(`[Events] Unknown cell parameter: ${path}`);
+  }
+}
+
+/**
+ * Check if an event's prerequisites are satisfied for a cell.
+ */
+function prereqSatisfied(
+  eventDef: EventDefinition,
+  cell: CellState
+): boolean {
+  // No prereq required
+  if (!eventDef.prereq) {
+    return true;
+  }
+
+  // Check if prereq event has fired for this cell
+  const prereqState = cell.event_states?.[eventDef.prereq];
+  return prereqState?.has_fired === true;
+}
+
+/**
+ * Check if an event should fire for a cell at the current time.
+ */
+function shouldEventFire(
+  eventState: CellEventState,
+  eventDef: EventDefinition,
+  cell: CellState,
+  t: number,
+  dt: number
+): boolean {
+  // Check cell cycle phase requirement
+  if (!satisfiesCellCyclePhase(cell, eventDef.cell_cycle_phase)) {
+    return false;
+  }
+
+  // Check prerequisites
+  if (!prereqSatisfied(eventDef, cell)) {
+    return false;
+  }
+
+  // Check if event was skipped (trigger_time is Infinity)
+  if (!isFinite(eventState.trigger_time)) {
+    return false;
+  }
+
+  // One-time event
+  if (eventDef.period === 0) {
+    // Fire if we just crossed the trigger time
+    return !eventState.has_fired && t <= eventState.trigger_time && t + dt > eventState.trigger_time;
+  }
+
+  // Periodic event
+  // Fire at trigger_time, then every period after that
+  if (t + dt < eventState.trigger_time) {
+    return false;
+  }
+
+  // Calculate time since trigger
+  const timeSinceLastFire = t - eventState.last_fire_time;
+
+  // First fire
+  if (!eventState.has_fired && t <= eventState.trigger_time && t + dt > eventState.trigger_time) {
+    return true;
+  }
+
+  // Subsequent fires
+  if (eventState.has_fired && timeSinceLastFire >= eventDef.period) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Process a parameter change event for a cell.
+ */
+function processParameterChangeEvent(
+  event: ParameterChangeEvent,
+  eventState: CellEventState,
+  cell: CellState,
+  t: number,
+  dt: number
+): void {
+  const oldValue = getCellParameter(cell, event.target_parameter);
+  if (oldValue === undefined) {
+    return;
+  }
+
+  const newValue = evaluateFormula(event.formula, oldValue, t, dt, event.period);
+  setCellParameter(cell, event.target_parameter, newValue);
+
+  // Update event state
+  eventState.has_fired = true;
+  eventState.last_fire_time = t;
+  eventState.fire_count++;
+}
+
+/**
+ * Process a special event for a cell.
+ */
+function processSpecialEvent(
+  event: SpecialEvent,
+  state: EHTSimulationState,
+  cellIndex: number
+): void {
+  const handler = specialEventHandlers[event.special_name];
+  if (handler) {
+    handler(state, cellIndex);
+  } else {
+    console.warn(`[Events] Unknown special event: ${event.special_name}`);
+  }
+}
+
+/**
+ * Process all v1.1.0 events for the current timestep.
+ */
+export function processV2Events(
+  state: EHTSimulationState,
+  params: EHTParams,
+  dt: number
+): void {
+  const t = state.t;
+
+  // Track which cell types have triggered apical constriction (for batch processing)
+  const constrictedTypes = new Set<string>();
+
+  for (let i = 0; i < state.cells.length; i++) {
+    const cell = state.cells[i];
+    const cellType = params.cell_types[cell.typeIndex] as EHTCellTypeParams;
+
+    // Skip if no v1.1.0 events
+    if (!cellType.events_v2 || !cell.event_states) {
+      continue;
+    }
+
+    for (const eventDef of cellType.events_v2) {
+      const eventState = cell.event_states[eventDef.id];
+      if (!eventState) {
+        continue;
+      }
+
+      if (shouldEventFire(eventState, eventDef, cell, t, dt)) {
+        if (eventDef.type === 'parameter_change') {
+          processParameterChangeEvent(eventDef, eventState, cell, t, dt);
+        } else if (eventDef.type === 'special') {
+          // Apical constriction needs special handling (processed once per cell type)
+          if (eventDef.special_name === 'apical_constriction') {
+            constrictedTypes.add(cell.typeIndex);
+            // Mark as fired for this cell
+            eventState.has_fired = true;
+            eventState.last_fire_time = t;
+            eventState.fire_count++;
+          } else {
+            processSpecialEvent(eventDef, state, i);
+            // Update event state
+            eventState.has_fired = true;
+            eventState.last_fire_time = t;
+            eventState.fire_count++;
+          }
+        }
+      }
+    }
+
+    // Update running state
+    updateRunningState(cell, state);
+  }
+
+  // Process apical constriction once per cell type
+  for (const typeIndex of constrictedTypes) {
+    const cellIdx = state.cells.findIndex(c => c.typeIndex === typeIndex);
+    if (cellIdx !== -1) {
+      processApicalConstriction(state, cellIdx);
+    }
+  }
+}
+
+/**
+ * Process all EMT events for the current timestep.
+ * Automatically detects whether to use legacy v1.0.0 or new v1.1.0 system.
+ */
+export function processAllEvents(
+  state: EHTSimulationState,
+  params: EHTParams,
+  dt: number
+): void {
+  // Check if any cell type uses v1.1.0 events
+  let hasV2Events = false;
+  for (const cellType of Object.values(params.cell_types)) {
+    if ((cellType as EHTCellTypeParams).events_v2 !== undefined &&
+        (cellType as EHTCellTypeParams).events_v2!.length > 0) {
+      hasV2Events = true;
+      break;
+    }
+  }
+
+  if (hasV2Events) {
+    // Use new v1.1.0 event system
+    processV2Events(state, params, dt);
+  } else {
+    // Use legacy v1.0.0 event system
+    processEMTEvents(state, params, dt);
   }
 }

@@ -3,7 +3,14 @@
  */
 
 // Cell management
-export { createCell, getCellType, updateCellPhase } from './cell';
+export {
+  createCell,
+  getCellType,
+  updateCellPhase,
+  initializeEventStates,
+  copyEventStates,
+  satisfiesCellCyclePhase,
+} from './cell';
 
 // Forces
 export {
@@ -34,6 +41,10 @@ export {
   processStartRunning,
   updateRunningState,
   processEMTEvents,
+  processV2Events,
+  processAllEvents,
+  processLoseApicalAdhesionOnly,
+  processLoseBasalAdhesionOnly,
 } from './events';
 
 // Division

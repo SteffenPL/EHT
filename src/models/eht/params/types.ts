@@ -8,7 +8,70 @@ import type { ParamsMetadata, RGBColor, Range, BaseSimulationParams } from '@/co
 // Re-export shared types for convenience
 export type { RGBColor, Range };
 
-/** EMT event timing configuration */
+// =============================================================================
+// New Event System (v1.1.0)
+// =============================================================================
+
+/** Cell cycle phase for event triggering requirements */
+export enum CellCyclePhase {
+  Any = 'any',
+  Birth = 'birth',
+  G1 = 'g1',
+  G2 = 'g2',
+  Mitosis = 'mitosis',
+}
+
+/** Special event names (hard-coded functions) */
+export type SpecialEventName =
+  | 'lose_apical_adhesion'
+  | 'lose_basal_adhesion'
+  | 'apical_constriction'
+  | 'start_running';
+
+/** Base properties shared by all event types */
+export interface BaseEventDefinition {
+  /** Unique identifier (used for prerequisites) */
+  id: string;
+  /** Human-readable display name */
+  name: string;
+  /** Earliest time event can occur */
+  start: number;
+  /** Latest time event can occur */
+  end: number;
+  /** Repeat interval (0 = one-time event) */
+  period: number;
+  /** Chance event happens per cell (0-1) */
+  probability: number;
+  /** Required event ID that must fire first (same cell only) */
+  prereq: string | null;
+  /** Cell must have reached this phase */
+  cell_cycle_phase: CellCyclePhase;
+}
+
+/** Parameter change event - updates a cell parameter using a math.js formula */
+export interface ParameterChangeEvent extends BaseEventDefinition {
+  type: 'parameter_change';
+  /** Target parameter path (e.g., 'stiffness_nuclei_apical') */
+  target_parameter: string;
+  /** math.js formula - variables: old_value, t, dt, period */
+  formula: string;
+}
+
+/** Special event - hard-coded functions selected by name */
+export interface SpecialEvent extends BaseEventDefinition {
+  type: 'special';
+  /** The special event function name */
+  special_name: SpecialEventName;
+}
+
+/** Union type for all event definitions */
+export type EventDefinition = ParameterChangeEvent | SpecialEvent;
+
+// =============================================================================
+// Legacy Event System (v1.0.0 - kept for backwards compatibility)
+// =============================================================================
+
+/** EMT event timing configuration (legacy v1.0.0 format) */
 export interface EMTEventTimes {
   time_A_start: number; // Time to lose apical adhesion (start)
   time_A_end: number;   // Time to lose apical adhesion (end)
@@ -47,8 +110,9 @@ export interface EHTCellTypeParams {
   lifespan_start: number;
   lifespan_end: number;
   INM: number;              // Interkinetic nuclear migration probability
-  hetero: boolean;          // Heterogeneous EMT behavior
-  events: EMTEventTimes;
+  hetero: boolean;          // Heterogeneous EMT behavior (legacy v1.0.0)
+  events: EMTEventTimes;    // Legacy v1.0.0 event timing
+  events_v2?: EventDefinition[];  // New v1.1.0 event system
   // Per-cell-type properties (previously global in cell_prop)
   diffusion: number;                // Diffusion coefficient
   basal_damping_ratio: number;      // Basal damping ratio

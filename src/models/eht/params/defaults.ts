@@ -4,7 +4,70 @@
 
 import { cloneDeep, merge } from 'lodash-es';
 import TOML from '@iarna/toml';
-import type { EHTParams, EHTCellTypeParams, PartialEHTParams } from './types';
+import type { EHTParams, EHTCellTypeParams, PartialEHTParams, EventDefinition } from './types';
+import { CellCyclePhase } from './types';
+import { ensureV1_1_0 } from './migration-v1.1';
+
+// =============================================================================
+// Default Events for v1.1.0
+// =============================================================================
+
+/** Default events for control cells (no events) */
+const DEFAULT_CONTROL_EVENTS_V2: EventDefinition[] = [];
+
+/** Default events for EMT cells (lose apical/basal adhesion with stiffness reduction) */
+const DEFAULT_EMT_EVENTS_V2: EventDefinition[] = [
+  {
+    type: 'special',
+    id: 'lose_apical',
+    name: 'Lose Apical Adhesion',
+    start: 3,
+    end: 12,
+    period: 0,
+    probability: 0.7, // hetero = true means 30% skip
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.Any,
+    special_name: 'lose_apical_adhesion',
+  },
+  {
+    type: 'parameter_change',
+    id: 'reduce_apical_stiffness',
+    name: 'Reduce Apical Stiffness',
+    start: 3,
+    end: 12,
+    period: 0,
+    probability: 1.0,
+    prereq: 'lose_apical',
+    cell_cycle_phase: CellCyclePhase.Any,
+    target_parameter: 'stiffness_nuclei_apical',
+    formula: 'old_value * 0.1',
+  },
+  {
+    type: 'special',
+    id: 'lose_basal',
+    name: 'Lose Basal Adhesion',
+    start: 3,
+    end: 12,
+    period: 0,
+    probability: 0.7,
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.Any,
+    special_name: 'lose_basal_adhesion',
+  },
+  {
+    type: 'parameter_change',
+    id: 'reduce_basal_stiffness',
+    name: 'Reduce Basal Stiffness',
+    start: 3,
+    end: 12,
+    period: 0,
+    probability: 1.0,
+    prereq: 'lose_basal',
+    cell_cycle_phase: CellCyclePhase.Any,
+    target_parameter: 'stiffness_nuclei_basal',
+    formula: 'old_value * 0.1',
+  },
+];
 
 /** Default control cell type */
 export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
@@ -44,6 +107,7 @@ export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
     time_AC_start: Infinity,
     time_AC_end: Infinity,
   },
+  events_v2: DEFAULT_CONTROL_EVENTS_V2,
   // Per-cell-type properties
   diffusion: 0.2,
   basal_damping_ratio: 1.0,
@@ -91,6 +155,7 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
     time_AC_start: Infinity,
     time_AC_end: Infinity,
   },
+  events_v2: DEFAULT_EMT_EVENTS_V2,
   // Per-cell-type properties
   diffusion: 0.2,
   basal_damping_ratio: 1.0,
@@ -104,7 +169,7 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
 export const DEFAULT_EHT_PARAMS: EHTParams = {
   metadata: {
     model: 'EHT',
-    version: '1.0.0',
+    version: '1.1.0',
   },
   general: {
     t_end: 48,
@@ -151,6 +216,7 @@ interface PresetMeta {
 
 /**
  * Deep merge partial params with defaults, ensuring all cell types get proper defaults.
+ * Also applies v1.0.0 to v1.1.0 migration if needed.
  */
 function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
   const base = cloneDeep(DEFAULT_EHT_PARAMS);
@@ -176,7 +242,8 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
     }
   }
 
-  return base;
+  // Apply migration from v1.0.0 to v1.1.0 if needed
+  return ensureV1_1_0(base);
 }
 
 // Load all TOML presets at build time using Vite's import.meta.glob

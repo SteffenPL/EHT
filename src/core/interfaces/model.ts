@@ -51,6 +51,8 @@ export interface ModelUI<Params = unknown> {
     ParametersTab?: ComponentType<ModelUITabProps<Params>>;
     /** Cell Types tab - table with rows per parameter, columns per cell type */
     CellTypesTab?: ComponentType<ModelUITabProps<Params>>;
+    /** Cell Events tab - event definitions per cell type */
+    CellEventsTab?: ComponentType<ModelUITabProps<Params>>;
     /** Simulation tab - algorithmic parameters (dt, substeps, etc.) */
     SimulationTab?: ComponentType<ModelUITabProps<Params>>;
 }

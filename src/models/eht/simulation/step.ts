@@ -11,7 +11,7 @@ import type { EHTParams } from '../params/types';
 import { getCellType, updateCellPhase } from './cell';
 import { calcAllForces, CellForces } from './forces';
 import { applyAllConstraints } from './constraints';
-import { processEMTEvents } from './events';
+import { processAllEvents } from './events';
 import { processCellDivisions } from './division';
 
 /**
@@ -183,8 +183,8 @@ export function performTimestep(
     // Process cell divisions
     const divisions = processCellDivisions(state, params, rng);
 
-    // Process EMT events
-    processEMTEvents(state, params, fullDt);
+    // Process EMT events (v1.0.0 legacy or v1.1.0 new system)
+    processAllEvents(state, params, fullDt);
 
     // Update cytoskeleton
     updateCytoskeleton(state, params, fullDt);
