@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/select";
 import { Plus, Trash2, Copy, ClipboardPaste } from 'lucide-react';
 import type { RGBColor } from '@/components/params/inputs/ColorInput';
+import { HelpPopover } from '@/components/ui/help-popover';
+import { getParameterDescription } from '../params/descriptions';
 // Section definitions for copy/paste
 type SectionKey = 'initial' | 'geometry' | 'appearance' | 'stiffness' | 'division' | 'cellTypeProps' | 'running';
 
@@ -39,14 +41,18 @@ const SECTIONS: SectionDefinition[] = [
 interface CellTypeRowProps {
   label: string;
   tooltip?: string;
+  description?: string;
   children: React.ReactNode;
 }
 
-function CellTypeRow({ label, tooltip, children }: CellTypeRowProps) {
+function CellTypeRow({ label, tooltip, description, children }: CellTypeRowProps) {
   return (
     <tr className="border-b border-border/50 hover:bg-muted/30">
       <td className="py-1.5 px-2 text-xs font-medium w-36" title={tooltip}>
-        {label}
+        <div className="flex items-center gap-1">
+          <span>{label}</span>
+          {description && <HelpPopover content={description} />}
+        </div>
       </td>
       {children}
     </tr>
@@ -422,6 +428,9 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
   // Helper to get cell type params
   const getCellType = (key: string): EHTCellTypeParams => params.cell_types[key] as EHTCellTypeParams;
 
+  // Helper to get description for a cell type parameter
+  const desc = (key: string) => getParameterDescription(`cell_types.${key}`);
+
   const handleAddCellType = useCallback(() => {
     addCellType(copyFromType === '__new__' ? undefined : copyFromType);
     setCopyFromType('__new__'); // Reset selection
@@ -491,7 +500,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
         <tbody>
           {/* Initial Count */}
           <SectionHeader section={SECTIONS[0]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
-          <CellTypeRow label="N Init" tooltip="Initial number of cells of this type">
+          <CellTypeRow label="N Init" description={desc('N_init')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -504,7 +513,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
 
           {/* Location */}
-          <CellTypeRow label="Location" tooltip='Predefined location along basal membrane: "top", "bottom", "rest" or numeric value in [-1, 1]'>
+          <CellTypeRow label="Location" description={desc('location')}>
             {cellTypeKeys.map((key) => (
               <StringCell
                 key={key}
@@ -517,7 +526,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
           {/* Geometry */}
           <SectionHeader section={SECTIONS[1]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
-          <CellTypeRow label="R Hard" tooltip="Hard sphere radius">
+          <CellTypeRow label="R Hard" description={desc('R_hard')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -528,7 +537,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="R Hard (div)" tooltip="Hard sphere radius during division">
+          <CellTypeRow label="R Hard (div)" description={desc('R_hard_div')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -539,7 +548,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="R Soft" tooltip="Soft interaction radius">
+          <CellTypeRow label="R Soft" description={desc('R_soft')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -566,7 +575,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
           {/* Stiffness */}
           <SectionHeader section={SECTIONS[3]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
-          <CellTypeRow label="k Apical Junction" tooltip="Apical junction spring constant">
+          <CellTypeRow label="k Apical Junction" description={desc('k_apical_junction')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -577,7 +586,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="k Cytos" tooltip="Cytoskeleton relaxation rate">
+          <CellTypeRow label="k Cytos" description={desc('k_cytos')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -588,7 +597,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Stiff Apical-Apical">
+          <CellTypeRow label="Stiff Apical-Apical" description={desc('stiffness_apical_apical')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -599,7 +608,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Stiff A-A (div)" tooltip="Apical-Apical stiffness during division">
+          <CellTypeRow label="Stiff A-A (div)" description={desc('stiffness_apical_apical_div')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -610,7 +619,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Stiff Nuclei-Apical">
+          <CellTypeRow label="Stiff Nuclei-Apical" description={desc('stiffness_nuclei_apical')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -621,7 +630,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Stiff Nuclei-Basal">
+          <CellTypeRow label="Stiff Nuclei-Basal" description={desc('stiffness_nuclei_basal')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -632,7 +641,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Stiff Repulsion">
+          <CellTypeRow label="Stiff Repulsion" description={desc('stiffness_repulsion')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -643,7 +652,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Stiff Straightness">
+          <CellTypeRow label="Stiff Straightness" description={desc('stiffness_straightness')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -657,7 +666,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
           {/* Division */}
           <SectionHeader section={SECTIONS[4]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
-          <CellTypeRow label="Lifespan (start)">
+          <CellTypeRow label="Lifespan (start)" description={desc('lifespan_start')}>
             {cellTypeKeys.map((key) => (
               <SplitRangeCell
                 key={key}
@@ -670,7 +679,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Lifespan (end)">
+          <CellTypeRow label="Lifespan (end)" description={desc('lifespan_end')}>
             {cellTypeKeys.map((key) => (
               <SplitRangeCell
                 key={key}
@@ -683,7 +692,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="G2 Duration">
+          <CellTypeRow label="G2 Duration" description={desc('dur_G2')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -694,7 +703,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Mitosis Duration">
+          <CellTypeRow label="Mitosis Duration" description={desc('dur_mitosis')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -705,7 +714,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="INM" tooltip="Interkinetic nuclear migration probability">
+          <CellTypeRow label="INM" description={desc('INM')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -720,7 +729,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
           {/* Cell-Type Specific Properties */}
           <SectionHeader section={SECTIONS[5]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
-          <CellTypeRow label="Diffusion" tooltip="Diffusion coefficient">
+          <CellTypeRow label="Diffusion" description={desc('diffusion')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -731,7 +740,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Basal Damping" tooltip="Basal damping ratio">
+          <CellTypeRow label="Basal Damping" description={desc('basal_damping_ratio')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -742,7 +751,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Max Basal Junc Dist" tooltip="Maximum basal junction distance">
+          <CellTypeRow label="Max Basal Junc Dist" description={desc('max_basal_junction_dist')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -753,7 +762,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Cytos Init" tooltip="Initial cytoskeleton length">
+          <CellTypeRow label="Cytos Init" description={desc('cytos_init')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -764,7 +773,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Basal Repulsion" tooltip="Basal membrane repulsion strength">
+          <CellTypeRow label="Basal Repulsion" description={desc('basal_membrane_repulsion')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -775,7 +784,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Apical Junc Init" tooltip="Initial apical junction distance">
+          <CellTypeRow label="Apical Junc Init" description={desc('apical_junction_init')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -786,7 +795,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Max Cytos Length" tooltip="Maximum cytoskeleton length">
+          <CellTypeRow label="Max Cytos Length" description={desc('max_cytoskeleton_length')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -800,7 +809,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
           {/* Running Behavior - at the end */}
           <SectionHeader section={SECTIONS[6]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
-          <CellTypeRow label="Run Probability">
+          <CellTypeRow label="Run Probability" description={desc('run')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -812,7 +821,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Running Speed">
+          <CellTypeRow label="Running Speed" description={desc('running_speed')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -823,7 +832,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Running Mode" tooltip="0: none, 1: after extrusion, 2: retain length, 3: immediate">
+          <CellTypeRow label="Running Mode" description={desc('running_mode')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}

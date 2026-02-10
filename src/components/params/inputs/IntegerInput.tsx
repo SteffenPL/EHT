@@ -3,6 +3,7 @@
  */
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { HelpPopover } from '@/components/ui/help-popover';
 
 export interface IntegerInputProps {
   label: string;
@@ -11,9 +12,10 @@ export interface IntegerInputProps {
   disabled?: boolean;
   min?: number;
   max?: number;
+  description?: string;
 }
 
-export function IntegerInput({ label, value, onChange, disabled, min, max }: IntegerInputProps) {
+export function IntegerInput({ label, value, onChange, disabled, min, max, description }: IntegerInputProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const parsed = parseInt(e.target.value, 10);
     if (!isNaN(parsed)) {
@@ -26,7 +28,10 @@ export function IntegerInput({ label, value, onChange, disabled, min, max }: Int
 
   return (
     <div className="flex items-center gap-2">
-      <Label className="text-xs w-32 shrink-0">{label}</Label>
+      <div className="flex items-center gap-1 w-32 shrink-0">
+        <Label className="text-xs">{label}</Label>
+        {description && <HelpPopover content={description} />}
+      </div>
       <Input
         type="number"
         value={value}
