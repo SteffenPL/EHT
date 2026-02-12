@@ -20,6 +20,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
+import { HelpPopover } from '@/components/ui/help-popover';
+import { getParameterDescription } from '../params/descriptions';
 import type {
   EventDefinition,
   ParameterChangeEvent,
@@ -322,6 +324,7 @@ export function EventEditor({
               ))}
             </SelectContent>
           </Select>
+          <HelpPopover content={getParameterDescription(`events.special.${event.special_name}`) || ''} />
         </div>
       ) : (
         <div className="space-y-2">
@@ -345,7 +348,10 @@ export function EventEditor({
             </Select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-muted-foreground w-20">Formula:</label>
+            <label className="text-xs text-muted-foreground w-20 flex items-center gap-1">
+              Formula:
+              <HelpPopover content={getParameterDescription('events.formula') || ''} />
+            </label>
             <Input
               value={(event as ParameterChangeEvent).formula}
               onChange={(e) => {
@@ -354,7 +360,6 @@ export function EventEditor({
               disabled={disabled}
               className="h-7 flex-1 text-xs font-mono"
               placeholder="old_value * 0.1"
-              title="Variables: old_value, t, dt, period"
             />
           </div>
         </div>
@@ -362,7 +367,10 @@ export function EventEditor({
 
       {/* Timing */}
       <div className="flex items-center gap-4">
-        <label className="text-xs text-muted-foreground">Time:</label>
+        <label className="text-xs text-muted-foreground flex items-center gap-1">
+          Time:
+          <HelpPopover content={getParameterDescription('events.time_range') || ''} />
+        </label>
         <TimeRangeInput
           start={event.start}
           end={event.end}
@@ -370,31 +378,56 @@ export function EventEditor({
           onChangeEnd={(v) => handleBaseFieldChange('end', v)}
           disabled={disabled}
         />
-        <NumberInput
-          value={event.period}
-          onChange={(v) => handleBaseFieldChange('period', v)}
-          disabled={disabled}
-          min={0}
-          step={0.1}
-          label="Period (0=once)"
-          className="w-24"
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground flex items-center gap-1">
+            Period (0=once)
+            <HelpPopover content={getParameterDescription('events.period') || ''} />
+          </label>
+          <Input
+            type="number"
+            value={isFinite(event.period) ? event.period : ''}
+            onChange={(e) => {
+              const parsed = parseFloat(e.target.value);
+              if (!isNaN(parsed) && parsed >= 0) {
+                handleBaseFieldChange('period', parsed);
+              }
+            }}
+            disabled={disabled}
+            min={0}
+            step={0.1}
+            className="h-7 text-xs w-24"
+          />
+        </div>
       </div>
 
       {/* Probability, Prereq, Phase */}
       <div className="flex items-center gap-4 flex-wrap">
-        <NumberInput
-          value={event.probability}
-          onChange={(v) => handleBaseFieldChange('probability', v)}
-          disabled={disabled}
-          min={0}
-          max={1}
-          step={0.1}
-          label="Probability"
-          className="w-24"
-        />
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Prerequisite</label>
+          <label className="text-xs text-muted-foreground flex items-center gap-1">
+            Probability
+            <HelpPopover content={getParameterDescription('events.probability') || ''} />
+          </label>
+          <Input
+            type="number"
+            value={event.probability}
+            onChange={(e) => {
+              const parsed = parseFloat(e.target.value);
+              if (!isNaN(parsed)) {
+                handleBaseFieldChange('probability', Math.max(0, Math.min(1, parsed)));
+              }
+            }}
+            disabled={disabled}
+            min={0}
+            max={1}
+            step={0.1}
+            className="h-7 text-xs w-24"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground flex items-center gap-1">
+            Prerequisite
+            <HelpPopover content={getParameterDescription('events.prereq') || ''} />
+          </label>
           <Select
             value={event.prereq || '__none__'}
             onValueChange={(value) => {
@@ -414,7 +447,10 @@ export function EventEditor({
           </Select>
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Cell Phase</label>
+          <label className="text-xs text-muted-foreground flex items-center gap-1">
+            Cell Phase
+            <HelpPopover content={getParameterDescription('events.cell_phase') || ''} />
+          </label>
           <Select
             value={event.cell_cycle_phase}
             onValueChange={(value: CellCyclePhase) => {

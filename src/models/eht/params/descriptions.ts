@@ -102,6 +102,58 @@ $$d\\mathbf{x} = \\sqrt{2D}\\, d\\mathbf{W}$$`,
 - **1**: Run after extrusion (leaves tissue)
 - **2**: Run but retain length (stays connected)
 - **3**: Immediate running (starts running instantly)`,
+
+  // === Event System (v1.1.0) ===
+  'events.formula': `A **math.js** expression to compute the new parameter value. Available variables:
+
+- \`old_value\`: current value of the parameter
+- \`t\`: current simulation time (hours)
+- \`dt\`: timestep size
+- \`period\`: event repeat interval (0 if one-time)
+
+**Examples:**
+- \`old_value * 0.1\` — reduce to 10%
+- \`old_value + 1\` — increment by 1
+- \`0\` — set to zero
+- \`sin(t) + 1\` — oscillate over time`,
+
+  'events.time_range': `Time window during which the event can trigger. A random trigger time is sampled uniformly from this range at cell birth.
+
+Uncheck to disable the event entirely.`,
+
+  'events.period': `Repeat interval in hours.
+- **0** = one-time event (fires once at trigger time)
+- **> 0** = periodic event (fires at trigger time, then every $period$ hours)`,
+
+  'events.probability': `Probability that this event is assigned to a cell at birth. Value between 0 and 1.
+
+- **1.0** = all cells of this type get the event
+- **0.5** = 50% of cells get the event
+- **0** = event is disabled`,
+
+  'events.prereq': `Prerequisite event that must fire first (on the same cell) before this event can trigger.
+
+Use this to create event chains, e.g., "lose basal adhesion" → "start running".`,
+
+  'events.cell_phase': `Cell cycle phase requirement. The event only fires if the cell has reached this phase:
+
+- **Any**: No restriction
+- **Birth**: Immediately after cell birth
+- **G1**: After entering G1 phase
+- **G2**: After entering G2 phase (preparing for division)
+- **Mitosis**: During mitosis`,
+
+  'events.special.lose_apical_adhesion': `Removes the cell's apical connections to neighbors. The cell's apical point detaches from the apical junction network.`,
+
+  'events.special.lose_basal_adhesion': `Removes the cell's basal connections. The cell detaches from the basal membrane.`,
+
+  'events.special.apical_constriction': `Triggers apical constriction for all cells of this type. Apical links between this cell type and other types are severed, and neighboring non-constricting cells are reconnected.`,
+
+  'events.special.start_running': `Sets the cell's running mode to 3 (immediate running), enabling active migration.`,
+
+  'events.special.cell_division': `Triggers cell division. The cell divides into two daughter cells (or resets if \`p_div_out\` applies). Bypasses the normal phase-based division timing.`,
+
+  'events.special.cell_cycle_reset': `Resets the cell's cycle without dividing. The cell gets a fresh lifespan and re-sampled event trigger times, but remains a single cell.`,
 };
 
 /**
