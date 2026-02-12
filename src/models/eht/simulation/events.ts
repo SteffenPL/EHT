@@ -8,10 +8,12 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
+import { SeededRandom } from '@/core/math/random';
 import { evaluate } from 'mathjs';
 import type { EHTSimulationState, ApicalLink, BasalLink, CellState, CellEventState } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, ParameterChangeEvent, SpecialEvent, SpecialEventName } from '../params/types';
-import { satisfiesCellCyclePhase } from './cell';
+import { createCell, getCellType, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
+import { divideSingleCell } from './division';
 
 /**
  * Process apical adhesion loss event.
@@ -331,6 +333,8 @@ const specialEventHandlers: Record<SpecialEventName, (state: EHTSimulationState,
   'lose_basal_adhesion': processLoseBasalAdhesionOnly,
   'apical_constriction': processApicalConstriction,
   'start_running': processStartRunning,
+  'cell_division': () => {}, // Handled as deferred event in processV2Events
+  'cell_cycle_reset': () => {}, // Handled as deferred event in processV2Events
 };
 
 /**
@@ -622,12 +626,15 @@ function processSpecialEvent(
 export function processV2Events(
   state: EHTSimulationState,
   params: EHTParams,
-  dt: number
+  dt: number,
+  rng: SeededRandom
 ): void {
   const t = state.t;
 
-  // Track which cell types have triggered apical constriction (for batch processing)
+  // Track deferred events (processed after main loop)
   const constrictedTypes = new Set<string>();
+  const cellsToReset: number[] = [];
+  const cellsToDivide: number[] = [];
 
   for (let i = 0; i < state.cells.length; i++) {
     const cell = state.cells[i];
@@ -648,16 +655,24 @@ export function processV2Events(
         if (eventDef.type === 'parameter_change') {
           processParameterChangeEvent(eventDef, eventState, cell, t, dt);
         } else if (eventDef.type === 'special') {
-          // Apical constriction needs special handling (processed once per cell type)
+          // Deferred events: collect indices and process after main loop
           if (eventDef.special_name === 'apical_constriction') {
             constrictedTypes.add(cell.typeIndex);
-            // Mark as fired for this cell
+            eventState.has_fired = true;
+            eventState.last_fire_time = t;
+            eventState.fire_count++;
+          } else if (eventDef.special_name === 'cell_cycle_reset') {
+            cellsToReset.push(i);
+            eventState.has_fired = true;
+            eventState.last_fire_time = t;
+            eventState.fire_count++;
+          } else if (eventDef.special_name === 'cell_division') {
+            cellsToDivide.push(i);
             eventState.has_fired = true;
             eventState.last_fire_time = t;
             eventState.fire_count++;
           } else {
             processSpecialEvent(eventDef, state, i);
-            // Update event state
             eventState.has_fired = true;
             eventState.last_fire_time = t;
             eventState.fire_count++;
@@ -670,6 +685,16 @@ export function processV2Events(
     updateRunningState(cell, state);
   }
 
+  // Process cell cycle resets first (in-place, no new cells)
+  for (const cellIndex of cellsToReset) {
+    processCellCycleReset(state, params, rng, cellIndex);
+  }
+
+  // Process cell divisions (may add new cells)
+  for (const cellIndex of cellsToDivide) {
+    divideSingleCell(state, params, rng, cellIndex);
+  }
+
   // Process apical constriction once per cell type
   for (const typeIndex of constrictedTypes) {
     const cellIdx = state.cells.findIndex(c => c.typeIndex === typeIndex);
@@ -680,13 +705,55 @@ export function processV2Events(
 }
 
 /**
+ * Process a cell cycle reset event.
+ * Resets the cell's cycle without dividing — creates a fresh cell in-place,
+ * preserving the cell's ID, and re-initializes event states.
+ */
+function processCellCycleReset(
+  state: EHTSimulationState,
+  params: EHTParams,
+  rng: SeededRandom,
+  cellIndex: number
+): void {
+  const cell = state.cells[cellIndex];
+  const cellType = getCellType(params, cell);
+
+  const cellInput: CreateCellInput = {
+    basalPoint: Vector2.from(cell.B),
+    apicalPoint: Vector2.from(cell.A),
+    nucleusPosition: Vector2.from(cell.pos),
+  };
+
+  const newCell = createCell(
+    params,
+    state,
+    rng,
+    cellInput,
+    cellType,
+    cell.typeIndex,
+    cell
+  );
+
+  // Preserve the cell's ID
+  newCell.id = cell.id;
+
+  // Re-initialize event states (fresh cycle)
+  newCell.event_states = initializeEventStates(cellType.events_v2, rng);
+  newCell.has_reached_G2 = false;
+  newCell.has_reached_mitosis = false;
+
+  state.cells[cellIndex] = newCell;
+}
+
+/**
  * Process all EMT events for the current timestep.
  * Automatically detects whether to use legacy v1.0.0 or new v1.1.0 system.
  */
 export function processAllEvents(
   state: EHTSimulationState,
   params: EHTParams,
-  dt: number
+  dt: number,
+  rng: SeededRandom
 ): void {
   // Check if any cell type uses v1.1.0 events
   let hasV2Events = false;
@@ -700,7 +767,7 @@ export function processAllEvents(
 
   if (hasV2Events) {
     // Use new v1.1.0 event system
-    processV2Events(state, params, dt);
+    processV2Events(state, params, dt, rng);
   } else {
     // Use legacy v1.0.0 event system
     processEMTEvents(state, params, dt);

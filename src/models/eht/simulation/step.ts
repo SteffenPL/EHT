@@ -184,7 +184,7 @@ export function performTimestep(
     const divisions = processCellDivisions(state, params, rng);
 
     // Process EMT events (v1.0.0 legacy or v1.1.0 new system)
-    processAllEvents(state, params, fullDt);
+    processAllEvents(state, params, fullDt, rng);
 
     // Update cytoskeleton
     updateCytoskeleton(state, params, fullDt);

@@ -26,7 +26,9 @@ export type SpecialEventName =
   | 'lose_apical_adhesion'
   | 'lose_basal_adhesion'
   | 'apical_constriction'
-  | 'start_running';
+  | 'start_running'
+  | 'cell_division'
+  | 'cell_cycle_reset';
 
 /** Base properties shared by all event types */
 export interface BaseEventDefinition {

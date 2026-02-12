@@ -38,6 +38,8 @@ export const specialEventNameSchema = z.enum([
   'lose_basal_adhesion',
   'apical_constriction',
   'start_running',
+  'cell_division',
+  'cell_cycle_reset',
 ]);
 
 /** Base event definition schema (shared fields) */

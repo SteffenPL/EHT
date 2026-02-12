@@ -59,6 +59,8 @@ const SPECIAL_EVENT_OPTIONS: { value: SpecialEventName; label: string }[] = [
   { value: 'lose_basal_adhesion', label: 'Lose Basal Adhesion' },
   { value: 'apical_constriction', label: 'Apical Constriction' },
   { value: 'start_running', label: 'Start Running' },
+  { value: 'cell_division', label: 'Cell Division' },
+  { value: 'cell_cycle_reset', label: 'Cell Cycle Reset' },
 ];
 
 const CELL_CYCLE_PHASE_OPTIONS: { value: CellCyclePhase; label: string }[] = [
