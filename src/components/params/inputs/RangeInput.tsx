@@ -3,6 +3,7 @@
  */
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { HelpPopover } from '@/components/ui/help-popover';
 
 export interface Range {
   min: number;
@@ -15,9 +16,10 @@ export interface RangeInputProps {
   onChange: (value: Range) => void;
   disabled?: boolean;
   step?: number;
+  description?: string;
 }
 
-export function RangeInput({ label, value, onChange, disabled, step = 0.1 }: RangeInputProps) {
+export function RangeInput({ label, value, onChange, disabled, step = 0.1, description }: RangeInputProps) {
   const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const parsed = parseFloat(e.target.value);
     if (!isNaN(parsed)) {
@@ -34,7 +36,10 @@ export function RangeInput({ label, value, onChange, disabled, step = 0.1 }: Ran
 
   return (
     <div className="flex items-center gap-2">
-      <Label className="text-xs w-32 shrink-0">{label}</Label>
+      <div className="flex items-center gap-1 w-32 shrink-0">
+        <Label className="text-xs">{label}</Label>
+        {description && <HelpPopover content={description} />}
+      </div>
       <Input
         type="number"
         value={value.min}

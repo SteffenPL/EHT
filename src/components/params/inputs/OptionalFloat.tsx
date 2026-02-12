@@ -5,6 +5,7 @@
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { HelpPopover } from '@/components/ui/help-popover';
 
 export interface OptionalFloatProps {
   label: string;
@@ -16,6 +17,7 @@ export interface OptionalFloatProps {
   step?: number;
   /** Label shown when the checkbox is unchecked (value is null/infinity) */
   disabledLabel?: string;
+  description?: string;
 }
 
 export function OptionalFloat({
@@ -27,6 +29,7 @@ export function OptionalFloat({
   max,
   step = 0.1,
   disabledLabel = 'Infinite',
+  description,
 }: OptionalFloatProps) {
   const isEnabled = value !== null && isFinite(value);
 
@@ -52,7 +55,10 @@ export function OptionalFloat({
 
   return (
     <div className="flex items-center gap-2">
-      <Label className="text-xs w-32 shrink-0">{label}</Label>
+      <div className="flex items-center gap-1 w-32 shrink-0">
+        <Label className="text-xs">{label}</Label>
+        {description && <HelpPopover content={description} />}
+      </div>
       <Checkbox
         checked={isEnabled}
         onCheckedChange={handleCheckChange}

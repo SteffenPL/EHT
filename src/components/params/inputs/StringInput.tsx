@@ -3,6 +3,7 @@
  */
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { HelpPopover } from '@/components/ui/help-popover';
 
 export interface StringInputProps {
   label: string;
@@ -10,12 +11,16 @@ export interface StringInputProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  description?: string;
 }
 
-export function StringInput({ label, value, onChange, disabled, placeholder }: StringInputProps) {
+export function StringInput({ label, value, onChange, disabled, placeholder, description }: StringInputProps) {
   return (
     <div className="flex items-center gap-2">
-      <Label className="text-xs w-32 shrink-0">{label}</Label>
+      <div className="flex items-center gap-1 w-32 shrink-0">
+        <Label className="text-xs">{label}</Label>
+        {description && <HelpPopover content={description} />}
+      </div>
       <Input
         type="text"
         value={value}

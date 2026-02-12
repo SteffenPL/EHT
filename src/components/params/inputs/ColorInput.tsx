@@ -3,6 +3,7 @@
  */
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { HelpPopover } from '@/components/ui/help-popover';
 
 export interface RGBColor {
   r: number;
@@ -15,6 +16,7 @@ export interface ColorInputProps {
   value: RGBColor;
   onChange: (value: RGBColor) => void;
   disabled?: boolean;
+  description?: string;
 }
 
 function rgbToHex(color: RGBColor): string {
@@ -36,7 +38,7 @@ function hexToRgb(hex: string): RGBColor {
   return { r: 0, g: 0, b: 0 };
 }
 
-export function ColorInput({ label, value, onChange, disabled }: ColorInputProps) {
+export function ColorInput({ label, value, onChange, disabled, description }: ColorInputProps) {
   const hexValue = rgbToHex(value);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,7 +48,10 @@ export function ColorInput({ label, value, onChange, disabled }: ColorInputProps
 
   return (
     <div className="flex items-center gap-2">
-      <Label className="text-xs w-32 shrink-0">{label}</Label>
+      <div className="flex items-center gap-1 w-32 shrink-0">
+        <Label className="text-xs">{label}</Label>
+        {description && <HelpPopover content={description} />}
+      </div>
       <Input
         type="color"
         value={hexValue}
