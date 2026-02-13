@@ -17,7 +17,8 @@ import { CellCyclePhase } from '../params/types';
  */
 function evaluateProbabilityFormula(
   formula: string,
-  generalParams?: EHTGeneralParams
+  generalParams?: EHTGeneralParams,
+  cellTypeParams?: EHTCellTypeParams
 ): number {
   try {
     const scope: Record<string, number> = {};
@@ -27,6 +28,9 @@ function evaluateProbabilityFormula(
       scope.h_init = generalParams.h_init;
       scope.w_init = generalParams.w_init;
       scope.t_end = generalParams.t_end;
+    }
+    if (cellTypeParams) {
+      scope.INM = cellTypeParams.INM;
     }
     const result = evaluate(formula, scope);
     return typeof result === 'number' ? result : Number(result);
@@ -75,7 +79,8 @@ export interface CreateCellInput {
 export function initializeEventStates(
   events: EventDefinition[] | undefined,
   rng: SeededRandom,
-  generalParams?: EHTGeneralParams
+  generalParams?: EHTGeneralParams,
+  cellTypeParams?: EHTCellTypeParams
 ): Record<string, CellEventState> {
   const eventStates: Record<string, CellEventState> = {};
 
@@ -85,7 +90,7 @@ export function initializeEventStates(
 
   for (const event of events) {
     // Determine if this event should be skipped based on probability formula
-    const prob = evaluateProbabilityFormula(event.probability, generalParams);
+    const prob = evaluateProbabilityFormula(event.probability, generalParams, cellTypeParams);
     const shouldTrigger = rng.random() <= prob;
 
     // Sample trigger time within [start, end] range
@@ -186,7 +191,7 @@ export function createCell(
 
     // Initialize v1.1.0+ event states if available (using effective events)
     const event_states = useV2Events
-      ? initializeEventStates(effectiveEvents, rng, params.general)
+      ? initializeEventStates(effectiveEvents, rng, params.general, cellType)
       : undefined;
 
     return {
@@ -256,7 +261,7 @@ export function createCell(
       stiffness_nuclei_basal: parent.stiffness_nuclei_basal,
       // v1.1.0 event system - re-initialize for fresh cell cycle
       event_states: useV2Events
-        ? initializeEventStates(effectiveEvents, rng, params.general)
+        ? initializeEventStates(effectiveEvents, rng, params.general, cellType)
         : copyEventStates(parent.event_states),
       has_reached_G2: false,
       has_reached_mitosis: false,

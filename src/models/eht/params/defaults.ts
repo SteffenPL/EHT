@@ -14,8 +14,35 @@ import { ensureV1_3_0 } from './migration-v1.3';
 // Default Events for v1.1.0
 // =============================================================================
 
-/** Default events for control cells (no events) */
-const DEFAULT_CONTROL_EVENTS_V2: EventDefinition[] = [];
+/** Default events for control cells (INM strain events) */
+const DEFAULT_CONTROL_EVENTS_V2: EventDefinition[] = [
+  {
+    type: 'parameter_change',
+    id: 'inm_contract_apical',
+    name: 'INM: Contract Apical',
+    start: 0,
+    end: 0,
+    period: 0,
+    probability: 'INM',
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.G2,
+    target_parameter: 'apical_cytos_strain',
+    formula: '-1',
+  },
+  {
+    type: 'parameter_change',
+    id: 'inm_extend_basal',
+    name: 'INM: Extend Basal',
+    start: 0,
+    end: 0,
+    period: 0,
+    probability: '1',
+    prereq: 'inm_contract_apical',
+    cell_cycle_phase: CellCyclePhase.G2,
+    target_parameter: 'basal_cytos_strain',
+    formula: '2',
+  },
+];
 
 /** Default events for EMT cells (lose apical/basal adhesion with stiffness reduction) */
 const DEFAULT_EMT_EVENTS_V2: EventDefinition[] = [
@@ -68,6 +95,32 @@ const DEFAULT_EMT_EVENTS_V2: EventDefinition[] = [
     cell_cycle_phase: CellCyclePhase.Any,
     target_parameter: 'stiffness_nuclei_basal',
     formula: 'old_value * 0.1',
+  },
+  {
+    type: 'parameter_change',
+    id: 'inm_contract_apical',
+    name: 'INM: Contract Apical',
+    start: 0,
+    end: 0,
+    period: 0,
+    probability: 'INM',
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.G2,
+    target_parameter: 'apical_cytos_strain',
+    formula: '-1',
+  },
+  {
+    type: 'parameter_change',
+    id: 'inm_extend_basal',
+    name: 'INM: Extend Basal',
+    start: 0,
+    end: 0,
+    period: 0,
+    probability: '1',
+    prereq: 'inm_contract_apical',
+    cell_cycle_phase: CellCyclePhase.G2,
+    target_parameter: 'basal_cytos_strain',
+    formula: '2',
   },
 ];
 
@@ -385,7 +438,7 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
     start: 0,
     end: 0,
     period: 0,
-    probability: '1',
+    probability: 'INM',
     prereq: null,
     cell_cycle_phase: CellCyclePhase.G2,
     target_parameter: 'apical_cytos_strain',

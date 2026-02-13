@@ -55,7 +55,7 @@ export function migrateV1_2_0toV1_3_0(params: EHTParams): EHTParams {
         start: 0,
         end: 0,
         period: 0,
-        probability: String(ct.INM),
+        probability: 'INM',
         prereq: null,
         cell_cycle_phase: CellCyclePhase.G2,
         target_parameter: 'apical_cytos_strain',
