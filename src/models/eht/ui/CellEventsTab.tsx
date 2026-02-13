@@ -6,6 +6,7 @@ import { useState, useCallback } from 'react';
 import type { ModelUITabProps } from '@/core/registry';
 import type { EHTParams, EHTCellTypeParams, EventDefinition } from '../params/types';
 import { CellCyclePhase } from '../params/types';
+import { DEFAULT_EVENT_PRESETS } from '../params/defaults';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -258,9 +259,66 @@ function EventEditDialog({ event, allEvents, onSave, onDelete, onClose, disabled
 
 export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps<EHTParams>) {
   const [editingEvent, setEditingEvent] = useState<{ cellTypeKey: string; eventIndex: number } | null>(null);
+  const [editingDefaultEvent, setEditingDefaultEvent] = useState<number | null>(null);
   const [copiedEvent, setCopiedEvent] = useState<EventDefinition | null>(null);
 
   const cellTypeKeys = Object.keys(params.cell_types);
+
+  // Default events from general params
+  const defaultEvents: EventDefinition[] = params.general.default_events ?? [];
+
+  const updateDefaultEvents = useCallback((events: EventDefinition[]) => {
+    const newParams = structuredClone(params);
+    newParams.general.default_events = events;
+    onChange(newParams);
+  }, [params, onChange]);
+
+  const updateDefaultEvent = useCallback((index: number, event: EventDefinition) => {
+    const events = [...defaultEvents];
+    events[index] = event;
+    updateDefaultEvents(events);
+  }, [defaultEvents, updateDefaultEvents]);
+
+  const deleteDefaultEvent = useCallback((index: number) => {
+    updateDefaultEvents(defaultEvents.filter((_, i) => i !== index));
+  }, [defaultEvents, updateDefaultEvents]);
+
+  const moveDefaultEvent = useCallback((index: number, direction: 'up' | 'down') => {
+    const events = [...defaultEvents];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= events.length) return;
+    [events[index], events[targetIndex]] = [events[targetIndex], events[index]];
+    updateDefaultEvents(events);
+  }, [defaultEvents, updateDefaultEvents]);
+
+  const addDefaultPreset = useCallback((presetKey: string) => {
+    const preset = DEFAULT_EVENT_PRESETS[presetKey];
+    if (!preset) return;
+    const cloned = structuredClone(preset);
+    // Ensure unique ID
+    let id = cloned.id;
+    let counter = 1;
+    while (defaultEvents.some(e => e.id === id)) {
+      id = `${cloned.id}_${counter}`;
+      counter++;
+    }
+    cloned.id = id;
+    updateDefaultEvents([...defaultEvents, cloned]);
+  }, [defaultEvents, updateDefaultEvents]);
+
+  const toggleSkipDefault = useCallback((cellTypeKey: string, eventId: string, skip: boolean) => {
+    const newParams = structuredClone(params);
+    const ct = newParams.cell_types[cellTypeKey] as EHTCellTypeParams;
+    if (!ct.skip_default_events) ct.skip_default_events = [];
+    if (skip) {
+      if (!ct.skip_default_events.includes(eventId)) {
+        ct.skip_default_events.push(eventId);
+      }
+    } else {
+      ct.skip_default_events = ct.skip_default_events.filter(id => id !== eventId);
+    }
+    onChange(newParams);
+  }, [params, onChange]);
 
   const getEvents = (cellTypeKey: string): EventDefinition[] =>
     (params.cell_types[cellTypeKey] as EHTCellTypeParams).events_v2 || [];
@@ -344,8 +402,89 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
     : null;
   const editedAllEvents = editingEvent ? getEvents(editingEvent.cellTypeKey) : [];
 
+  // Get the default event currently being edited
+  const editedDefaultEvent = editingDefaultEvent !== null
+    ? defaultEvents[editingDefaultEvent] ?? null
+    : null;
+
   return (
     <div className="space-y-4">
+      {/* Default Events Section */}
+      <div className="space-y-2">
+        <div className="text-sm font-semibold border-b pb-1">Default Events (shared across all cell types)</div>
+
+        {/* Default event cards */}
+        {defaultEvents.length > 0 && (
+          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+            {defaultEvents.map((event, i) => (
+              <CompactEventCard
+                key={`default-${event.id}-${i}`}
+                event={event}
+                index={i}
+                totalCount={defaultEvents.length}
+                allEvents={defaultEvents}
+                onEventChange={(updated) => updateDefaultEvent(i, updated)}
+                onEdit={() => setEditingDefaultEvent(i)}
+                onDelete={() => deleteDefaultEvent(i)}
+                onMoveUp={() => moveDefaultEvent(i, 'up')}
+                onMoveDown={() => moveDefaultEvent(i, 'down')}
+                onCopy={() => setCopiedEvent(structuredClone(event))}
+                disabled={disabled}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* Preset buttons */}
+        <div className="flex flex-wrap gap-1">
+          {Object.entries(DEFAULT_EVENT_PRESETS).map(([key, preset]) => (
+            <Button
+              key={key}
+              variant="outline"
+              size="sm"
+              onClick={() => addDefaultPreset(key)}
+              disabled={disabled}
+              className="h-6 text-xs gap-1"
+            >
+              <Plus className="h-3 w-3" />
+              {preset.name}
+            </Button>
+          ))}
+        </div>
+
+        {/* Skip checkboxes per cell type */}
+        {defaultEvents.length > 0 && (
+          <div className="border rounded-md p-2 space-y-1">
+            <div className="text-xs font-medium text-muted-foreground">Skip default events per cell type:</div>
+            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cellTypeKeys.length}, minmax(120px, 1fr))` }}>
+              {cellTypeKeys.map((key) => {
+                const ct = params.cell_types[key] as EHTCellTypeParams;
+                const skipSet = new Set(ct.skip_default_events ?? []);
+                return (
+                  <div key={key} className="space-y-0.5">
+                    <div className="text-xs font-semibold">{key}</div>
+                    {defaultEvents.map((event) => (
+                      <div key={event.id} className="flex items-center gap-1">
+                        <Checkbox
+                          checked={skipSet.has(event.id)}
+                          onCheckedChange={(checked) => toggleSkipDefault(key, event.id, !!checked)}
+                          disabled={disabled}
+                          className="h-3.5 w-3.5"
+                        />
+                        <span className="text-xs text-muted-foreground truncate" title={event.name}>
+                          Skip: {event.name || event.id}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Per-Cell-Type Events */}
       <div className="overflow-x-auto">
         <div
           className="grid gap-4"
@@ -425,7 +564,7 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
         </div>
       </div>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog for per-type events */}
       <EventEditDialog
         event={editedEvent}
         allEvents={editedAllEvents}
@@ -440,6 +579,24 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
           }
         }}
         onClose={() => setEditingEvent(null)}
+        disabled={disabled}
+      />
+
+      {/* Edit Dialog for default events */}
+      <EventEditDialog
+        event={editedDefaultEvent}
+        allEvents={defaultEvents}
+        onSave={(updated) => {
+          if (editingDefaultEvent !== null) {
+            updateDefaultEvent(editingDefaultEvent, updated);
+          }
+        }}
+        onDelete={() => {
+          if (editingDefaultEvent !== null) {
+            deleteDefaultEvent(editingDefaultEvent);
+          }
+        }}
+        onClose={() => setEditingDefaultEvent(null)}
         disabled={disabled}
       />
     </div>

@@ -122,6 +122,10 @@ export const ehtCellTypeSchema = z.object({
   hetero: z.boolean(),
   events: emtEventTimesSchema,
   events_v2: eventsArraySchema.optional(),  // New v1.1.0 event system
+  // Strain init (v1.2.0)
+  apical_cytos_strain_init: z.number(),
+  basal_cytos_strain_init: z.number(),
+  skip_default_events: z.array(z.string()),
   // Per-cell-type properties
   diffusion: z.number().nonnegative(),
   basal_damping_ratio: z.number().nonnegative(),
@@ -148,6 +152,7 @@ export const ehtGeneralParamsSchema = z.object({
   perimeter: z.number().positive(),           // Ellipse perimeter (only used when aspect != 0)
   aspect_ratio: z.number(),                   // 0=line, >0=curve above, <0=curve below; |aspect|=b/a
   hard_sphere_nuclei: z.boolean(),            // If true, use R_hard instead of R_soft for nuclei spring rest length
+  default_events: eventsArraySchema,         // Default events applied to all cell types (v1.2.0)
 });
 
 /** Cell property params schema (legacy - empty, properties moved to cell types) */

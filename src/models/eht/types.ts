@@ -66,6 +66,10 @@ export interface CellState {
     has_A: boolean;  // Has apical adhesion
     has_B: boolean;  // Has basal adhesion
 
+    // Cytoskeleton strain (-1 = inactive, 0 = no change, scales drl)
+    apical_cytos_strain: number;
+    basal_cytos_strain: number;
+
     // Cell cycle
     phase: CellPhase;
     birth_time: number;

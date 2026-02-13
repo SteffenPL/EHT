@@ -19,6 +19,7 @@ export enum CellCyclePhase {
   G1 = 'g1',
   G2 = 'g2',
   Mitosis = 'mitosis',
+  Division = 'division',
 }
 
 /** Special event names (hard-coded functions) */
@@ -115,6 +116,10 @@ export interface EHTCellTypeParams {
   hetero: boolean;          // Heterogeneous EMT behavior (legacy v1.0.0)
   events: EMTEventTimes;    // Legacy v1.0.0 event timing
   events_v2?: EventDefinition[];  // New v1.1.0 event system
+  // Strain initial values (v1.2.0)
+  apical_cytos_strain_init: number;
+  basal_cytos_strain_init: number;
+  skip_default_events: string[];  // IDs of default events to skip for this cell type
   // Per-cell-type properties (previously global in cell_prop)
   diffusion: number;                // Diffusion coefficient
   basal_damping_ratio: number;      // Basal damping ratio
@@ -141,6 +146,7 @@ export interface EHTGeneralParams {
   perimeter: number;        // Ellipse perimeter (0 for straight line)
   aspect_ratio: number;     // Shape: 0=line, >0=curve above, <0=curve below; |aspect|=b/a
   hard_sphere_nuclei: boolean; // If true, use R_hard instead of R_soft for nuclei spring rest length
+  default_events: EventDefinition[]; // Default events applied to all cell types (v1.2.0)
 }
 
 /** Cell property parameters (legacy - kept empty for backwards compatibility) */

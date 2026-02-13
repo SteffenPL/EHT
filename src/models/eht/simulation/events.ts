@@ -12,7 +12,7 @@ import { SeededRandom } from '@/core/math/random';
 import { evaluate } from 'mathjs';
 import type { EHTSimulationState, ApicalLink, BasalLink, CellState, CellEventState } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, ParameterChangeEvent, SpecialEvent, SpecialEventName } from '../params/types';
-import { createCell, getCellType, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
+import { createCell, getCellType, getEffectiveEvents, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
 import { divideSingleCell } from './division';
 
 /**
@@ -422,21 +422,33 @@ export function processLoseBasalAdhesionOnly(
 
 /**
  * Evaluate a math.js formula for a parameter change event.
+ * Scope includes old_value, t, dt, period, and general params like p_div_out.
  */
 function evaluateFormula(
   formula: string,
   oldValue: number,
   t: number,
   dt: number,
-  period: number
+  period: number,
+  generalParams?: import('../params/types').EHTGeneralParams
 ): number {
   try {
-    const scope = {
+    const scope: Record<string, number> = {
       old_value: oldValue,
       t,
       dt,
       period: period || 1, // Avoid division by zero
     };
+
+    // Expose general params in formula scope
+    if (generalParams) {
+      scope.p_div_out = generalParams.p_div_out;
+      scope.mu = generalParams.mu;
+      scope.h_init = generalParams.h_init;
+      scope.w_init = generalParams.w_init;
+      scope.t_end = generalParams.t_end;
+    }
+
     return evaluate(formula, scope);
   } catch (error) {
     console.error(`[Events] Failed to evaluate formula "${formula}":`, error);
@@ -467,6 +479,10 @@ function getCellParameter(cell: CellState, path: string): number | undefined {
       return cell.eta_B;
     case 'running_mode':
       return cell.running_mode;
+    case 'apical_cytos_strain':
+      return cell.apical_cytos_strain;
+    case 'basal_cytos_strain':
+      return cell.basal_cytos_strain;
     default:
       console.warn(`[Events] Unknown cell parameter: ${path}`);
       return undefined;
@@ -504,6 +520,12 @@ function setCellParameter(cell: CellState, path: string, value: number): void {
       break;
     case 'running_mode':
       cell.running_mode = value;
+      break;
+    case 'apical_cytos_strain':
+      cell.apical_cytos_strain = value;
+      break;
+    case 'basal_cytos_strain':
+      cell.basal_cytos_strain = value;
       break;
     default:
       console.warn(`[Events] Unknown cell parameter: ${path}`);
@@ -588,14 +610,15 @@ function processParameterChangeEvent(
   eventState: CellEventState,
   cell: CellState,
   t: number,
-  dt: number
+  dt: number,
+  generalParams?: import('../params/types').EHTGeneralParams
 ): void {
   const oldValue = getCellParameter(cell, event.target_parameter);
   if (oldValue === undefined) {
     return;
   }
 
-  const newValue = evaluateFormula(event.formula, oldValue, t, dt, event.period);
+  const newValue = evaluateFormula(event.formula, oldValue, t, dt, event.period, generalParams);
   setCellParameter(cell, event.target_parameter, newValue);
 
   // Update event state
@@ -640,12 +663,15 @@ export function processV2Events(
     const cell = state.cells[i];
     const cellType = params.cell_types[cell.typeIndex] as EHTCellTypeParams;
 
-    // Skip if no v1.1.0 events
-    if (!cellType.events_v2 || !cell.event_states) {
+    // Get effective events (merged default + per-type)
+    const effectiveEvents = getEffectiveEvents(params.general, cellType);
+
+    // Skip if no events
+    if (effectiveEvents.length === 0 || !cell.event_states) {
       continue;
     }
 
-    for (const eventDef of cellType.events_v2) {
+    for (const eventDef of effectiveEvents) {
       const eventState = cell.event_states[eventDef.id];
       if (!eventState) {
         continue;
@@ -653,7 +679,7 @@ export function processV2Events(
 
       if (shouldEventFire(eventState, eventDef, cell, t, dt)) {
         if (eventDef.type === 'parameter_change') {
-          processParameterChangeEvent(eventDef, eventState, cell, t, dt);
+          processParameterChangeEvent(eventDef, eventState, cell, t, dt, params.general);
         } else if (eventDef.type === 'special') {
           // Deferred events: collect indices and process after main loop
           if (eventDef.special_name === 'apical_constriction') {
@@ -737,8 +763,9 @@ function processCellCycleReset(
   // Preserve the cell's ID
   newCell.id = cell.id;
 
-  // Re-initialize event states (fresh cycle)
-  newCell.event_states = initializeEventStates(cellType.events_v2, rng);
+  // Re-initialize event states (fresh cycle) using effective events
+  const effectiveEvents = getEffectiveEvents(params.general, cellType);
+  newCell.event_states = initializeEventStates(effectiveEvents, rng);
   newCell.has_reached_G2 = false;
   newCell.has_reached_mitosis = false;
 
@@ -755,13 +782,15 @@ export function processAllEvents(
   dt: number,
   rng: SeededRandom
 ): void {
-  // Check if any cell type uses v1.1.0 events
-  let hasV2Events = false;
-  for (const cellType of Object.values(params.cell_types)) {
-    if ((cellType as EHTCellTypeParams).events_v2 !== undefined &&
-        (cellType as EHTCellTypeParams).events_v2!.length > 0) {
-      hasV2Events = true;
-      break;
+  // Check if any cell type uses v1.1.0+ events (including default events)
+  let hasV2Events = (params.general.default_events ?? []).length > 0;
+  if (!hasV2Events) {
+    for (const cellType of Object.values(params.cell_types)) {
+      if ((cellType as EHTCellTypeParams).events_v2 !== undefined &&
+          (cellType as EHTCellTypeParams).events_v2!.length > 0) {
+        hasV2Events = true;
+        break;
+      }
     }
   }
 

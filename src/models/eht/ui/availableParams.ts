@@ -63,6 +63,9 @@ export function generateEHTBatchParameters(params: EHTParams): BatchParameterDef
       { path: `${prefix}.cytos_init`, label: `${label}: cytos_init` },
       { path: `${prefix}.basal_membrane_repulsion`, label: `${label}: basal_membrane_repulsion` },
       { path: `${prefix}.apical_junction_init`, label: `${label}: apical_junction_init` },
+      // Strain
+      { path: `${prefix}.apical_cytos_strain_init`, label: `${label}: apical_cytos_strain_init` },
+      { path: `${prefix}.basal_cytos_strain_init`, label: `${label}: basal_cytos_strain_init` },
       // Events
       { path: `${prefix}.events.time_A_start`, label: `${label}: time_A start` },
       { path: `${prefix}.events.time_A_end`, label: `${label}: time_A end` },

@@ -103,6 +103,27 @@ $$d\\mathbf{x} = \\sqrt{2D}\\, d\\mathbf{W}$$`,
 - **2**: Run but retain length (stays connected)
 - **3**: Immediate running (starts running instantly)`,
 
+  // === Cytoskeleton Strain ===
+  'cell_types.apical_cytos_strain_init': `Initial apical cytoskeleton strain. Controls the rest length scaling of the apical cytoskeleton:
+- **-1**: Inactive (rest length = 0)
+- **0**: No change (default)
+- **> 0**: Increased rest length
+- **< 0**: Decreased rest length
+
+Formula: $drl \\times (1 + \\text{strain})$`,
+
+  'cell_types.basal_cytos_strain_init': `Initial basal cytoskeleton strain. Controls the rest length scaling of the basal cytoskeleton:
+- **-1**: Inactive (rest length = 0)
+- **0**: No change (default)
+- **> 0**: Increased rest length
+- **< 0**: Decreased rest length
+
+Formula: $drl \\times (1 + \\text{strain})$`,
+
+  'cell_types.skip_default_events': `List of default event IDs that should NOT apply to this cell type. Use to opt specific cell types out of shared default events.`,
+
+  'general.default_events': `Default events applied to all cell types. Each cell type can opt out of specific events using \`skip_default_events\`.`,
+
   // === Event System (v1.1.0) ===
   'events.formula': `A **math.js** expression to compute the new parameter value. Available variables:
 

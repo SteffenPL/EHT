@@ -61,6 +61,22 @@ function updateCytoskeleton(
             cell.R_hard = cellType.R_hard_div;
         }
 
+        // Apply cytoskeleton strain
+        // strain === -1: inactive (drl = 0)
+        // strain === 0: no change
+        // otherwise: drl *= (1 + strain)
+        if (cell.apical_cytos_strain === -1) {
+            apicalDrl = 0.0;
+        } else if (cell.apical_cytos_strain !== 0) {
+            apicalDrl *= (1 + cell.apical_cytos_strain);
+        }
+
+        if (cell.basal_cytos_strain === -1) {
+            basalDrl = 0.0;
+        } else if (cell.basal_cytos_strain !== 0) {
+            basalDrl *= (1 + cell.basal_cytos_strain);
+        }
+
         // Cells without adhesion have zero rest length
         if (!cell.has_A) apicalDrl = 0.0;
         if (!cell.has_B) basalDrl = 0.0;

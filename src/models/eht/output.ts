@@ -67,6 +67,10 @@ export function getSnapshot(state: EHTSimulationState): Record<string, any>[] {
             R_soft: cell.R_soft,
             R_hard: cell.R_hard,
 
+            // Strain
+            apical_cytos_strain: cell.apical_cytos_strain,
+            basal_cytos_strain: cell.basal_cytos_strain,
+
             // Events
             time_A: cell.time_A,
             time_B: cell.time_B,
@@ -138,6 +142,8 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
 
             has_A: Boolean(row.has_A),
             has_B: Boolean(row.has_B),
+            apical_cytos_strain: Number(row.apical_cytos_strain ?? 0),
+            basal_cytos_strain: Number(row.basal_cytos_strain ?? 0),
             // Handle legacy phase as number or enum
             phase: Number(row.phase) as CellPhase,
             birth_time: t - Number(row.age),

@@ -8,7 +8,7 @@ import { SeededRandom } from '@/core/math/random';
 import type { EHTSimulationState } from '../types';
 import { CellPhase } from '../types';
 import type { EHTParams } from '../params/types';
-import { createCell, getCellType, type CreateCellInput } from './cell';
+import { createCell, getCellType, getEffectiveEvents, type CreateCellInput } from './cell';
 
 /**
  * Perform a single cell division (two offspring) for a cell at the given index.
@@ -130,8 +130,9 @@ export function processCellDivisions(
 
     const cellType = getCellType(params, cell);
 
-    // Check if this cell type uses event-based lifecycle
-    const hasEventLifecycle = cellType.events_v2?.some(
+    // Check if this cell type uses event-based lifecycle (including default events)
+    const effectiveEvents = getEffectiveEvents(params.general, cellType);
+    const hasEventLifecycle = effectiveEvents.some(
       e => e.type === 'special' && (e.special_name === 'cell_division' || e.special_name === 'cell_cycle_reset')
     );
     if (hasEventLifecycle) continue;

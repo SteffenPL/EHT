@@ -28,7 +28,7 @@ export const EHTModel: SimulationModel<EHTParams, EHTSimulationState> = {
   // Identity
   id: 'EHT',
   name: 'Epithelial-to-Hematopoietic Transition',
-  version: '1.1.0',
+  version: '1.2.0',
   description: 'Simulates cell mechanics, division, and EMT events in curved epithelial tissue.',
 
   // Parameter system

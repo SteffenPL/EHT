@@ -7,8 +7,32 @@ import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
 import type { EHTSimulationState, CellState, CellEventState } from '../types';
 import { CellPhase } from '../types';
-import type { EHTParams, EHTCellTypeParams, EventDefinition } from '../params/types';
+import type { EHTParams, EHTCellTypeParams, EventDefinition, EHTGeneralParams } from '../params/types';
 import { CellCyclePhase } from '../params/types';
+
+/**
+ * Get the effective event list for a cell type by merging default events
+ * with per-type events. Default events filtered by skip_default_events.
+ * Per-type events with same ID as a default take precedence.
+ */
+export function getEffectiveEvents(
+  general: EHTGeneralParams,
+  cellType: EHTCellTypeParams
+): EventDefinition[] {
+  const defaultEvents = general.default_events ?? [];
+  const skipSet = new Set(cellType.skip_default_events ?? []);
+  const perTypeEvents = cellType.events_v2 ?? [];
+
+  // Per-type event IDs take precedence over defaults
+  const perTypeIds = new Set(perTypeEvents.map(e => e.id));
+
+  // Filter default events: not skipped and not overridden by per-type
+  const filteredDefaults = defaultEvents.filter(
+    e => !skipSet.has(e.id) && !perTypeIds.has(e.id)
+  );
+
+  return [...filteredDefaults, ...perTypeEvents];
+}
 
 /** Input for creating a new cell with pre-computed positions */
 export interface CreateCellInput {
@@ -106,8 +130,9 @@ export function createCell(
     ? Math.max(...state.cells.map(c => c.id)) + 1
     : 0;
 
-  // Check if using v1.1.0 event system
-  const useV2Events = cellType.events_v2 !== undefined && cellType.events_v2.length > 0;
+  // Check if using v1.1.0+ event system (including default events)
+  const effectiveEvents = getEffectiveEvents(params.general, cellType);
+  const useV2Events = effectiveEvents.length > 0;
 
   if (parent === undefined) {
     // New cell (not from division)
@@ -130,9 +155,9 @@ export function createCell(
       if (rng.random() > 0.7) time_AC = Infinity;
     }
 
-    // Initialize v1.1.0 event states if available
+    // Initialize v1.1.0+ event states if available (using effective events)
     const event_states = useV2Events
-      ? initializeEventStates(cellType.events_v2, rng)
+      ? initializeEventStates(effectiveEvents, rng)
       : undefined;
 
     return {
@@ -147,6 +172,8 @@ export function createCell(
       eta_B: h / 2,
       has_A: true,
       has_B: true,
+      apical_cytos_strain: cellType.apical_cytos_strain_init ?? 0,
+      basal_cytos_strain: cellType.basal_cytos_strain_init ?? 0,
       phase: CellPhase.G1,
       birth_time: birthTime,
       division_time: birthTime + maxAge,
@@ -181,6 +208,8 @@ export function createCell(
       eta_B: parent.eta_B,
       has_A: parent.has_A,
       has_B: parent.has_B,
+      apical_cytos_strain: parent.apical_cytos_strain,
+      basal_cytos_strain: parent.basal_cytos_strain,
       phase: CellPhase.G1,
       birth_time: state.t,
       division_time: state.t + maxAge,
@@ -266,6 +295,8 @@ export function satisfiesCellCyclePhase(
       return cell.has_reached_G2 === true;
     case CellCyclePhase.Mitosis:
       return cell.has_reached_mitosis === true;
+    case CellCyclePhase.Division:
+      return cell.phase === CellPhase.Division;
     default:
       return true;
   }

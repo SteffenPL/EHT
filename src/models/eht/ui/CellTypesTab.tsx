@@ -20,7 +20,7 @@ import type { RGBColor } from '@/components/params/inputs/ColorInput';
 import { HelpPopover } from '@/components/ui/help-popover';
 import { getParameterDescription } from '../params/descriptions';
 // Section definitions for copy/paste
-type SectionKey = 'initial' | 'geometry' | 'appearance' | 'stiffness' | 'division' | 'cellTypeProps' | 'running';
+type SectionKey = 'initial' | 'geometry' | 'appearance' | 'stiffness' | 'strain' | 'division' | 'cellTypeProps' | 'running';
 
 interface SectionDefinition {
   key: SectionKey;
@@ -33,6 +33,7 @@ const SECTIONS: SectionDefinition[] = [
   { key: 'geometry', label: 'Geometry', fields: ['R_hard', 'R_hard_div', 'R_soft'] },
   { key: 'appearance', label: 'Appearance', fields: ['color'] },
   { key: 'stiffness', label: 'Stiffness', fields: ['k_apical_junction', 'k_cytos', 'stiffness_apical_apical', 'stiffness_apical_apical_div', 'stiffness_nuclei_apical', 'stiffness_nuclei_basal', 'stiffness_repulsion', 'stiffness_straightness'] },
+  { key: 'strain', label: 'Cytoskeleton Strain', fields: ['apical_cytos_strain_init', 'basal_cytos_strain_init'] },
   { key: 'division', label: 'Division & Lifecycle', fields: ['lifespan_start', 'lifespan_end', 'dur_G2', 'dur_mitosis', 'INM'] },
   { key: 'cellTypeProps', label: 'Cell-Type Properties', fields: ['diffusion', 'basal_damping_ratio', 'max_basal_junction_dist', 'cytos_init', 'basal_membrane_repulsion', 'apical_junction_init', 'max_cytoskeleton_length'] },
   { key: 'running', label: 'Running Behavior', fields: ['run', 'running_speed', 'running_mode'] },
@@ -664,8 +665,33 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
             ))}
           </CellTypeRow>
 
-          {/* Division */}
+          {/* Cytoskeleton Strain */}
           <SectionHeader section={SECTIONS[4]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
+          <CellTypeRow label="Apical Strain Init" description={desc('apical_cytos_strain_init')}>
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).apical_cytos_strain_init}
+                onChange={(v) => updateCellType(key, 'apical_cytos_strain_init', v)}
+                disabled={disabled}
+                step={0.1}
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="Basal Strain Init" description={desc('basal_cytos_strain_init')}>
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).basal_cytos_strain_init}
+                onChange={(v) => updateCellType(key, 'basal_cytos_strain_init', v)}
+                disabled={disabled}
+                step={0.1}
+              />
+            ))}
+          </CellTypeRow>
+
+          {/* Division */}
+          <SectionHeader section={SECTIONS[5]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
           <CellTypeRow label="Lifespan (start)" description={desc('lifespan_start')}>
             {cellTypeKeys.map((key) => (
               <SplitRangeCell
@@ -728,7 +754,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
 
           {/* Cell-Type Specific Properties */}
-          <SectionHeader section={SECTIONS[5]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
+          <SectionHeader section={SECTIONS[6]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
           <CellTypeRow label="Diffusion" description={desc('diffusion')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
@@ -808,7 +834,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
 
           {/* Running Behavior - at the end */}
-          <SectionHeader section={SECTIONS[6]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
+          <SectionHeader section={SECTIONS[7]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
           <CellTypeRow label="Run Probability" description={desc('run')}>
             {cellTypeKeys.map((key) => (
               <NumberCell

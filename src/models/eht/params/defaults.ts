@@ -4,9 +4,10 @@
 
 import { cloneDeep, merge } from 'lodash-es';
 import TOML from '@iarna/toml';
-import type { EHTParams, EHTCellTypeParams, PartialEHTParams, EventDefinition } from './types';
+import type { EHTParams, EHTCellTypeParams, PartialEHTParams, EventDefinition, SpecialEvent, ParameterChangeEvent } from './types';
 import { CellCyclePhase } from './types';
 import { ensureV1_1_0 } from './migration-v1.1';
+import { ensureV1_2_0 } from './migration-v1.2';
 
 // =============================================================================
 // Default Events for v1.1.0
@@ -108,6 +109,9 @@ export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
     time_AC_end: Infinity,
   },
   events_v2: DEFAULT_CONTROL_EVENTS_V2,
+  apical_cytos_strain_init: 0,
+  basal_cytos_strain_init: 0,
+  skip_default_events: [],
   // Per-cell-type properties
   diffusion: 0.2,
   basal_damping_ratio: 1.0,
@@ -156,6 +160,9 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
     time_AC_end: Infinity,
   },
   events_v2: DEFAULT_EMT_EVENTS_V2,
+  apical_cytos_strain_init: 0,
+  basal_cytos_strain_init: 0,
+  skip_default_events: [],
   // Per-cell-type properties
   diffusion: 0.2,
   basal_damping_ratio: 1.0,
@@ -169,7 +176,7 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
 export const DEFAULT_EHT_PARAMS: EHTParams = {
   metadata: {
     model: 'EHT',
-    version: '1.1.0',
+    version: '1.2.0',
   },
   general: {
     t_end: 48,
@@ -187,6 +194,7 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     perimeter: 105,    // ≈ 2π × 16.67 (equivalent to curvature 0.06)
     aspect_ratio: 1,   // Circle
     hard_sphere_nuclei: true,
+    default_events: [],
   },
   cell_prop: {
     // All properties moved to per-cell-type in cell_types
@@ -242,8 +250,8 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
     }
   }
 
-  // Apply migration from v1.0.0 to v1.1.0 if needed
-  return ensureV1_1_0(base);
+  // Apply migration chain: v1.0.0 → v1.1.0 → v1.2.0
+  return ensureV1_2_0(ensureV1_1_0(base));
 }
 
 // Load all TOML presets at build time using Vite's import.meta.glob
@@ -311,6 +319,65 @@ export const EHT_PRESETS: Array<{
     create: (): EHTParams => mergePresetWithDefaults(preset.params),
   })),
 ];
+
+// =============================================================================
+// Default Event Presets for v1.2.0
+// =============================================================================
+
+/** Preset default events that can be quickly added to general.default_events */
+export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
+  cell_division: {
+    type: 'special',
+    id: 'default_cell_division',
+    name: 'Cell Division',
+    start: 0,
+    end: Infinity,
+    period: 0,
+    probability: 1,
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.Division,
+    special_name: 'cell_division',
+  } as SpecialEvent,
+  increase_R_hard: {
+    type: 'parameter_change',
+    id: 'default_increase_R_hard',
+    name: 'Increase R_hard',
+    start: 0,
+    end: Infinity,
+    period: 0.1,
+    probability: 1,
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.Any,
+    target_parameter: 'R_hard',
+    formula: 'old_value + 0.01 * dt',
+  } as ParameterChangeEvent,
+  change_apical_strain: {
+    type: 'parameter_change',
+    id: 'default_change_apical_strain',
+    name: 'Change Apical Strain',
+    start: 0,
+    end: Infinity,
+    period: 0,
+    probability: 1,
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.Any,
+    target_parameter: 'apical_cytos_strain',
+    formula: '-1',
+  } as ParameterChangeEvent,
+  change_basal_strain: {
+    type: 'parameter_change',
+    id: 'default_change_basal_strain',
+    name: 'Change Basal Strain',
+    start: 0,
+    end: Infinity,
+    period: 0,
+    probability: 1,
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.Any,
+    target_parameter: 'basal_cytos_strain',
+    formula: '-1',
+  } as ParameterChangeEvent,
+};
 
 // Legacy exports for backwards compatibility
 export const DEFAULT_PARAMS = DEFAULT_EHT_PARAMS;
