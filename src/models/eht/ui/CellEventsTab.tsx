@@ -1,6 +1,7 @@
 /**
  * EHT Cell Events Tab - Dedicated tab for managing cell events per cell type.
  * Shows compact event cards with a dialog for full editing.
+ * Single-column layout with collapsible sections for default and per-type events.
  */
 import { useState, useCallback } from 'react';
 import type { ModelUITabProps } from '@/core/registry';
@@ -10,6 +11,12 @@ import { DEFAULT_EVENT_PRESETS } from '../params/defaults';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +35,7 @@ import {
 import { EventEditor } from './EventsEditor';
 
 // =============================================================================
-// Compact Event Card
+// Compact Event Card (wide horizontal layout)
 // =============================================================================
 
 interface CompactEventCardProps {
@@ -87,47 +94,48 @@ function CompactEventCard({
   };
 
   return (
-    <div className="border rounded-md p-2 space-y-1 bg-card text-xs">
-      {/* Row 1: Type badge + name */}
-      <div className="flex items-center gap-1.5">
-        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${
-          event.type === 'special'
-            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-            : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-        }`}>
-          {event.type === 'special' ? 'S' : 'P'}
-        </span>
-        <span className="font-medium truncate" title={event.name || event.id}>
-          {event.name || event.id}
-        </span>
-      </div>
+    <div className="border rounded-md px-2 py-1.5 bg-card text-xs flex items-center gap-2 flex-wrap">
+      {/* Type badge */}
+      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${
+        event.type === 'special'
+          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+          : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+      }`}>
+        {event.type === 'special' ? 'S' : 'P'}
+      </span>
 
-      {/* Row 2: Active + probability */}
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <Checkbox
-            checked={isActive}
-            onCheckedChange={handleActiveToggle}
-            disabled={disabled}
-            className="h-3.5 w-3.5"
-          />
-          <span className="text-muted-foreground">Active</span>
-        </div>
-        <div className="flex items-center gap-1 ml-auto">
-          <span className="text-muted-foreground">p=</span>
-          <Input
-            type="text"
-            value={event.probability}
-            onChange={handleProbabilityChange}
-            disabled={disabled}
-            className="h-5 text-xs w-20 px-1"
-            placeholder="1"
-          />
-        </div>
-      </div>
+      {/* Name */}
+      <span className="font-medium truncate min-w-[80px] max-w-[160px]" title={event.name || event.id}>
+        {event.name || event.id}
+      </span>
 
-      {/* Row 3: Start - End (disabled when inactive, not hidden) */}
+      {/* Active toggle */}
       <div className="flex items-center gap-1">
+        <Checkbox
+          checked={isActive}
+          onCheckedChange={handleActiveToggle}
+          disabled={disabled}
+          className="h-3.5 w-3.5"
+        />
+        <span className="text-muted-foreground">Active</span>
+      </div>
+
+      {/* Probability */}
+      <div className="flex items-center gap-1">
+        <span className="text-muted-foreground">p=</span>
+        <Input
+          type="text"
+          value={event.probability}
+          onChange={handleProbabilityChange}
+          disabled={disabled}
+          className="h-5 text-xs w-16 px-1"
+          placeholder="1"
+        />
+      </div>
+
+      {/* Time range */}
+      <div className="flex items-center gap-1">
+        <span className="text-muted-foreground text-[10px]">t:</span>
         <Input
           type="number"
           value={isActive ? event.start : ''}
@@ -151,22 +159,8 @@ function CompactEventCard({
         />
       </div>
 
-      {/* Row 4: Edit button */}
-      <div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onEdit}
-          disabled={disabled}
-          className="h-6 text-xs gap-1 w-full"
-        >
-          <Pencil className="h-3 w-3" />
-          Edit
-        </Button>
-      </div>
-
-      {/* Row 5: Up/Down + Copy + Delete */}
-      <div className="flex items-center gap-0.5">
+      {/* Action buttons */}
+      <div className="flex items-center gap-0.5 ml-auto">
         <Button
           variant="ghost"
           size="icon"
@@ -187,28 +181,36 @@ function CompactEventCard({
         >
           <ChevronDown className="h-3.5 w-3.5" />
         </Button>
-        <div className="ml-auto flex items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onCopy}
-            disabled={disabled}
-            className="h-6 w-6"
-            title="Copy event"
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onDelete}
-            disabled={disabled}
-            className="h-6 w-6 text-destructive hover:text-destructive"
-            title="Delete event"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onEdit}
+          disabled={disabled}
+          className="h-6 w-6"
+          title="Edit event"
+        >
+          <Pencil className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onCopy}
+          disabled={disabled}
+          className="h-6 w-6"
+          title="Copy event"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onDelete}
+          disabled={disabled}
+          className="h-6 w-6 text-destructive hover:text-destructive"
+          title="Delete event"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
       </div>
     </div>
   );
@@ -403,161 +405,185 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
     : null;
 
   return (
-    <div className="space-y-4">
-      {/* Default Events Section */}
-      <div className="space-y-2">
-        <div className="text-sm font-semibold border-b pb-1">Default Events (shared across all cell types)</div>
+    <div className="space-y-1">
+      <Accordion type="multiple" defaultValue={cellTypeKeys}>
+        {/* Default Events Section */}
+        <AccordionItem value="default-events">
+          <AccordionTrigger className="py-2 text-sm font-semibold">
+            Default Events ({defaultEvents.length})
+          </AccordionTrigger>
+          <AccordionContent className="pb-2 pt-0">
+            <div className="space-y-2">
+              {/* Default event cards */}
+              {defaultEvents.length > 0 && (
+                <div className="space-y-1">
+                  {defaultEvents.map((event, i) => (
+                    <CompactEventCard
+                      key={`default-${event.id}-${i}`}
+                      event={event}
+                      index={i}
+                      totalCount={defaultEvents.length}
+                      allEvents={defaultEvents}
+                      onEventChange={(updated) => updateDefaultEvent(i, updated)}
+                      onEdit={() => setEditingDefaultEvent(i)}
+                      onDelete={() => deleteDefaultEvent(i)}
+                      onMoveUp={() => moveDefaultEvent(i, 'up')}
+                      onMoveDown={() => moveDefaultEvent(i, 'down')}
+                      onCopy={() => setCopiedEvent(structuredClone(event))}
+                      disabled={disabled}
+                    />
+                  ))}
+                </div>
+              )}
 
-        {/* Default event cards */}
-        {defaultEvents.length > 0 && (
-          <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
-            {defaultEvents.map((event, i) => (
-              <CompactEventCard
-                key={`default-${event.id}-${i}`}
-                event={event}
-                index={i}
-                totalCount={defaultEvents.length}
-                allEvents={defaultEvents}
-                onEventChange={(updated) => updateDefaultEvent(i, updated)}
-                onEdit={() => setEditingDefaultEvent(i)}
-                onDelete={() => deleteDefaultEvent(i)}
-                onMoveUp={() => moveDefaultEvent(i, 'up')}
-                onMoveDown={() => moveDefaultEvent(i, 'down')}
-                onCopy={() => setCopiedEvent(structuredClone(event))}
-                disabled={disabled}
-              />
-            ))}
-          </div>
-        )}
+              {/* Preset buttons */}
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(DEFAULT_EVENT_PRESETS).map(([key, preset]) => (
+                  <Button
+                    key={key}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addDefaultPreset(key)}
+                    disabled={disabled}
+                    className="h-6 text-xs gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    {preset.name}
+                  </Button>
+                ))}
+              </div>
 
-        {/* Preset buttons */}
-        <div className="flex flex-wrap gap-1">
-          {Object.entries(DEFAULT_EVENT_PRESETS).map(([key, preset]) => (
-            <Button
-              key={key}
-              variant="outline"
-              size="sm"
-              onClick={() => addDefaultPreset(key)}
-              disabled={disabled}
-              className="h-6 text-xs gap-1"
-            >
-              <Plus className="h-3 w-3" />
-              {preset.name}
-            </Button>
-          ))}
-        </div>
-
-        {/* Skip checkboxes per cell type */}
-        {defaultEvents.length > 0 && (
-          <div className="border rounded-md p-2 space-y-1">
-            <div className="text-xs font-medium text-muted-foreground">Skip default events per cell type:</div>
-            <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cellTypeKeys.length}, minmax(120px, 1fr))` }}>
-              {cellTypeKeys.map((key) => {
-                const ct = params.cell_types[key] as EHTCellTypeParams;
-                const skipSet = new Set(ct.skip_default_events ?? []);
-                return (
-                  <div key={key} className="space-y-0.5">
-                    <div className="text-xs font-semibold">{key}</div>
-                    {defaultEvents.map((event) => (
-                      <div key={event.id} className="flex items-center gap-1">
-                        <Checkbox
-                          checked={skipSet.has(event.id)}
-                          onCheckedChange={(checked) => toggleSkipDefault(key, event.id, !!checked)}
-                          disabled={disabled}
-                          className="h-3.5 w-3.5"
-                        />
-                        <span className="text-xs text-muted-foreground truncate" title={event.name}>
-                          Skip: {event.name || event.id}
-                        </span>
+              {/* Skip checkboxes per cell type */}
+              {defaultEvents.length > 0 && (
+                <div className="border rounded-md p-2 space-y-1">
+                  <div className="text-xs font-medium text-muted-foreground">Skip default events per cell type:</div>
+                  {cellTypeKeys.map((key) => {
+                    const ct = params.cell_types[key] as EHTCellTypeParams;
+                    const skipSet = new Set(ct.skip_default_events ?? []);
+                    const hasSkips = defaultEvents.some(e => skipSet.has(e.id));
+                    if (!hasSkips && defaultEvents.length <= 3) {
+                      // Show inline for small event counts
+                      return (
+                        <div key={key} className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-semibold min-w-[60px]">{key}:</span>
+                          {defaultEvents.map((event) => (
+                            <div key={event.id} className="flex items-center gap-1">
+                              <Checkbox
+                                checked={skipSet.has(event.id)}
+                                onCheckedChange={(checked) => toggleSkipDefault(key, event.id, !!checked)}
+                                disabled={disabled}
+                                className="h-3.5 w-3.5"
+                              />
+                              <span className="text-xs text-muted-foreground truncate" title={event.name}>
+                                {event.name || event.id}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={key} className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold min-w-[60px]">{key}:</span>
+                        {defaultEvents.map((event) => (
+                          <div key={event.id} className="flex items-center gap-1">
+                            <Checkbox
+                              checked={skipSet.has(event.id)}
+                              onCheckedChange={(checked) => toggleSkipDefault(key, event.id, !!checked)}
+                              disabled={disabled}
+                              className="h-3.5 w-3.5"
+                            />
+                            <span className="text-xs text-muted-foreground truncate" title={event.name}>
+                              {event.name || event.id}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
-        )}
-      </div>
+          </AccordionContent>
+        </AccordionItem>
 
-      {/* Per-Cell-Type Events */}
-      <div className="overflow-x-auto">
-        <div
-          className="grid gap-4"
-          style={{ gridTemplateColumns: `repeat(${cellTypeKeys.length}, minmax(180px, 1fr))` }}
-        >
-          {cellTypeKeys.map((key) => {
-            const events = getEvents(key);
-            return (
-              <div key={key} className="space-y-2">
-                {/* Column header */}
-                <div className="text-sm font-semibold border-b pb-1">{key}</div>
+        {/* Per-Cell-Type Events */}
+        {cellTypeKeys.map((key) => {
+          const events = getEvents(key);
+          return (
+            <AccordionItem key={key} value={key}>
+              <AccordionTrigger className="py-2 text-sm font-semibold">
+                {key} ({events.length})
+              </AccordionTrigger>
+              <AccordionContent className="pb-2 pt-0">
+                <div className="space-y-2">
+                  {/* Event cards */}
+                  {events.length === 0 ? (
+                    <div className="text-xs text-muted-foreground text-center py-2 border rounded-md bg-muted/30">
+                      No events
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {events.map((event, i) => (
+                        <CompactEventCard
+                          key={`${key}-${event.id}-${i}`}
+                          event={event}
+                          index={i}
+                          totalCount={events.length}
+                          allEvents={events}
+                          onEventChange={(updated) => updateEvent(key, i, updated)}
+                          onEdit={() => setEditingEvent({ cellTypeKey: key, eventIndex: i })}
+                          onDelete={() => deleteEvent(key, i)}
+                          onMoveUp={() => moveEvent(key, i, 'up')}
+                          onMoveDown={() => moveEvent(key, i, 'down')}
+                          onCopy={() => setCopiedEvent(structuredClone(event))}
+                          disabled={disabled}
+                        />
+                      ))}
+                    </div>
+                  )}
 
-                {/* Event cards */}
-                {events.length === 0 ? (
-                  <div className="text-xs text-muted-foreground text-center py-4 border rounded-md bg-muted/30">
-                    No events
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {events.map((event, i) => (
-                      <CompactEventCard
-                        key={`${key}-${event.id}-${i}`}
-                        event={event}
-                        index={i}
-                        totalCount={events.length}
-                        allEvents={events}
-                        onEventChange={(updated) => updateEvent(key, i, updated)}
-                        onEdit={() => setEditingEvent({ cellTypeKey: key, eventIndex: i })}
-                        onDelete={() => deleteEvent(key, i)}
-                        onMoveUp={() => moveEvent(key, i, 'up')}
-                        onMoveDown={() => moveEvent(key, i, 'down')}
-                        onCopy={() => setCopiedEvent(structuredClone(event))}
-                        disabled={disabled}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Add / Paste buttons */}
-                <div className="flex flex-wrap gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addEvent(key, 'special')}
-                    disabled={disabled}
-                    className="h-6 text-xs gap-1"
-                  >
-                    <Plus className="h-3 w-3" />
-                    Special
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => addEvent(key, 'parameter_change')}
-                    disabled={disabled}
-                    className="h-6 text-xs gap-1"
-                  >
-                    <Plus className="h-3 w-3" />
-                    Parameter
-                  </Button>
-                  {copiedEvent && (
+                  {/* Add / Paste buttons */}
+                  <div className="flex flex-wrap gap-1">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => pasteEvent(key)}
+                      onClick={() => addEvent(key, 'special')}
                       disabled={disabled}
                       className="h-6 text-xs gap-1"
                     >
-                      <ClipboardPaste className="h-3 w-3" />
-                      Paste
+                      <Plus className="h-3 w-3" />
+                      Special
                     </Button>
-                  )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addEvent(key, 'parameter_change')}
+                      disabled={disabled}
+                      className="h-6 text-xs gap-1"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Parameter
+                    </Button>
+                    {copiedEvent && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => pasteEvent(key)}
+                        disabled={disabled}
+                        className="h-6 text-xs gap-1"
+                      >
+                        <ClipboardPaste className="h-3 w-3" />
+                        Paste
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
 
       {/* Edit Dialog for per-type events */}
       <EventEditDialog
