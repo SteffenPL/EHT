@@ -69,10 +69,7 @@ function CompactEventCard({
   };
 
   const handleProbabilityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseFloat(e.target.value);
-    if (!isNaN(parsed)) {
-      onEventChange({ ...event, probability: Math.max(0, Math.min(1, parsed)) });
-    }
+    onEventChange({ ...event, probability: e.target.value });
   };
 
   const handleStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,14 +116,12 @@ function CompactEventCard({
         <div className="flex items-center gap-1 ml-auto">
           <span className="text-muted-foreground">p=</span>
           <Input
-            type="number"
+            type="text"
             value={event.probability}
             onChange={handleProbabilityChange}
             disabled={disabled}
-            min={0}
-            max={1}
-            step={0.1}
-            className="h-5 text-xs w-14 px-1"
+            className="h-5 text-xs w-20 px-1"
+            placeholder="1"
           />
         </div>
       </div>
@@ -363,7 +358,7 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
       start: 0,
       end: 10,
       period: 0,
-      probability: 1.0,
+      probability: '1',
       prereq: null,
       cell_cycle_phase: CellCyclePhase.Any,
     };

@@ -24,7 +24,7 @@ export function convertLegacyEventsToV2(
   run: number
 ): EventDefinition[] {
   const result: EventDefinition[] = [];
-  const probability = hetero ? 0.7 : 1.0;
+  const probability = hetero ? '0.7' : '1';
 
   // Helper to check if event is active (not Infinity)
   const isActive = (start: number, end: number) =>
@@ -55,7 +55,7 @@ export function convertLegacyEventsToV2(
       start: events.time_A_start,
       end: events.time_A_end,
       period: 0,
-      probability: 1.0, // Always fires if prereq fired
+      probability: '1', // Always fires if prereq fired
       prereq: 'lose_apical',
       cell_cycle_phase: CellCyclePhase.Any,
       target_parameter: 'stiffness_nuclei_apical',
@@ -89,7 +89,7 @@ export function convertLegacyEventsToV2(
       start: events.time_B_start,
       end: events.time_B_end,
       period: 0,
-      probability: 1.0, // Always fires if prereq fired
+      probability: '1', // Always fires if prereq fired
       prereq: 'lose_basal',
       cell_cycle_phase: CellCyclePhase.Any,
       target_parameter: 'stiffness_nuclei_basal',
@@ -125,7 +125,7 @@ export function convertLegacyEventsToV2(
       start: events.time_P_start,
       end: events.time_P_end,
       period: 0,
-      probability: run, // Use the run probability directly
+      probability: String(run), // Use the run probability directly
       prereq: null,
       cell_cycle_phase: CellCyclePhase.Any,
       special_name: 'start_running',

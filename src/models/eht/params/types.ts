@@ -43,8 +43,8 @@ export interface BaseEventDefinition {
   end: number;
   /** Repeat interval (0 = one-time event) */
   period: number;
-  /** Chance event happens per cell (0-1) */
-  probability: number;
+  /** Probability formula - evaluated at cell birth (0-1). Variables: p_div_out, mu, etc. */
+  probability: string;
   /** Required event ID that must fire first (same cell only) */
   prereq: string | null;
   /** Cell must have reached this phase */

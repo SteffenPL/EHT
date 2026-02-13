@@ -5,10 +5,37 @@
 
 import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
+import { evaluate } from 'mathjs';
 import type { EHTSimulationState, CellState, CellEventState } from '../types';
 import { CellPhase } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, EHTGeneralParams } from '../params/types';
 import { CellCyclePhase } from '../params/types';
+
+/**
+ * Evaluate a probability formula string.
+ * Returns a number between 0 and 1. Falls back to parsing as plain number.
+ */
+function evaluateProbabilityFormula(
+  formula: string,
+  generalParams?: EHTGeneralParams
+): number {
+  try {
+    const scope: Record<string, number> = {};
+    if (generalParams) {
+      scope.p_div_out = generalParams.p_div_out;
+      scope.mu = generalParams.mu;
+      scope.h_init = generalParams.h_init;
+      scope.w_init = generalParams.w_init;
+      scope.t_end = generalParams.t_end;
+    }
+    const result = evaluate(formula, scope);
+    return typeof result === 'number' ? result : Number(result);
+  } catch {
+    // Fallback: try parsing as plain number
+    const num = Number(formula);
+    return isNaN(num) ? 1 : num;
+  }
+}
 
 /**
  * Get the effective event list for a cell type by merging default events
@@ -47,7 +74,8 @@ export interface CreateCellInput {
  */
 export function initializeEventStates(
   events: EventDefinition[] | undefined,
-  rng: SeededRandom
+  rng: SeededRandom,
+  generalParams?: EHTGeneralParams
 ): Record<string, CellEventState> {
   const eventStates: Record<string, CellEventState> = {};
 
@@ -56,8 +84,9 @@ export function initializeEventStates(
   }
 
   for (const event of events) {
-    // Determine if this event should be skipped based on probability
-    const shouldTrigger = rng.random() <= event.probability;
+    // Determine if this event should be skipped based on probability formula
+    const prob = evaluateProbabilityFormula(event.probability, generalParams);
+    const shouldTrigger = rng.random() <= prob;
 
     // Sample trigger time within [start, end] range
     let triggerTime: number;
@@ -157,7 +186,7 @@ export function createCell(
 
     // Initialize v1.1.0+ event states if available (using effective events)
     const event_states = useV2Events
-      ? initializeEventStates(effectiveEvents, rng)
+      ? initializeEventStates(effectiveEvents, rng, params.general)
       : undefined;
 
     return {

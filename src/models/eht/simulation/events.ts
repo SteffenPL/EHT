@@ -765,7 +765,7 @@ function processCellCycleReset(
 
   // Re-initialize event states (fresh cycle) using effective events
   const effectiveEvents = getEffectiveEvents(params.general, cellType);
-  newCell.event_states = initializeEventStates(effectiveEvents, rng);
+  newCell.event_states = initializeEventStates(effectiveEvents, rng, params.general);
   newCell.has_reached_G2 = false;
   newCell.has_reached_mitosis = false;
 

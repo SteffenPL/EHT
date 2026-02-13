@@ -3,7 +3,7 @@
  * Adds strain parameters, skip_default_events, and default_events.
  */
 
-import type { EHTParams, EHTCellTypeParams } from './types';
+import type { EHTParams, EHTCellTypeParams, EventDefinition } from './types';
 
 /**
  * Check if params need migration to v1.2.0.
@@ -54,6 +54,27 @@ export function migrateV1_1_0toV1_2_0(params: EHTParams): EHTParams {
     if (!('skip_default_events' in ct)) {
       (ct as any).skip_default_events = [];
     }
+
+    // Convert numeric probability fields to string formulas
+    if (ct.events_v2) {
+      ct.events_v2 = ct.events_v2.map((event: EventDefinition) => {
+        if (typeof event.probability === 'number') {
+          return { ...event, probability: String(event.probability) };
+        }
+        return event;
+      });
+    }
+  }
+
+  // Also convert default_events probabilities
+  const general = migrated.general as any;
+  if (general.default_events) {
+    general.default_events = general.default_events.map((event: EventDefinition) => {
+      if (typeof event.probability === 'number') {
+        return { ...event, probability: String(event.probability) };
+      }
+      return event;
+    });
   }
 
   return migrated;

@@ -146,11 +146,13 @@ Uncheck to disable the event entirely.`,
 - **0** = one-time event (fires once at trigger time)
 - **> 0** = periodic event (fires at trigger time, then every $period$ hours)`,
 
-  'events.probability': `Probability that this event is assigned to a cell at birth. Value between 0 and 1.
+  'events.probability': `Probability formula evaluated at cell birth (should return 0\u20131). Can use **math.js** expressions and reference general parameters.
 
-- **1.0** = all cells of this type get the event
-- **0.5** = 50% of cells get the event
-- **0** = event is disabled`,
+**Examples:**
+- \`1\` \u2014 all cells get this event
+- \`0.5\` \u2014 50% of cells
+- \`0\` \u2014 event disabled
+- \`p_div_out\` \u2014 use the division-out probability from general params`,
 
   'events.prereq': `Prerequisite event that must fire first (on the same cell) before this event can trigger.
 

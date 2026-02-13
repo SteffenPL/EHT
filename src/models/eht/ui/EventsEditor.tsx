@@ -408,19 +408,14 @@ export function EventEditor({
             <HelpPopover content={getParameterDescription('events.probability') || ''} />
           </label>
           <Input
-            type="number"
+            type="text"
             value={event.probability}
             onChange={(e) => {
-              const parsed = parseFloat(e.target.value);
-              if (!isNaN(parsed)) {
-                handleBaseFieldChange('probability', Math.max(0, Math.min(1, parsed)));
-              }
+              handleBaseFieldChange('probability', e.target.value);
             }}
             disabled={disabled}
-            min={0}
-            max={1}
-            step={0.1}
-            className="h-7 text-xs w-24"
+            placeholder="1"
+            className="h-7 text-xs w-32"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -518,7 +513,7 @@ export function EventsEditor({ events, onChange, disabled, cellTypeKey }: Events
       start: 0,
       end: 10,
       period: 0,
-      probability: 1.0,
+      probability: '1',
       prereq: null,
       cell_cycle_phase: CellCyclePhase.Any,
     };

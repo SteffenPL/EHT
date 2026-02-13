@@ -49,7 +49,7 @@ export const baseEventDefinitionSchema = z.object({
   start: z.number(),
   end: z.number(),
   period: z.number().nonnegative(),
-  probability: z.number().min(0).max(1),
+  probability: z.string(),
   prereq: z.string().nullable(),
   cell_cycle_phase: cellCyclePhaseSchema,
 });
