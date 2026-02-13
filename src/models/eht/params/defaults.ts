@@ -8,6 +8,7 @@ import type { EHTParams, EHTCellTypeParams, PartialEHTParams, EventDefinition, S
 import { CellCyclePhase } from './types';
 import { ensureV1_1_0 } from './migration-v1.1';
 import { ensureV1_2_0 } from './migration-v1.2';
+import { ensureV1_3_0 } from './migration-v1.3';
 
 // =============================================================================
 // Default Events for v1.1.0
@@ -176,7 +177,7 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
 export const DEFAULT_EHT_PARAMS: EHTParams = {
   metadata: {
     model: 'EHT',
-    version: '1.2.0',
+    version: '1.3.0',
   },
   general: {
     t_end: 48,
@@ -250,8 +251,8 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
     }
   }
 
-  // Apply migration chain: v1.0.0 → v1.1.0 → v1.2.0
-  return ensureV1_2_0(ensureV1_1_0(base));
+  // Apply migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0
+  return ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(base)));
 }
 
 // Load all TOML presets at build time using Vite's import.meta.glob
@@ -376,6 +377,32 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
     cell_cycle_phase: CellCyclePhase.Any,
     target_parameter: 'basal_cytos_strain',
     formula: '-1',
+  } as ParameterChangeEvent,
+  inm_contract_apical: {
+    type: 'parameter_change',
+    id: 'inm_contract_apical',
+    name: 'INM: Contract Apical',
+    start: 0,
+    end: 0,
+    period: 0,
+    probability: '1',
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.G2,
+    target_parameter: 'apical_cytos_strain',
+    formula: '-1',
+  } as ParameterChangeEvent,
+  inm_extend_basal: {
+    type: 'parameter_change',
+    id: 'inm_extend_basal',
+    name: 'INM: Extend Basal',
+    start: 0,
+    end: 0,
+    period: 0,
+    probability: '1',
+    prereq: 'inm_contract_apical',
+    cell_cycle_phase: CellCyclePhase.G2,
+    target_parameter: 'basal_cytos_strain',
+    formula: '2',
   } as ParameterChangeEvent,
 };
 

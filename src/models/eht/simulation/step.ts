@@ -32,24 +32,9 @@ function updateCytoskeleton(
         const distAX = pos.dist(A);
         const distBX = pos.dist(B);
 
-        // Determine desired rest lengths based on phase and INM
-        let apicalDrl = 0.0;
-        let basalDrl = 0.0;
-
-        const phaseMode = cell.phase + (cell.has_inm ? 0 : 10);
-
-        switch (phaseMode) {
-            case CellPhase.G2: // G2 with INM
-            case CellPhase.Mitosis: // Mitosis with INM
-                const distAB = A.dist(B);
-                apicalDrl = 0.0;
-                basalDrl = Math.max(0, distAB - 2 * cell.R_soft);
-                break;
-
-            default:
-                apicalDrl = Math.max(0, distAX - cell.R_soft);
-                basalDrl = Math.max(0, distBX - cell.R_soft);
-        }
+        // Determine desired rest lengths
+        let apicalDrl = Math.max(0, distAX - cell.R_soft);
+        let basalDrl = Math.max(0, distBX - cell.R_soft);
 
         // Update stiffness during G2
         if (cell.phase === CellPhase.G2) {

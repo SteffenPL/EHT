@@ -576,8 +576,11 @@ function shouldEventFire(
 
   // One-time event
   if (eventDef.period === 0) {
+    if (eventState.has_fired) return false;
+    // Phase-only trigger: start=0, end=0 → trigger_time=0, fire when phase is satisfied
+    if (eventState.trigger_time === 0) return true;
     // Fire if we just crossed the trigger time
-    return !eventState.has_fired && t <= eventState.trigger_time && t + dt > eventState.trigger_time;
+    return t <= eventState.trigger_time && t + dt > eventState.trigger_time;
   }
 
   // Periodic event

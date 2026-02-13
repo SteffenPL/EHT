@@ -237,8 +237,8 @@ export function createCell(
       eta_B: parent.eta_B,
       has_A: parent.has_A,
       has_B: parent.has_B,
-      apical_cytos_strain: parent.apical_cytos_strain,
-      basal_cytos_strain: parent.basal_cytos_strain,
+      apical_cytos_strain: cellType.apical_cytos_strain_init ?? 0,
+      basal_cytos_strain: cellType.basal_cytos_strain_init ?? 0,
       phase: CellPhase.G1,
       birth_time: state.t,
       division_time: state.t + maxAge,
@@ -254,10 +254,12 @@ export function createCell(
       stiffness_straightness: parent.stiffness_straightness,
       stiffness_nuclei_apical: parent.stiffness_nuclei_apical,
       stiffness_nuclei_basal: parent.stiffness_nuclei_basal,
-      // v1.1.0 event system - inherit from parent
-      event_states: copyEventStates(parent.event_states),
-      has_reached_G2: parent.has_reached_G2,
-      has_reached_mitosis: parent.has_reached_mitosis,
+      // v1.1.0 event system - re-initialize for fresh cell cycle
+      event_states: useV2Events
+        ? initializeEventStates(effectiveEvents, rng, params.general)
+        : copyEventStates(parent.event_states),
+      has_reached_G2: false,
+      has_reached_mitosis: false,
     };
   }
 }
