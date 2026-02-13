@@ -11,11 +11,36 @@ import { ensureV1_2_0 } from './migration-v1.2';
 import { ensureV1_3_0 } from './migration-v1.3';
 
 // =============================================================================
-// Default Events for v1.1.0
+// Default Events
 // =============================================================================
 
-/** Default events for control cells (INM strain events) */
-const DEFAULT_CONTROL_EVENTS_V2: EventDefinition[] = [
+/** Default events shared across all cell types (in general.default_events) */
+const DEFAULT_GLOBAL_EVENTS: EventDefinition[] = [
+  {
+    type: 'special',
+    id: 'default_cell_division',
+    name: 'Cell Division',
+    start: 0,
+    end: Infinity,
+    period: 0,
+    probability: 'p_div_out',
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.Division,
+    special_name: 'cell_division',
+  } as SpecialEvent,
+  {
+    type: 'parameter_change',
+    id: 'default_increase_R_hard',
+    name: 'Increase R_hard',
+    start: 0,
+    end: Infinity,
+    period: 0.1,
+    probability: '1',
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.Any,
+    target_parameter: 'R_hard',
+    formula: 'old_value + 0.01 * dt',
+  } as ParameterChangeEvent,
   {
     type: 'parameter_change',
     id: 'inm_contract_apical',
@@ -28,7 +53,7 @@ const DEFAULT_CONTROL_EVENTS_V2: EventDefinition[] = [
     cell_cycle_phase: CellCyclePhase.G2,
     target_parameter: 'apical_cytos_strain',
     formula: '-1',
-  },
+  } as ParameterChangeEvent,
   {
     type: 'parameter_change',
     id: 'inm_extend_basal',
@@ -41,10 +66,13 @@ const DEFAULT_CONTROL_EVENTS_V2: EventDefinition[] = [
     cell_cycle_phase: CellCyclePhase.G2,
     target_parameter: 'basal_cytos_strain',
     formula: '2',
-  },
+  } as ParameterChangeEvent,
 ];
 
-/** Default events for EMT cells (lose apical/basal adhesion with stiffness reduction) */
+/** Per-cell-type events for control cells (none) */
+const DEFAULT_CONTROL_EVENTS_V2: EventDefinition[] = [];
+
+/** Per-cell-type events for EMT cells (lose apical/basal adhesion with stiffness reduction) */
 const DEFAULT_EMT_EVENTS_V2: EventDefinition[] = [
   {
     type: 'special',
@@ -95,32 +123,6 @@ const DEFAULT_EMT_EVENTS_V2: EventDefinition[] = [
     cell_cycle_phase: CellCyclePhase.Any,
     target_parameter: 'stiffness_nuclei_basal',
     formula: 'old_value * 0.1',
-  },
-  {
-    type: 'parameter_change',
-    id: 'inm_contract_apical',
-    name: 'INM: Contract Apical',
-    start: 0,
-    end: 0,
-    period: 0,
-    probability: 'INM',
-    prereq: null,
-    cell_cycle_phase: CellCyclePhase.G2,
-    target_parameter: 'apical_cytos_strain',
-    formula: '-1',
-  },
-  {
-    type: 'parameter_change',
-    id: 'inm_extend_basal',
-    name: 'INM: Extend Basal',
-    start: 0,
-    end: 0,
-    period: 0,
-    probability: '1',
-    prereq: 'inm_contract_apical',
-    cell_cycle_phase: CellCyclePhase.G2,
-    target_parameter: 'basal_cytos_strain',
-    formula: '2',
   },
 ];
 
@@ -248,7 +250,7 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     perimeter: 105,    // ≈ 2π × 16.67 (equivalent to curvature 0.06)
     aspect_ratio: 1,   // Circle
     hard_sphere_nuclei: true,
-    default_events: [],
+    default_events: DEFAULT_GLOBAL_EVENTS,
   },
   cell_prop: {
     // All properties moved to per-cell-type in cell_types
