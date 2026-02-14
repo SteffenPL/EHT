@@ -126,6 +126,7 @@ Routes: `/docs/eht/model`, `/docs/eht/statistics`
 
 ## Development Notes
 
+- **Parameter descriptions**: All EHT model parameters must be documented in [src/models/eht/params/descriptions.ts](src/models/eht/params/descriptions.ts) using dot-notation keys (e.g. `general.t_end`, `cell_types.R_soft`, `events.formula`). Descriptions support LaTeX math via KaTeX and are displayed as help popovers in the UI.
 - **In-place state mutation**: For performance, the EHT model mutates state in-place during `step()` rather than creating new objects
 - **Deterministic RNG**: Use `SeededRandom` from [src/core/math/random.ts](src/core/math/random.ts) for reproducible simulations
 - **Parameter validation**: Models use Zod schemas for runtime parameter validation
