@@ -31,8 +31,15 @@ import {
   ChevronDown,
   Copy,
   ClipboardPaste,
+  HelpCircle,
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { EventEditor } from './EventsEditor';
+import { getParameterDescription } from '../params/descriptions';
 
 // =============================================================================
 // Compact Event Card (wide horizontal layout)
@@ -225,6 +232,7 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
   const [editingEvent, setEditingEvent] = useState<{ cellTypeKey: string; eventIndex: number } | null>(null);
   const [editingDefaultEvent, setEditingDefaultEvent] = useState<number | null>(null);
   const [copiedEvent, setCopiedEvent] = useState<EventDefinition | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const cellTypeKeys = Object.keys(params.cell_types);
 
@@ -373,6 +381,51 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
 
   return (
     <div className="space-y-1">
+      {/* Help button */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setShowHelp(true)}
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          title="Event system documentation"
+        >
+          <HelpCircle className="h-3.5 w-3.5" />
+          <span>Help</span>
+        </button>
+      </div>
+
+      {/* Help Dialog */}
+      <Dialog open={showHelp} onOpenChange={setShowHelp}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Cell Events Documentation</DialogTitle>
+          </DialogHeader>
+          <div className="events-help-content prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+              {getParameterDescription('events.overview') ?? ''}
+            </ReactMarkdown>
+          </div>
+          <style>{`
+            .events-help-content { line-height: 1.6; font-size: 0.875rem; }
+            .events-help-content h1 { font-size: 1.25rem; font-weight: 700; margin: 0 0 0.75rem; }
+            .events-help-content h2 { font-size: 1rem; font-weight: 600; margin: 1.25rem 0 0.5rem; border-bottom: 1px solid hsl(var(--border)); padding-bottom: 0.25rem; }
+            .events-help-content h3 { font-size: 0.9rem; font-weight: 600; margin: 1rem 0 0.375rem; }
+            .events-help-content p { margin: 0.375rem 0; }
+            .events-help-content ul, .events-help-content ol { margin: 0.375rem 0; padding-left: 1.25rem; }
+            .events-help-content li { margin: 0.125rem 0; }
+            .events-help-content code { background: hsl(var(--muted)); padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 0.85em; }
+            .events-help-content pre { background: hsl(var(--muted)); padding: 0.5rem; border-radius: 0.375rem; overflow-x: auto; margin: 0.5rem 0; }
+            .events-help-content pre code { background: none; padding: 0; }
+            .events-help-content table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; font-size: 0.8rem; }
+            .events-help-content th { text-align: left; padding: 0.375rem 0.5rem; border-bottom: 2px solid hsl(var(--border)); font-weight: 600; }
+            .events-help-content td { padding: 0.375rem 0.5rem; border-bottom: 1px solid hsl(var(--border)); }
+            .events-help-content .katex { font-size: 0.95em; }
+            .events-help-content .katex-display { margin: 0.5rem 0; text-align: center; overflow-x: auto; }
+            .events-help-content strong { font-weight: 600; }
+          `}</style>
+        </DialogContent>
+      </Dialog>
+
       <Accordion type="multiple" defaultValue={cellTypeKeys}>
         {/* Default Events Section */}
         <AccordionItem value="default-events">

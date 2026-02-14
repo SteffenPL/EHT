@@ -177,6 +177,108 @@ Use this to create event chains, e.g., "lose basal adhesion" → "start running"
   'events.special.cell_division': `Triggers cell division. The cell divides into two daughter cells (or resets if \`p_div_out\` applies). Bypasses the normal phase-based division timing.`,
 
   'events.special.cell_cycle_reset': `Resets the cell's cycle without dividing. The cell gets a fresh lifespan and re-sampled event trigger times, but remains a single cell.`,
+
+  // === Cell Events Tab Overview ===
+  'events.overview': `# Cell Events System
+
+The event system controls time-dependent changes to individual cells — adhesion loss, parameter modifications, division, migration, and more. Events can be **shared across all cell types** (default events) or **specific to one cell type** (per-type events).
+
+## Event Types
+
+There are two kinds of events:
+
+- **Special events** (\`S\` badge): Hard-coded actions that modify the simulation state structurally.
+- **Parameter change events** (\`P\` badge): Modify a numeric cell parameter using a math.js formula.
+
+## Available Special Events
+
+| Name | Description |
+|------|-------------|
+| \`lose_apical_adhesion\` | Removes the cell's apical links to neighbors. The cell detaches from the apical junction network. |
+| \`lose_basal_adhesion\` | Removes the cell's basal links. The cell detaches from the basal membrane. |
+| \`apical_constriction\` | Severs apical links between this cell type and other types, reconnecting non-constricting neighbors. |
+| \`start_running\` | Sets running mode to 3, enabling active cell migration along the basal membrane. |
+| \`cell_division\` | Triggers cell division into two daughter cells (subject to \`p_div_out\`). |
+| \`cell_cycle_reset\` | Resets the cell cycle without dividing — fresh lifespan and re-sampled events. |
+
+## Targetable Cell Parameters
+
+Parameter change events can modify these cell properties via the \`target_parameter\` field:
+
+\`stiffness_nuclei_apical\`, \`stiffness_nuclei_basal\`, \`stiffness_straightness\`, \`stiffness_apical_apical\`, \`R_soft\`, \`R_hard\`, \`eta_A\`, \`eta_B\`, \`running_mode\`, \`apical_cytos_strain\`, \`basal_cytos_strain\`
+
+## Trigger Mechanisms
+
+### Time-based triggering
+Each event has a **start** and **end** time. At cell birth, a random trigger time $t_{trigger}$ is sampled uniformly from $[\\text{start}, \\text{end}]$. The event fires when the simulation crosses $t_{trigger}$.
+
+### Phase-gated triggering
+Events can require a **cell cycle phase** (\`Any\`, \`G1\`, \`G2\`, \`Mitosis\`, \`Division\`). The event only fires once the cell has reached that phase.
+
+### Phase-only triggering
+When both start and end are **0**, the event fires as soon as the phase requirement is met (no time sampling). This is used for INM events that should activate exactly when G2 begins.
+
+### Periodic events
+If \`period > 0\`, the event repeats every \`period\` hours after its initial trigger.
+
+### One-time events
+If \`period = 0\`, the event fires exactly once.
+
+## Probability
+
+The **probability** field is a math.js formula evaluated at cell birth. It determines whether the event is active for that cell. Available variables:
+
+- \`p_div_out\` — division-out probability (general param)
+- \`mu\`, \`h_init\`, \`w_init\`, \`t_end\` — general simulation parameters
+- \`INM\` — interkinetic nuclear migration probability (cell type param)
+
+**Examples:** \`1\` (always), \`0.5\` (50%), \`INM\` (use cell type's INM value), \`p_div_out\` (use division probability)
+
+If the probability evaluates to 0, the event is skipped entirely for that cell. If it evaluates to a value less than 1, each cell independently samples whether the event is active.
+
+## Formula (Parameter Change Events)
+
+The \`formula\` field is a math.js expression that computes the new parameter value. Available variables:
+
+- \`old_value\` — current value of the target parameter
+- \`t\` — current simulation time (hours)
+- \`dt\` — timestep size
+- \`period\` — event repeat interval
+- \`p_div_out\`, \`mu\`, \`h_init\`, \`w_init\`, \`t_end\` — general params
+
+**Examples:**
+- \`old_value * 0.1\` — reduce to 10%
+- \`old_value + 0.01 * dt\` — gradual increase over time
+- \`-1\` — set to -1 (e.g. for strain = inactive)
+- \`2\` — set to 2
+
+## Prerequisites
+
+Events can depend on other events via the \`prereq\` field. A prerequisite event must have fired (on the same cell) before the dependent event can trigger. This creates event chains, e.g.:
+
+1. \`lose_apical_adhesion\` fires → 2. \`reduce_apical_stiffness\` fires (prereq: \`lose_apical\`)
+
+## Default vs Per-Type Events
+
+**Default events** (in \`general.default_events\`) apply to all cell types. Each cell type can opt out of specific default events using the **skip** checkboxes.
+
+**Per-type events** (in \`cell_types.X.events_v2\`) apply only to that cell type. If a per-type event has the same ID as a default event, the per-type event takes precedence.
+
+## Daughter Cell Events
+
+When a cell divides, daughter cells get **fresh event states** — new trigger times are sampled, and one-time events can fire again. This ensures each cell has its own independent event lifecycle.
+
+## Built-in Default Events
+
+The following events are included by default:
+
+| Event | Probability | Phase | Description |
+|-------|-------------|-------|-------------|
+| Cell Division | \`p_div_out\` | Division | Triggers cell division when the cell reaches Division phase |
+| Increase R_hard | \`1\` | Any | Gradually increases hard radius: \`old_value + 0.01 * dt\` (periodic, every 0.1h) |
+| INM: Contract Apical | \`INM\` | G2 | Sets apical strain to -1 (contracts apical cytoskeleton) |
+| INM: Extend Basal | \`1\` (prereq: apical) | G2 | Sets basal strain to 2 (extends basal cytoskeleton) |
+`,
 };
 
 /**
