@@ -94,47 +94,49 @@ function CompactEventCard({
   };
 
   return (
-    <div className="border rounded-md px-2 py-1.5 bg-card text-xs flex items-center gap-2 flex-wrap">
-      {/* Type badge */}
-      <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${
-        event.type === 'special'
-          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-          : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-      }`}>
+    <div
+      className={`border rounded-md px-2 py-1 text-xs items-center gap-x-1.5 ${isActive ? 'bg-card' : 'bg-muted/40 opacity-60'}`}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '20px minmax(0, 200px) 80px 110px 1fr',
+      }}
+    >
+      {/* Type badge as on/off toggle */}
+      <button
+        onClick={() => !disabled && handleActiveToggle(!isActive)}
+        disabled={disabled}
+        className={`px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-colors ${
+          isActive
+            ? event.type === 'special'
+              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+              : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+            : 'bg-muted text-muted-foreground'
+        }`}
+        title={`${event.type === 'special' ? 'Special' : 'Parameter'} event — click to ${isActive ? 'disable' : 'enable'}`}
+      >
         {event.type === 'special' ? 'S' : 'P'}
-      </span>
+      </button>
 
-      {/* Name */}
-      <span className="font-medium truncate min-w-[80px] max-w-[160px]" title={event.name || event.id}>
+      {/* Name — truncated within its grid column */}
+      <span className="font-medium truncate" title={event.name || event.id}>
         {event.name || event.id}
       </span>
 
-      {/* Active toggle */}
-      <div className="flex items-center gap-1">
-        <Checkbox
-          checked={isActive}
-          onCheckedChange={handleActiveToggle}
-          disabled={disabled}
-          className="h-3.5 w-3.5"
-        />
-        <span className="text-muted-foreground">Active</span>
-      </div>
-
       {/* Probability */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <span className="text-muted-foreground">p=</span>
         <Input
           type="text"
           value={event.probability}
           onChange={handleProbabilityChange}
           disabled={disabled}
-          className="h-5 text-xs w-16 px-1"
+          className="h-5 text-xs w-full px-1"
           placeholder="1"
         />
       </div>
 
       {/* Time range */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <span className="text-muted-foreground text-[10px]">t:</span>
         <Input
           type="number"
@@ -143,7 +145,7 @@ function CompactEventCard({
           disabled={disabled || !isActive}
           min={0}
           step={0.1}
-          className="h-5 text-xs w-14 px-1"
+          className="h-5 text-xs w-full px-1"
           placeholder="---"
         />
         <span className="text-muted-foreground">-</span>
@@ -154,62 +156,27 @@ function CompactEventCard({
           disabled={disabled || !isActive}
           min={0}
           step={0.1}
-          className="h-5 text-xs w-14 px-1"
+          className="h-5 text-xs w-full px-1"
           placeholder="---"
         />
       </div>
 
       {/* Action buttons */}
-      <div className="flex items-center gap-0.5 ml-auto">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onMoveUp}
-          disabled={disabled || index === 0}
-          className="h-6 w-6"
-          title="Move up"
-        >
-          <ChevronUp className="h-3.5 w-3.5" />
+      <div className="flex items-center gap-0 justify-end">
+        <Button variant="ghost" size="icon" onClick={onMoveUp} disabled={disabled || index === 0} className="h-5 w-5" title="Move up">
+          <ChevronUp className="h-3 w-3" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onMoveDown}
-          disabled={disabled || index >= totalCount - 1}
-          className="h-6 w-6"
-          title="Move down"
-        >
-          <ChevronDown className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon" onClick={onMoveDown} disabled={disabled || index >= totalCount - 1} className="h-5 w-5" title="Move down">
+          <ChevronDown className="h-3 w-3" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onEdit}
-          disabled={disabled}
-          className="h-6 w-6"
-          title="Edit event"
-        >
-          <Pencil className="h-3 w-3" />
+        <Button variant="ghost" size="icon" onClick={onEdit} disabled={disabled} className="h-5 w-5" title="Edit event">
+          <Pencil className="h-2.5 w-2.5" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onCopy}
-          disabled={disabled}
-          className="h-6 w-6"
-          title="Copy event"
-        >
-          <Copy className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon" onClick={onCopy} disabled={disabled} className="h-5 w-5" title="Copy event">
+          <Copy className="h-3 w-3" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onDelete}
-          disabled={disabled}
-          className="h-6 w-6 text-destructive hover:text-destructive"
-          title="Delete event"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
+        <Button variant="ghost" size="icon" onClick={onDelete} disabled={disabled} className="h-5 w-5 text-destructive hover:text-destructive" title="Delete event">
+          <Trash2 className="h-3 w-3" />
         </Button>
       </div>
     </div>
