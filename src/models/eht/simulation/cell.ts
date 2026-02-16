@@ -95,8 +95,13 @@ export function initializeEventStates(
 
     // Sample trigger time within [start, end] range
     let triggerTime: number;
-    if (shouldTrigger && isFinite(event.start) && isFinite(event.end)) {
-      triggerTime = rng.random(event.start, event.end);
+    if (shouldTrigger && isFinite(event.start)) {
+      if (isFinite(event.end)) {
+        triggerTime = rng.random(event.start, event.end);
+      } else {
+        // Infinite end = always applicable from start time
+        triggerTime = event.start;
+      }
     } else {
       // Event is skipped or has invalid range
       triggerTime = Infinity;
