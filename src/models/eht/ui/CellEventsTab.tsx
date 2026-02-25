@@ -5,7 +5,7 @@
  */
 import { useState, useCallback } from 'react';
 import type { ModelUITabProps } from '@/core/registry';
-import type { EHTParams, EHTCellTypeParams, EventDefinition } from '../params/types';
+import type { EHTParams, EHTCellTypeParams, EventDefinition, GlobalEventDefinition } from '../params/types';
 import { CellCyclePhase } from '../params/types';
 import { DEFAULT_EVENT_PRESETS } from '../params/defaults';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import { EventEditor } from './EventsEditor';
+import { EventEditor, GlobalEventEditor } from './EventsEditor';
 import { getParameterDescription } from '../params/descriptions';
 
 // =============================================================================
@@ -191,6 +191,166 @@ function CompactEventCard({
 }
 
 // =============================================================================
+// Compact Global Event Card
+// =============================================================================
+
+interface CompactGlobalEventCardProps {
+  event: GlobalEventDefinition;
+  index: number;
+  totalCount: number;
+  onEventChange: (event: GlobalEventDefinition) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  disabled?: boolean;
+}
+
+function CompactGlobalEventCard({
+  event,
+  index,
+  totalCount,
+  onEventChange,
+  onEdit,
+  onDelete,
+  onMoveUp,
+  onMoveDown,
+  disabled,
+}: CompactGlobalEventCardProps) {
+  const isActive = isFinite(event.start) && isFinite(event.end);
+
+  const handleActiveToggle = (checked: boolean) => {
+    if (checked) {
+      onEventChange({ ...event, start: 0, end: 48 });
+    } else {
+      onEventChange({ ...event, start: Infinity, end: Infinity });
+    }
+  };
+
+  const handleStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const parsed = parseFloat(e.target.value);
+    if (!isNaN(parsed)) {
+      onEventChange({ ...event, start: Math.max(0, parsed) });
+    }
+  };
+
+  const handleEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const parsed = parseFloat(e.target.value);
+    if (!isNaN(parsed)) {
+      onEventChange({ ...event, end: Math.max(0, parsed) });
+    }
+  };
+
+  return (
+    <div
+      className={`border rounded-md px-2 py-1 text-xs items-center gap-x-1.5 ${isActive ? 'bg-card' : 'bg-muted/40 opacity-60'}`}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '20px minmax(0, 160px) 80px 110px 1fr',
+      }}
+    >
+      {/* Type badge as on/off toggle */}
+      <button
+        onClick={() => !disabled && handleActiveToggle(!isActive)}
+        disabled={disabled}
+        className={`px-1.5 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-colors ${
+          isActive
+            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+            : 'bg-muted text-muted-foreground'
+        }`}
+        title={`Global event — click to ${isActive ? 'disable' : 'enable'}`}
+      >
+        G
+      </button>
+
+      {/* Name */}
+      <span className="font-medium truncate" title={event.name || event.id}>
+        {event.name || event.id}
+      </span>
+
+      {/* Target parameter */}
+      <span className="text-muted-foreground truncate" title={event.target_parameter}>
+        {event.target_parameter}
+      </span>
+
+      {/* Time range */}
+      <div className="flex items-center gap-0.5">
+        <span className="text-muted-foreground text-[10px]">t:</span>
+        <Input
+          type="number"
+          value={isActive ? event.start : ''}
+          onChange={handleStartChange}
+          disabled={disabled || !isActive}
+          min={0}
+          step={0.1}
+          className="h-5 text-xs w-full px-1"
+          placeholder="---"
+        />
+        <span className="text-muted-foreground">-</span>
+        <Input
+          type="number"
+          value={isActive ? event.end : ''}
+          onChange={handleEndChange}
+          disabled={disabled || !isActive}
+          min={0}
+          step={0.1}
+          className="h-5 text-xs w-full px-1"
+          placeholder="---"
+        />
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-0 justify-end">
+        <Button variant="ghost" size="icon" onClick={onMoveUp} disabled={disabled || index === 0} className="h-5 w-5" title="Move up">
+          <ChevronUp className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={onMoveDown} disabled={disabled || index >= totalCount - 1} className="h-5 w-5" title="Move down">
+          <ChevronDown className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={onEdit} disabled={disabled} className="h-5 w-5" title="Edit event">
+          <Pencil className="h-2.5 w-2.5" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={onDelete} disabled={disabled} className="h-5 w-5 text-destructive hover:text-destructive" title="Delete event">
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// Global Event Edit Dialog
+// =============================================================================
+
+interface GlobalEventEditDialogProps {
+  event: GlobalEventDefinition | null;
+  onSave: (event: GlobalEventDefinition) => void;
+  onDelete: () => void;
+  onClose: () => void;
+  disabled?: boolean;
+}
+
+function GlobalEventEditDialog({ event, onSave, onDelete, onClose, disabled }: GlobalEventEditDialogProps) {
+  return (
+    <Dialog open={event !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-sm">Edit Global Event: {event?.name || event?.id}</DialogTitle>
+        </DialogHeader>
+        {event && (
+          <GlobalEventEditor
+            event={event}
+            onChange={onSave}
+            onDelete={() => { onDelete(); onClose(); }}
+            disabled={disabled}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// =============================================================================
 // Event Edit Dialog
 // =============================================================================
 
@@ -231,6 +391,7 @@ function EventEditDialog({ event, allEvents, onSave, onDelete, onClose, disabled
 export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps<EHTParams>) {
   const [editingEvent, setEditingEvent] = useState<{ cellTypeKey: string; eventIndex: number } | null>(null);
   const [editingDefaultEvent, setEditingDefaultEvent] = useState<number | null>(null);
+  const [editingGlobalEvent, setEditingGlobalEvent] = useState<number | null>(null);
   const [copiedEvent, setCopiedEvent] = useState<EventDefinition | null>(null);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -238,6 +399,9 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
 
   // Default events from general params
   const defaultEvents: EventDefinition[] = params.general.default_events ?? [];
+
+  // Global events from general params
+  const globalEvents: GlobalEventDefinition[] = params.general.global_events ?? [];
 
   const updateDefaultEvents = useCallback((events: EventDefinition[]) => {
     const newParams = structuredClone(params);
@@ -262,6 +426,50 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
     [events[index], events[targetIndex]] = [events[targetIndex], events[index]];
     updateDefaultEvents(events);
   }, [defaultEvents, updateDefaultEvents]);
+
+  // Global event handlers
+  const updateGlobalEvents = useCallback((events: GlobalEventDefinition[]) => {
+    const newParams = structuredClone(params);
+    newParams.general.global_events = events;
+    onChange(newParams);
+  }, [params, onChange]);
+
+  const updateGlobalEvent = useCallback((index: number, event: GlobalEventDefinition) => {
+    const events = [...globalEvents];
+    events[index] = event;
+    updateGlobalEvents(events);
+  }, [globalEvents, updateGlobalEvents]);
+
+  const deleteGlobalEvent = useCallback((index: number) => {
+    updateGlobalEvents(globalEvents.filter((_, i) => i !== index));
+  }, [globalEvents, updateGlobalEvents]);
+
+  const moveGlobalEvent = useCallback((index: number, direction: 'up' | 'down') => {
+    const events = [...globalEvents];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= events.length) return;
+    [events[index], events[targetIndex]] = [events[targetIndex], events[index]];
+    updateGlobalEvents(events);
+  }, [globalEvents, updateGlobalEvents]);
+
+  const addGlobalEvent = useCallback(() => {
+    let counter = 1;
+    let newId = `global_event_${counter}`;
+    while (globalEvents.some(e => e.id === newId)) {
+      counter++;
+      newId = `global_event_${counter}`;
+    }
+    const newEvent: GlobalEventDefinition = {
+      id: newId,
+      name: `Global Event ${counter}`,
+      start: 0,
+      end: 48,
+      period: 1,
+      target_parameter: 'mu',
+      formula: 'old_value',
+    };
+    updateGlobalEvents([...globalEvents, newEvent]);
+  }, [globalEvents, updateGlobalEvents]);
 
   const addDefaultPreset = useCallback((presetKey: string) => {
     const preset = DEFAULT_EVENT_PRESETS[presetKey];
@@ -377,6 +585,11 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
   // Get the default event currently being edited
   const editedDefaultEvent = editingDefaultEvent !== null
     ? defaultEvents[editingDefaultEvent] ?? null
+    : null;
+
+  // Get the global event currently being edited
+  const editedGlobalEvent = editingGlobalEvent !== null
+    ? globalEvents[editingGlobalEvent] ?? null
     : null;
 
   return (
@@ -603,6 +816,51 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
             </AccordionItem>
           );
         })}
+        {/* Global Events Section */}
+        <AccordionItem value="global-events">
+          <AccordionTrigger className="py-2 text-sm font-semibold">
+            Global Events ({globalEvents.length})
+          </AccordionTrigger>
+          <AccordionContent className="pb-2 pt-0">
+            <div className="space-y-2">
+              {globalEvents.length === 0 ? (
+                <div className="text-xs text-muted-foreground text-center py-2 border rounded-md bg-muted/30">
+                  No global events. Add events to modify simulation-wide parameters over time.
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {globalEvents.map((event, i) => (
+                    <CompactGlobalEventCard
+                      key={`global-${event.id}-${i}`}
+                      event={event}
+                      index={i}
+                      totalCount={globalEvents.length}
+                      onEventChange={(updated) => updateGlobalEvent(i, updated)}
+                      onEdit={() => setEditingGlobalEvent(i)}
+                      onDelete={() => deleteGlobalEvent(i)}
+                      onMoveUp={() => moveGlobalEvent(i, 'up')}
+                      onMoveDown={() => moveGlobalEvent(i, 'down')}
+                      disabled={disabled}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addGlobalEvent}
+                  disabled={disabled}
+                  className="h-6 text-xs gap-1"
+                >
+                  <Plus className="h-3 w-3" />
+                  Add Global Event
+                </Button>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
       </Accordion>
 
       {/* Edit Dialog for per-type events */}
@@ -638,6 +896,23 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
           }
         }}
         onClose={() => setEditingDefaultEvent(null)}
+        disabled={disabled}
+      />
+
+      {/* Edit Dialog for global events */}
+      <GlobalEventEditDialog
+        event={editedGlobalEvent}
+        onSave={(updated) => {
+          if (editingGlobalEvent !== null) {
+            updateGlobalEvent(editingGlobalEvent, updated);
+          }
+        }}
+        onDelete={() => {
+          if (editingGlobalEvent !== null) {
+            deleteGlobalEvent(editingGlobalEvent);
+          }
+        }}
+        onClose={() => setEditingGlobalEvent(null)}
         disabled={disabled}
       />
     </div>

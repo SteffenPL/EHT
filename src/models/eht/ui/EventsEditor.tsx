@@ -29,6 +29,7 @@ import type {
   SpecialEvent,
   SpecialEventName,
   EHTCellTypeParams,
+  GlobalEventDefinition,
 } from '../params/types';
 import { CellCyclePhase } from '../params/types';
 
@@ -588,6 +589,133 @@ export function EventsEditor({ events, onChange, disabled, cellTypeKey }: Events
           ))}
         </Accordion>
       )}
+    </div>
+  );
+}
+
+// =============================================================================
+// Global Event Editor Component
+// =============================================================================
+
+const GLOBAL_PARAMETER_OPTIONS: { value: string; label: string }[] = [
+  { value: 'mu', label: 'Friction (mu)' },
+  { value: 'perimeter', label: 'Perimeter' },
+  { value: 'aspect_ratio', label: 'Aspect Ratio' },
+  { value: 'p_div_out', label: 'p_div_out' },
+];
+
+interface GlobalEventEditorProps {
+  event: GlobalEventDefinition;
+  onChange: (event: GlobalEventDefinition) => void;
+  onDelete: () => void;
+  disabled?: boolean;
+}
+
+export function GlobalEventEditor({
+  event,
+  onChange,
+  onDelete,
+  disabled,
+}: GlobalEventEditorProps) {
+  const handleFieldChange = <K extends keyof GlobalEventDefinition>(
+    field: K,
+    value: GlobalEventDefinition[K]
+  ) => {
+    onChange({ ...event, [field]: value });
+  };
+
+  return (
+    <div className="border rounded-md p-3 space-y-3 bg-card">
+      {/* Header: ID, Name, Delete */}
+      <div className="flex items-center gap-2">
+        <Input
+          value={event.id}
+          onChange={(e) => handleFieldChange('id', e.target.value)}
+          disabled={disabled}
+          className="h-7 text-xs w-24"
+          placeholder="ID"
+          title="Unique identifier"
+        />
+        <Input
+          value={event.name}
+          onChange={(e) => handleFieldChange('name', e.target.value)}
+          disabled={disabled}
+          className="h-7 text-xs flex-1"
+          placeholder="Name"
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onDelete}
+          disabled={disabled}
+          className="h-7 w-7 text-destructive hover:text-destructive"
+          title="Delete event"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Target parameter */}
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-muted-foreground w-20">Parameter:</label>
+        <Select
+          value={event.target_parameter}
+          onValueChange={(value) => handleFieldChange('target_parameter', value)}
+          disabled={disabled}
+        >
+          <SelectTrigger className="h-7 flex-1 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {GLOBAL_PARAMETER_OPTIONS.map(opt => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Formula */}
+      <div className="flex items-center gap-2">
+        <label className="text-xs text-muted-foreground w-20 flex items-center gap-1">
+          Formula:
+          <HelpPopover content={getParameterDescription('events.formula') || ''} />
+        </label>
+        <Input
+          value={event.formula}
+          onChange={(e) => handleFieldChange('formula', e.target.value)}
+          disabled={disabled}
+          className="h-7 flex-1 text-xs font-mono"
+          placeholder="old_value * 0.9"
+        />
+      </div>
+
+      {/* Timing */}
+      <div className="flex items-center gap-4">
+        <label className="text-xs text-muted-foreground flex items-center gap-1">
+          Time:
+          <HelpPopover content={getParameterDescription('events.time_range') || ''} />
+        </label>
+        <TimeRangeInput
+          start={event.start}
+          end={event.end}
+          onChangeStart={(v) => handleFieldChange('start', v)}
+          onChangeEnd={(v) => handleFieldChange('end', v)}
+          disabled={disabled}
+        />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground flex items-center gap-1">
+            Period (0=once)
+            <HelpPopover content={getParameterDescription('events.period') || ''} />
+          </label>
+          <NumericTextInput
+            value={event.period}
+            onChange={(v) => handleFieldChange('period', v)}
+            disabled={disabled}
+            min={0}
+            className="h-7 text-xs w-24"
+          />
+        </div>
+      </div>
     </div>
   );
 }

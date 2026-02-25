@@ -5,7 +5,7 @@
 
 import { SeededRandom } from '@/core/math/random';
 import { createBasalGeometry } from '@/core/math';
-import type { EHTSimulationState } from '../types';
+import type { EHTSimulationState, GlobalEventState } from '../types';
 import type { EHTParams } from '../params/types';
 import { computeEllipseFromPerimeter, ramanujanPerimeter } from '../params/geometry';
 import { createCell, type CreateCellInput } from './cell';
@@ -205,5 +205,30 @@ export function initializeEHTSimulation(
       l: last,
       r: 0,
     });
+  }
+
+  // Initialize global event states
+  const globalEvents = pg.global_events ?? [];
+  if (globalEvents.length > 0) {
+    const globalEventStates: Record<string, GlobalEventState> = {};
+    for (const event of globalEvents) {
+      let triggerTime: number;
+      if (isFinite(event.start)) {
+        if (isFinite(event.end)) {
+          triggerTime = rng.random(event.start, event.end);
+        } else {
+          triggerTime = event.start;
+        }
+      } else {
+        triggerTime = Infinity;
+      }
+      globalEventStates[event.id] = {
+        trigger_time: triggerTime,
+        has_fired: false,
+        last_fire_time: -Infinity,
+        fire_count: 0,
+      };
+    }
+    state.global_event_states = globalEventStates;
   }
 }

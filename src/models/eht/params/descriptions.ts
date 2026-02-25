@@ -124,6 +124,8 @@ Formula: $drl \\times (1 + \\text{strain})$`,
 
   'general.default_events': `Default events applied to all cell types. Each cell type can opt out of specific events using \`skip_default_events\`.`,
 
+  'general.global_events': `Global events that modify simulation-wide parameters ($\\mu$, perimeter, aspect ratio, $p_{div\\_out}$) over time. Unlike cell events, these fire once per timestep (not per cell). Changes to perimeter or aspect ratio trigger a geometry recomputation.`,
+
   // === Event System (v1.1.0) ===
   'events.formula': `A **math.js** expression to compute the new parameter value. Available variables:
 
