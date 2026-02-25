@@ -28,8 +28,15 @@ export function migrateV1_3_0toV1_4_0(params: EHTParams): EHTParams {
 
   migrated.metadata.version = '1.4.0';
 
-  // Add default_cell_cycle_reset if not present
   const defaultEvents = migrated.general.default_events ?? [];
+
+  // Remove deprecated default_increase_R_hard (replaced by default_R_hard_mitosis)
+  const increaseIdx = defaultEvents.findIndex(e => e.id === 'default_increase_R_hard');
+  if (increaseIdx !== -1) {
+    defaultEvents.splice(increaseIdx, 1);
+  }
+
+  // Add default_cell_cycle_reset if not present
   if (!defaultEvents.some(e => e.id === 'default_cell_cycle_reset')) {
     defaultEvents.push({
       type: 'special',
