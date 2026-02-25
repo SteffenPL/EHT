@@ -8,6 +8,7 @@ import { DEFAULT_CONTROL_CELL } from '../params/defaults';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { NumericTextInput } from '@/components/params/inputs/NumericTextInput';
 import {
   Select,
   SelectContent,
@@ -69,25 +70,13 @@ interface NumberCellProps {
   max?: number;
 }
 
-function NumberCell({ value, onChange, disabled, step, min, max }: NumberCellProps) {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseFloat(e.target.value);
-    if (!isNaN(parsed)) {
-      let clamped = parsed;
-      if (min !== undefined) clamped = Math.max(min, clamped);
-      if (max !== undefined) clamped = Math.min(max, clamped);
-      onChange(clamped);
-    }
-  };
-
+function NumberCell({ value, onChange, disabled, min, max }: NumberCellProps) {
   return (
     <td className="py-1 px-1">
-      <Input
-        type="number"
+      <NumericTextInput
         value={value}
-        onChange={handleChange}
+        onChange={onChange}
         disabled={disabled}
-        step={step}
         min={min}
         max={max}
         className="h-6 text-xs w-20"
@@ -142,26 +131,15 @@ function SplitRangeCell({ valueStart, valueEnd, onChangeStart, onChangeEnd, disa
     }
   };
 
-  const handleValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseFloat(e.target.value);
-    if (e.target.value === '') {
-      if (label === 'start') {
-        onChangeStart(Infinity);
-      } else {
-        onChangeEnd(Infinity);
-      }
-    } else if (!isNaN(parsed)) {
-      if (label === 'start') {
-        onChangeStart(parsed);
-      } else {
-        onChangeEnd(parsed);
-      }
-    }
-  };
-
   const isActive = label === 'start' ? isStartActive : isEndActive;
   const value = label === 'start' ? valueStart : valueEnd;
-  const displayValue = isFinite(value) ? value : '';
+  const handleValueChange = (v: number) => {
+    if (label === 'start') {
+      onChangeStart(v);
+    } else {
+      onChangeEnd(v);
+    }
+  };
 
   return (
     <td className="py-1 px-1">
@@ -175,9 +153,8 @@ function SplitRangeCell({ valueStart, valueEnd, onChangeStart, onChangeEnd, disa
         {!isActive ? (
           <span className="text-xs text-muted-foreground w-20">-</span>
         ) : (
-          <Input
-            type="number"
-            value={displayValue}
+          <NumericTextInput
+            value={value}
             onChange={handleValueChange}
             disabled={disabled}
             className="h-6 text-xs w-20"

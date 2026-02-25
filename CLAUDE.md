@@ -29,6 +29,15 @@ npm run cli -- run                              # Single simulation with default
 npm run cli -- run -c params.toml -o out.csv    # With config and output
 npm run cli -- batch -c batch.toml --stats all  # Batch with all statistics
 npm run cli -- stats                            # List available statistics
+
+# Deployment (scripts/deploy.ts)
+npx tsx scripts/deploy.ts                        # Interactive: select source, target, confirm
+npx tsx scripts/deploy.ts --current              # Deploy working directory → primary
+npx tsx scripts/deploy.ts --current --target beta   # Deploy working directory → beta
+npx tsx scripts/deploy.ts --current --target alpha  # Deploy working directory → alpha
+npx tsx scripts/deploy.ts --tag 1.2.0            # Deploy git tag → primary
+npx tsx scripts/deploy.ts --tag 1.2.0 --target beta # Deploy git tag → beta
+npx tsx scripts/deploy.ts --commit abc123        # Deploy specific commit → primary
 ```
 
 ## Architecture

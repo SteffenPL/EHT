@@ -9,6 +9,7 @@ import { CellCyclePhase } from './types';
 import { ensureV1_1_0 } from './migration-v1.1';
 import { ensureV1_2_0 } from './migration-v1.2';
 import { ensureV1_3_0 } from './migration-v1.3';
+import { ensureV1_4_0 } from './migration-v1.4';
 
 // =============================================================================
 // Default Events
@@ -27,6 +28,18 @@ const DEFAULT_GLOBAL_EVENTS: EventDefinition[] = [
     prereq: null,
     cell_cycle_phase: CellCyclePhase.Division,
     special_name: 'cell_division',
+  } as SpecialEvent,
+  {
+    type: 'special',
+    id: 'default_cell_cycle_reset',
+    name: 'Cell Cycle Reset',
+    start: 0,
+    end: Infinity,
+    period: 0,
+    probability: '1',
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.Division,
+    special_name: 'cell_cycle_reset',
   } as SpecialEvent,
   {
     type: 'parameter_change',
@@ -218,7 +231,7 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
   events_v2: DEFAULT_EMT_EVENTS_V2,
   apical_cytos_strain_init: 0,
   basal_cytos_strain_init: 0,
-  skip_default_events: [],
+  skip_default_events: ['default_cell_division'],
   // Per-cell-type properties
   diffusion: 0.2,
   basal_damping_ratio: 1.0,
@@ -232,7 +245,7 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
 export const DEFAULT_EHT_PARAMS: EHTParams = {
   metadata: {
     model: 'EHT',
-    version: '1.3.0',
+    version: '1.4.0',
   },
   general: {
     t_end: 48,
@@ -306,8 +319,8 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
     }
   }
 
-  // Apply migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0
-  return ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(base)));
+  // Apply migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0 → v1.4.0
+  return ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(base))));
 }
 
 // Load all TOML presets at build time using Vite's import.meta.glob
@@ -393,6 +406,18 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
     prereq: null,
     cell_cycle_phase: CellCyclePhase.Division,
     special_name: 'cell_division',
+  } as SpecialEvent,
+  cell_cycle_reset: {
+    type: 'special',
+    id: 'default_cell_cycle_reset',
+    name: 'Cell Cycle Reset',
+    start: 0,
+    end: Infinity,
+    period: 0,
+    probability: '1',
+    prereq: null,
+    cell_cycle_phase: CellCyclePhase.Division,
+    special_name: 'cell_cycle_reset',
   } as SpecialEvent,
   increase_R_hard: {
     type: 'parameter_change',

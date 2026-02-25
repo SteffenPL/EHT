@@ -40,15 +40,11 @@ export {
   processLoseStraightness,
   processStartRunning,
   updateRunningState,
-  processEMTEvents,
   processV2Events,
   processAllEvents,
   processLoseApicalAdhesionOnly,
   processLoseBasalAdhesionOnly,
 } from './events';
-
-// Division
-export { processCellDivisions } from './division';
 
 // Initialization
 export { initializeEHTSimulation } from './init';

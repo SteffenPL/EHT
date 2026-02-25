@@ -1,9 +1,10 @@
 /**
  * Range input component for min/max value pairs.
+ * Uses text-based inputs (no scrubber on label — ambiguous which value to scrub).
  */
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { HelpPopover } from '@/components/ui/help-popover';
+import { NumericTextInput } from './NumericTextInput';
 
 export interface Range {
   min: number;
@@ -19,45 +20,25 @@ export interface RangeInputProps {
   description?: string;
 }
 
-export function RangeInput({ label, value, onChange, disabled, step = 0.1, description }: RangeInputProps) {
-  const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseFloat(e.target.value);
-    if (!isNaN(parsed)) {
-      onChange({ ...value, min: parsed });
-    }
-  };
-
-  const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseFloat(e.target.value);
-    if (!isNaN(parsed)) {
-      onChange({ ...value, max: parsed });
-    }
-  };
-
+export function RangeInput({ label, value, onChange, disabled, description }: RangeInputProps) {
   return (
     <div className="flex items-center gap-2">
       <div className="flex items-center gap-1 w-32 shrink-0">
         <Label className="text-xs">{label}</Label>
         {description && <HelpPopover content={description} />}
       </div>
-      <Input
-        type="number"
+      <NumericTextInput
         value={value.min}
-        onChange={handleMinChange}
+        onChange={(v) => onChange({ ...value, min: v })}
         disabled={disabled}
-        step={step}
         className="h-7 text-xs w-16"
-        title="Min"
       />
       <span className="text-xs text-muted-foreground">-</span>
-      <Input
-        type="number"
+      <NumericTextInput
         value={value.max}
-        onChange={handleMaxChange}
+        onChange={(v) => onChange({ ...value, max: v })}
         disabled={disabled}
-        step={step}
         className="h-7 text-xs w-16"
-        title="Max"
       />
     </div>
   );

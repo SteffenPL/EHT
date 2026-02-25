@@ -6,9 +6,8 @@
 import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
 import type { EHTSimulationState } from '../types';
-import { CellPhase } from '../types';
 import type { EHTParams } from '../params/types';
-import { createCell, getCellType, getEffectiveEvents, type CreateCellInput } from './cell';
+import { createCell, getCellType, type CreateCellInput } from './cell';
 
 /**
  * Perform a single cell division (two offspring) for a cell at the given index.
@@ -109,63 +108,6 @@ export function divideSingleCell(
     // Update basal links
     updateBasalLinksAfterDivision(state, params, cellIndex, newCellIndex);
   }
-}
-
-/**
- * Process cell divisions for all cells in Division phase.
- * Returns the number of divisions that occurred.
- */
-export function processCellDivisions(
-  state: EHTSimulationState,
-  params: EHTParams,
-  rng: SeededRandom
-): number {
-  let divisionCount = 0;
-
-  // Process divisions (iterate with index since array may grow)
-  for (let i = 0; i < state.cells.length; i++) {
-    const cell = state.cells[i];
-
-    if (cell.phase !== CellPhase.Division) continue;
-
-    const cellType = getCellType(params, cell);
-
-    // Check if this cell type uses event-based lifecycle (including default events)
-    const effectiveEvents = getEffectiveEvents(params.general, cellType);
-    const hasEventLifecycle = effectiveEvents.some(
-      e => e.type === 'special' && (e.special_name === 'cell_division' || e.special_name === 'cell_cycle_reset')
-    );
-    if (hasEventLifecycle) continue;
-
-    // Build input from parent cell's current positions
-    const cellInput: CreateCellInput = {
-      basalPoint: Vector2.from(cell.B),
-      apicalPoint: Vector2.from(cell.A),
-      nucleusPosition: Vector2.from(cell.pos),
-    };
-
-    if (cell.typeIndex === 'emt') {
-      // EMT cells just reset their cycle (no actual division)
-      const newCell = createCell(
-        params,
-        state,
-        rng,
-        cellInput,
-        cellType,
-        cell.typeIndex,
-        cell
-      );
-      // Preserve the cell's ID
-      newCell.id = cell.id;
-      state.cells[i] = newCell;
-    } else {
-      // Control cells can divide
-      divisionCount++;
-      divideSingleCell(state, params, rng, i);
-    }
-  }
-
-  return divisionCount;
 }
 
 /**

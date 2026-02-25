@@ -1,10 +1,7 @@
 /**
- * EHT model EMT events handling.
- * Processes time-based events like losing apical/basal adhesion.
- *
- * Supports both:
- * - Legacy v1.0.0 event system (EMTEventTimes)
- * - New v1.1.0 event system (events_v2 array)
+ * EHT model event handling.
+ * Processes time-based events like losing apical/basal adhesion,
+ * cell division, cell cycle reset, and parameter changes.
  */
 
 import { Vector2 } from '@/core/math/vector2';
@@ -259,69 +256,8 @@ export function updateRunningState(
   cell.is_running = isFarEnough && modeCheck;
 }
 
-/**
- * Process all EMT events for the current timestep.
- */
-export function processEMTEvents(
-  state: EHTSimulationState,
-  _params: EHTParams,
-  dt: number
-): void {
-  const t = state.t;
-
-  // Track which cell types have triggered apical constriction
-  const constrictedTypes = new Set<string>();
-
-  for (let i = 0; i < state.cells.length; i++) {
-    const cell = state.cells[i];
-
-    // Lose apical adhesion
-    if (t <= cell.time_A && t + dt > cell.time_A) {
-      processLoseApicalAdhesion(state, i);
-    }
-
-    // Lose basal adhesion
-    if (t <= cell.time_B && t + dt > cell.time_B) {
-      console.log("Event B")
-      processLoseBasalAdhesion(state, i);
-    }
-
-    // Lose straightness
-    if (t <= cell.time_S && t + dt > cell.time_S) {
-      processLoseStraightness(state, i);
-    }
-
-    // Apical constriction - collect types that trigger
-    if (t <= cell.time_AC && t + dt > cell.time_AC) {
-      constrictedTypes.add(cell.typeIndex);
-    }
-
-    // Start running
-    const shouldStartRunning =
-      (cell.time_P > cell.time_B && t <= cell.time_P && t + dt > cell.time_P) ||
-      (cell.time_P <= cell.time_B && t <= cell.time_B && t + dt > cell.time_B);
-
-    if (shouldStartRunning) {
-      processStartRunning(state, i);
-    }
-
-    // Update running state
-    updateRunningState(cell, state);
-  }
-
-  // Process apical constriction once per cell type
-  for (const typeIndex of constrictedTypes) {
-    // Find first cell of this type and process constriction for all cells of that type
-    const cellIdx = state.cells.findIndex(c => c.typeIndex === typeIndex);
-    if (cellIdx !== -1) {
-      console.log(`Event AC for type ${typeIndex}`);
-      processApicalConstriction(state, cellIdx);
-    }
-  }
-}
-
 // =============================================================================
-// New v1.1.0 Event System
+// V2 Event System
 // =============================================================================
 
 /**
@@ -657,6 +593,9 @@ export function processV2Events(
 ): void {
   const t = state.t;
 
+  // Terminal events: once one fires for a cell, skip remaining terminal events
+  const TERMINAL_EVENTS = new Set<SpecialEventName>(['cell_division', 'cell_cycle_reset']);
+
   // Track deferred events (processed after main loop)
   const constrictedTypes = new Set<string>();
   const cellsToReset: number[] = [];
@@ -674,7 +613,14 @@ export function processV2Events(
       continue;
     }
 
+    let terminalFired = false;
+
     for (const eventDef of effectiveEvents) {
+      // Skip remaining terminal events once one has fired for this cell
+      if (terminalFired && eventDef.type === 'special' && TERMINAL_EVENTS.has(eventDef.special_name)) {
+        continue;
+      }
+
       const eventState = cell.event_states[eventDef.id];
       if (!eventState) {
         continue;
@@ -695,11 +641,13 @@ export function processV2Events(
             eventState.has_fired = true;
             eventState.last_fire_time = t;
             eventState.fire_count++;
+            terminalFired = true;
           } else if (eventDef.special_name === 'cell_division') {
             cellsToDivide.push(i);
             eventState.has_fired = true;
             eventState.last_fire_time = t;
             eventState.fire_count++;
+            terminalFired = true;
           } else {
             processSpecialEvent(eventDef, state, i);
             eventState.has_fired = true;
@@ -776,8 +724,7 @@ function processCellCycleReset(
 }
 
 /**
- * Process all EMT events for the current timestep.
- * Automatically detects whether to use legacy v1.0.0 or new v1.1.0 system.
+ * Process all events for the current timestep.
  */
 export function processAllEvents(
   state: EHTSimulationState,
@@ -785,23 +732,5 @@ export function processAllEvents(
   dt: number,
   rng: SeededRandom
 ): void {
-  // Check if any cell type uses v1.1.0+ events (including default events)
-  let hasV2Events = (params.general.default_events ?? []).length > 0;
-  if (!hasV2Events) {
-    for (const cellType of Object.values(params.cell_types)) {
-      if ((cellType as EHTCellTypeParams).events_v2 !== undefined &&
-          (cellType as EHTCellTypeParams).events_v2!.length > 0) {
-        hasV2Events = true;
-        break;
-      }
-    }
-  }
-
-  if (hasV2Events) {
-    // Use new v1.1.0 event system
-    processV2Events(state, params, dt, rng);
-  } else {
-    // Use legacy v1.0.0 event system
-    processEMTEvents(state, params, dt);
-  }
+  processV2Events(state, params, dt, rng);
 }

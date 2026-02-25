@@ -6,6 +6,7 @@ import { useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { NumericTextInput } from '@/components/params/inputs/NumericTextInput';
 import {
   Select,
   SelectContent,
@@ -100,30 +101,17 @@ interface NumberInputProps {
   className?: string;
 }
 
-function NumberInput({ value, onChange, disabled, min, max, step, label, className }: NumberInputProps) {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseFloat(e.target.value);
-    if (!isNaN(parsed)) {
-      let clamped = parsed;
-      if (min !== undefined) clamped = Math.max(min, clamped);
-      if (max !== undefined) clamped = Math.min(max, clamped);
-      onChange(clamped);
-    }
-  };
-
+function NumberInput({ value, onChange, disabled, min, max, label, className }: NumberInputProps) {
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
       {label && <label className="text-xs text-muted-foreground">{label}</label>}
-      <Input
-        type="number"
-        value={isFinite(value) ? value : ''}
-        onChange={handleChange}
+      <NumericTextInput
+        value={value}
+        onChange={onChange}
         disabled={disabled}
         min={min}
         max={max}
-        step={step}
         className="h-7 text-xs"
-        placeholder={!isFinite(value) ? 'Never' : undefined}
       />
     </div>
   );
@@ -383,18 +371,11 @@ export function EventEditor({
             Period (0=once)
             <HelpPopover content={getParameterDescription('events.period') || ''} />
           </label>
-          <Input
-            type="number"
-            value={isFinite(event.period) ? event.period : ''}
-            onChange={(e) => {
-              const parsed = parseFloat(e.target.value);
-              if (!isNaN(parsed) && parsed >= 0) {
-                handleBaseFieldChange('period', parsed);
-              }
-            }}
+          <NumericTextInput
+            value={event.period}
+            onChange={(v) => handleBaseFieldChange('period', v)}
             disabled={disabled}
             min={0}
-            step={0.1}
             className="h-7 text-xs w-24"
           />
         </div>

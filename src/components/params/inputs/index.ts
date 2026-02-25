@@ -11,3 +11,5 @@ export { ComboBox } from './ComboBox';
 export { OptionalFloat } from './OptionalFloat';
 export { ColorInput } from './ColorInput';
 export { RangeInput } from './RangeInput';
+export { NumericTextInput } from './NumericTextInput';
+export { ScrubLabel } from './ScrubLabel';

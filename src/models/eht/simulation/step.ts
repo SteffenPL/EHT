@@ -12,7 +12,6 @@ import { getCellType, updateCellPhase } from './cell';
 import { calcAllForces, CellForces } from './forces';
 import { applyAllConstraints } from './constraints';
 import { processAllEvents } from './events';
-import { processCellDivisions } from './division';
 
 /**
  * Update cytoskeleton rest lengths (eta_A, eta_B).
@@ -171,7 +170,7 @@ export function performTimestep(
     state: EHTSimulationState,
     params: EHTParams,
     rng: SeededRandom
-): number {
+): void {
     const pg = params.general;
     const fullDt = pg.dt;
 
@@ -181,10 +180,7 @@ export function performTimestep(
         updateCellPhase(cell, cellType, state.t);
     }
 
-    // Process cell divisions
-    const divisions = processCellDivisions(state, params, rng);
-
-    // Process EMT events (v1.0.0 legacy or v1.1.0 new system)
+    // Process events (division, reset, parameter changes, etc.)
     processAllEvents(state, params, fullDt, rng);
 
     // Update cytoskeleton
@@ -210,6 +206,4 @@ export function performTimestep(
     }
 
     state.step_count++;
-
-    return divisions;
 }

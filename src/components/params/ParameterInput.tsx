@@ -5,6 +5,8 @@
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
+import { NumericTextInput } from './inputs/NumericTextInput';
+import { ScrubLabel } from './inputs/ScrubLabel';
 
 /** Parameters that should be treated as integers */
 const INTEGER_PARAMS = new Set([
@@ -51,27 +53,26 @@ export function ParameterInput({ label, path, value, onChange, disabled }: Param
     );
   }
 
-  // Number - number input
+  // Number - numeric text input with scrub label
   if (typeof value === 'number') {
     const isInteger = isIntegerParam(path);
-    const step = isInteger ? 1 : 0.01;
-    const parseValue = isInteger
-      ? (v: string) => parseInt(v, 10) || 0
-      : (v: string) => parseFloat(v) || 0;
 
     return (
       <div className="grid grid-cols-2 gap-1.5">
-        <Label htmlFor={path} className="text-sm col-span-1">
-          {label}
-        </Label>
+        <ScrubLabel
+          label={label}
+          value={value}
+          onChange={(v) => handleChange(v)}
+          disabled={disabled}
+          integer={isInteger}
+          className="col-span-1"
+        />
         <div className="col-span-1">
-          <Input
-            id={path}
-            type="number"
+          <NumericTextInput
             value={value}
-            step={step}
-            onChange={(e) => handleChange(parseValue(e.target.value))}
+            onChange={(v) => handleChange(v)}
             disabled={disabled}
+            integer={isInteger}
             className="h-8 text-sm"
           />
         </div>
