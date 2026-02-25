@@ -723,6 +723,20 @@ function processCellCycleReset(
   // Preserve the cell's ID
   newCell.id = cell.id;
 
+  // Reset all properties to cell type defaults (createCell inherits from parent)
+  const h = params.general.h_init;
+  newCell.R_hard = cellType.R_hard;
+  newCell.eta_A = h / 2;
+  newCell.eta_B = h / 2;
+  newCell.has_A = true;
+  newCell.has_B = true;
+  newCell.is_running = false;
+  newCell.running_mode = cellType.running_mode;
+  newCell.stiffness_apical_apical = cellType.stiffness_apical_apical;
+  newCell.stiffness_straightness = cellType.stiffness_straightness;
+  newCell.stiffness_nuclei_apical = cellType.stiffness_nuclei_apical;
+  newCell.stiffness_nuclei_basal = cellType.stiffness_nuclei_basal;
+
   // Re-initialize event states (fresh cycle) using effective events
   const effectiveEvents = getEffectiveEvents(params.general, cellType);
   newCell.event_states = initializeEventStates(effectiveEvents, rng, params.general, cellType);
