@@ -6,7 +6,6 @@ import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
 import type { EHTSimulationState } from '../types';
 
-import { CellPhase } from '../types';
 import type { EHTParams } from '../params/types';
 import { getCellType, updateCellPhase } from './cell';
 import { calcAllForces, CellForces } from './forces';
@@ -34,16 +33,6 @@ function updateCytoskeleton(
         // Determine desired rest lengths
         let apicalDrl = Math.max(0, distAX - cell.R_soft);
         let basalDrl = Math.max(0, distBX - cell.R_soft);
-
-        // Update stiffness during G2
-        if (cell.phase === CellPhase.G2) {
-            cell.stiffness_apical_apical = cellType.stiffness_apical_apical_div;
-        }
-
-        // Update hard radius during mitosis
-        if (cell.phase === CellPhase.Mitosis) {
-            cell.R_hard = cellType.R_hard_div;
-        }
 
         // Apply cytoskeleton strain
         // strain === -1: inactive (drl = 0)

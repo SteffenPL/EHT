@@ -4,7 +4,7 @@
  * - EMT cell types skip default_cell_division (preserves reset-only behavior)
  */
 
-import type { EHTParams, EHTCellTypeParams, SpecialEvent } from './types';
+import type { EHTParams, EHTCellTypeParams, SpecialEvent, ParameterChangeEvent } from './types';
 import { CellCyclePhase } from './types';
 
 /**
@@ -44,6 +44,40 @@ export function migrateV1_3_0toV1_4_0(params: EHTParams): EHTParams {
       special_name: 'cell_cycle_reset',
     } as SpecialEvent);
     migrated.general.default_events = defaultEvents;
+  }
+
+  // Add stiffness_apical_apical G2 override if not present
+  if (!defaultEvents.some(e => e.id === 'default_stiffness_apical_apical_g2')) {
+    defaultEvents.push({
+      type: 'parameter_change',
+      id: 'default_stiffness_apical_apical_g2',
+      name: 'Apical Stiffness (G2)',
+      start: 0,
+      end: 0,
+      period: 0,
+      probability: '1',
+      prereq: null,
+      cell_cycle_phase: CellCyclePhase.G2,
+      target_parameter: 'stiffness_apical_apical',
+      formula: 'stiffness_apical_apical_div',
+    } as ParameterChangeEvent);
+  }
+
+  // Add R_hard mitosis override if not present
+  if (!defaultEvents.some(e => e.id === 'default_R_hard_mitosis')) {
+    defaultEvents.push({
+      type: 'parameter_change',
+      id: 'default_R_hard_mitosis',
+      name: 'R_hard (Mitosis)',
+      start: 0,
+      end: 0,
+      period: 0,
+      probability: '1',
+      prereq: null,
+      cell_cycle_phase: CellCyclePhase.Mitosis,
+      target_parameter: 'R_hard',
+      formula: 'R_hard_div',
+    } as ParameterChangeEvent);
   }
 
   // For cell types named 'emt', add 'default_cell_division' to skip_default_events

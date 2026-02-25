@@ -358,7 +358,7 @@ export function processLoseBasalAdhesionOnly(
 
 /**
  * Evaluate a math.js formula for a parameter change event.
- * Scope includes old_value, t, dt, period, and general params like p_div_out.
+ * Scope includes old_value, t, dt, period, general params, and cell type params.
  */
 function evaluateFormula(
   formula: string,
@@ -366,7 +366,8 @@ function evaluateFormula(
   t: number,
   dt: number,
   period: number,
-  generalParams?: import('../params/types').EHTGeneralParams
+  generalParams?: import('../params/types').EHTGeneralParams,
+  cellTypeParams?: EHTCellTypeParams
 ): number {
   try {
     const scope: Record<string, number> = {
@@ -383,6 +384,13 @@ function evaluateFormula(
       scope.h_init = generalParams.h_init;
       scope.w_init = generalParams.w_init;
       scope.t_end = generalParams.t_end;
+    }
+
+    // Expose cell type params in formula scope
+    if (cellTypeParams) {
+      scope.R_hard_div = cellTypeParams.R_hard_div;
+      scope.stiffness_apical_apical_div = cellTypeParams.stiffness_apical_apical_div;
+      scope.INM = cellTypeParams.INM;
     }
 
     return evaluate(formula, scope);
@@ -550,14 +558,15 @@ function processParameterChangeEvent(
   cell: CellState,
   t: number,
   dt: number,
-  generalParams?: import('../params/types').EHTGeneralParams
+  generalParams?: import('../params/types').EHTGeneralParams,
+  cellTypeParams?: EHTCellTypeParams
 ): void {
   const oldValue = getCellParameter(cell, event.target_parameter);
   if (oldValue === undefined) {
     return;
   }
 
-  const newValue = evaluateFormula(event.formula, oldValue, t, dt, event.period, generalParams);
+  const newValue = evaluateFormula(event.formula, oldValue, t, dt, event.period, generalParams, cellTypeParams);
   setCellParameter(cell, event.target_parameter, newValue);
 
   // Update event state
@@ -628,7 +637,7 @@ export function processV2Events(
 
       if (shouldEventFire(eventState, eventDef, cell, t, dt)) {
         if (eventDef.type === 'parameter_change') {
-          processParameterChangeEvent(eventDef, eventState, cell, t, dt, params.general);
+          processParameterChangeEvent(eventDef, eventState, cell, t, dt, params.general, cellType);
         } else if (eventDef.type === 'special') {
           // Deferred events: collect indices and process after main loop
           if (eventDef.special_name === 'apical_constriction') {
