@@ -64,16 +64,16 @@ events_v2 = []
   b = 0
 
   [cell_types.control.events]
-  time_A_start = 1e+308
-  time_A_end = 1e+308
-  time_B_start = 1e+308
-  time_B_end = 1e+308
-  time_S_start = 1e+308
-  time_S_end = 1e+308
-  time_P_start = 1e+308
-  time_P_end = 1e+308
-  time_AC_start = 1e+308
-  time_AC_end = 1e+308
+  time_A_start = inf
+  time_A_end = inf
+  time_B_start = inf
+  time_B_end = inf
+  time_S_start = inf
+  time_S_end = inf
+  time_P_start = inf
+  time_P_end = inf
+  time_AC_start = inf
+  time_AC_end = inf
 
 [cell_types.emt]
 N_init = 10
@@ -113,16 +113,16 @@ skip_default_events = []
   b = 255
 
   [cell_types.emt.events]
-  time_A_start = 1e+308
-  time_A_end = 1e+308
-  time_B_start = 1e+308
-  time_B_end = 1e+308
-  time_S_start = 1e+308
-  time_S_end = 1e+308
-  time_P_start = 1e+308
-  time_P_end = 1e+308
-  time_AC_start = 1e+308
-  time_AC_end = 1e+308
+  time_A_start = inf
+  time_A_end = inf
+  time_B_start = inf
+  time_B_end = inf
+  time_S_start = inf
+  time_S_end = inf
+  time_P_start = inf
+  time_P_end = inf
+  time_AC_start = inf
+  time_AC_end = inf
 
   # Loss of apical interface: detach emt cells from control cells apically
   # at t=3..10, then connect neighboring control cells across the gap
@@ -131,7 +131,7 @@ skip_default_events = []
   id = "lose_apical_interface"
   name = "Lose Apical Interface"
   start = 3
-  end = 1e+308
+  end = inf
   period = 0
   probability = "1"
   cell_cycle_phase = "any"

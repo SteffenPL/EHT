@@ -64,16 +64,16 @@ events_v2 = []
   b = 0
 
   [cell_types.control.events]
-  time_A_start = 1e+308
-  time_A_end = 1e+308
-  time_B_start = 1e+308
-  time_B_end = 1e+308
-  time_S_start = 1e+308
-  time_S_end = 1e+308
-  time_P_start = 1e+308
-  time_P_end = 1e+308
-  time_AC_start = 1e+308
-  time_AC_end = 1e+308
+  time_A_start = inf
+  time_A_end = inf
+  time_B_start = inf
+  time_B_end = inf
+  time_S_start = inf
+  time_S_end = inf
+  time_P_start = inf
+  time_P_end = inf
+  time_AC_start = inf
+  time_AC_end = inf
 
 [cell_types.emt]
 N_init = 10
@@ -113,16 +113,16 @@ skip_default_events = []
   b = 255
 
   [cell_types.emt.events]
-  time_A_start = 1e+308
-  time_A_end = 1e+308
-  time_B_start = 1e+308
-  time_B_end = 1e+308
-  time_S_start = 1e+308
-  time_S_end = 1e+308
-  time_P_start = 1e+308
-  time_P_end = 1e+308
-  time_AC_start = 1e+308
-  time_AC_end = 1e+308
+  time_A_start = inf
+  time_A_end = inf
+  time_B_start = inf
+  time_B_end = inf
+  time_S_start = inf
+  time_S_end = inf
+  time_P_start = inf
+  time_P_end = inf
+  time_AC_start = inf
+  time_AC_end = inf
 
   # Oscillating R_soft: varies +/- 20% of base value (1.0) using sin(age)
   # Formula: 1.0 * (1 + 0.2 * sin(age * 2))
@@ -132,7 +132,7 @@ skip_default_events = []
   id = "oscillate_r_soft"
   name = "Oscillate R_soft"
   start = 0
-  end = 1e+308
+  end = inf
   period = "dt"
   probability = "1"
   cell_cycle_phase = "any"
