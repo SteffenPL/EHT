@@ -41,8 +41,8 @@ export interface BaseEventDefinition {
   start: number;
   /** Latest time event can occur */
   end: number;
-  /** Repeat interval (0 = one-time event) */
-  period: number;
+  /** Repeat interval (0 = one-time event, 'dt' = every timestep) */
+  period: number | 'dt';
   /** Probability formula - evaluated at cell birth (0-1). Variables: p_div_out, mu, etc. */
   probability: string;
   /** Required event ID that must fire first (same cell only) */

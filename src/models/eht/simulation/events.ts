@@ -9,8 +9,15 @@ import { SeededRandom } from '@/core/math/random';
 import { evaluate } from 'mathjs';
 import type { EHTSimulationState, ApicalLink, BasalLink, CellState, CellEventState } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, ParameterChangeEvent, SpecialEvent, SpecialEventName } from '../params/types';
-import { createCell, getCellType, getEffectiveEvents, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
+import { createCell, getCellType, getEffectiveEvents, inheritEventStates, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
 import { divideSingleCell } from './division';
+
+/**
+ * Resolve event period to a number. Handles 'dt' as a special value.
+ */
+function resolveEffectivePeriod(period: number | 'dt', dt: number): number {
+  return period === 'dt' ? dt : period;
+}
 
 /**
  * Process apical adhesion loss event.
@@ -366,6 +373,7 @@ function evaluateFormula(
   t: number,
   dt: number,
   period: number,
+  birthTime: number,
   generalParams?: import('../params/types').EHTGeneralParams,
   cellTypeParams?: EHTCellTypeParams
 ): number {
@@ -375,6 +383,7 @@ function evaluateFormula(
       t,
       dt,
       period: period || 1, // Avoid division by zero
+      age: t - birthTime,
     };
 
     // Expose general params in formula scope
@@ -532,24 +541,18 @@ function shouldEventFire(
     return t <= eventState.trigger_time && t + dt > eventState.trigger_time;
   }
 
-  // Periodic event
-  // Fire at trigger_time, then every period after that
-  if (t + dt < eventState.trigger_time) {
-    return false;
-  }
+  // Periodic event — active window semantics
+  const effectivePeriod = resolveEffectivePeriod(eventDef.period, dt);
 
-  // Calculate time since trigger
-  const timeSinceLastFire = t - eventState.last_fire_time;
+  // Active window check
+  if (t < eventDef.start) return false;
+  if (eventDef.end !== -1 && isFinite(eventDef.end) && t > eventDef.end) return false;
 
-  // First fire
-  if (!eventState.has_fired && t <= eventState.trigger_time && t + dt > eventState.trigger_time) {
-    return true;
-  }
+  // First fire in this cycle
+  if (!eventState.has_fired) return true;
 
   // Subsequent fires
-  if (eventState.has_fired && timeSinceLastFire >= eventDef.period) {
-    return true;
-  }
+  if (t - eventState.last_fire_time >= effectivePeriod) return true;
 
   return false;
 }
@@ -571,7 +574,8 @@ function processParameterChangeEvent(
     return;
   }
 
-  const newValue = evaluateFormula(event.formula, oldValue, t, dt, event.period, generalParams, cellTypeParams);
+  const effectivePeriod = resolveEffectivePeriod(event.period, dt);
+  const newValue = evaluateFormula(event.formula, oldValue, t, dt, effectivePeriod, cell.birth_time, generalParams, cellTypeParams);
   setCellParameter(cell, event.target_parameter, newValue);
 
   // Update event state
@@ -743,9 +747,11 @@ function processCellCycleReset(
   newCell.stiffness_nuclei_basal = cellType.stiffness_nuclei_basal;
   newCell.k_apical_junction = cellType.k_apical_junction;
 
-  // Re-initialize event states (fresh cycle) using effective events
+  // Inherit periodic event participation, re-sample one-time events
   const effectiveEvents = getEffectiveEvents(params.general, cellType);
-  newCell.event_states = initializeEventStates(effectiveEvents, rng, params.general, cellType);
+  newCell.event_states = cell.event_states
+    ? inheritEventStates(cell.event_states, effectiveEvents, rng, params.general, cellType)
+    : initializeEventStates(effectiveEvents, rng, params.general, cellType);
   newCell.has_reached_G2 = false;
   newCell.has_reached_mitosis = false;
 

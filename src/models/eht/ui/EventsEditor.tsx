@@ -361,16 +361,38 @@ export function EventEditor({
         />
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground flex items-center gap-1">
-            Period (0=once)
+            Period
             <HelpPopover content={getParameterDescription('events.period') || ''} />
           </label>
-          <NumericTextInput
-            value={event.period}
-            onChange={(v) => handleBaseFieldChange('period', v)}
-            disabled={disabled}
-            min={0}
-            className="h-7 text-xs w-24"
-          />
+          <div className="flex items-center gap-1">
+            <Select
+              value={event.period === 'dt' ? 'dt' : event.period === 0 ? '0' : 'custom'}
+              onValueChange={(v) => {
+                if (v === '0') handleBaseFieldChange('period', 0);
+                else if (v === 'dt') handleBaseFieldChange('period', 'dt');
+                else handleBaseFieldChange('period', 1);
+              }}
+              disabled={disabled}
+            >
+              <SelectTrigger className="h-7 w-20 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Once</SelectItem>
+                <SelectItem value="dt">dt</SelectItem>
+                <SelectItem value="custom">Custom</SelectItem>
+              </SelectContent>
+            </Select>
+            {typeof event.period === 'number' && event.period > 0 && (
+              <NumericTextInput
+                value={event.period}
+                onChange={(v) => handleBaseFieldChange('period', Math.max(0.001, v))}
+                disabled={disabled}
+                min={0.001}
+                className="h-7 text-xs w-20"
+              />
+            )}
+          </div>
         </div>
       </div>
 

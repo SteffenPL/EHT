@@ -93,18 +93,24 @@ export function initializeEventStates(
     const prob = evaluateProbabilityFormula(event.probability, generalParams, cellTypeParams);
     const shouldTrigger = rng.random() <= prob;
 
-    // Sample trigger time within [start, end] range
     let triggerTime: number;
-    if (shouldTrigger && event.end !== -1) {
-      if (isFinite(event.end)) {
-        triggerTime = rng.random(event.start, event.end);
-      } else {
-        // Infinite end = always applicable from start time
-        triggerTime = event.start;
-      }
+    if (event.period !== 0) {
+      // Periodic event: trigger_time is a participation flag only.
+      // Active window [start, end] is checked at runtime in shouldEventFire.
+      triggerTime = shouldTrigger ? 0 : Infinity;
     } else {
-      // Event is skipped or inactive (end === -1)
-      triggerTime = Infinity;
+      // One-time event: sample trigger time within [start, end] range
+      if (shouldTrigger && event.end !== -1) {
+        if (isFinite(event.end)) {
+          triggerTime = rng.random(event.start, event.end);
+        } else {
+          // Infinite end = always applicable from start time
+          triggerTime = event.start;
+        }
+      } else {
+        // Event is skipped or inactive (end === -1)
+        triggerTime = Infinity;
+      }
     }
 
     eventStates[event.id] = {
@@ -135,6 +141,61 @@ export function copyEventStates(
     copied[id] = { ...state };
   }
   return copied;
+}
+
+/**
+ * Inherit event states from a parent cell for division or cell cycle reset.
+ * Periodic events: inherit participation (trigger_time), reset firing counters.
+ * One-time events: re-sample fresh via probability.
+ */
+export function inheritEventStates(
+  parentStates: Record<string, CellEventState>,
+  events: EventDefinition[],
+  rng: SeededRandom,
+  generalParams?: EHTGeneralParams,
+  cellTypeParams?: EHTCellTypeParams
+): Record<string, CellEventState> {
+  const result: Record<string, CellEventState> = {};
+
+  for (const event of events) {
+    const parentState = parentStates[event.id];
+
+    if (event.period !== 0 && parentState) {
+      // Periodic: inherit participation decision, reset counters
+      result[event.id] = {
+        event_id: event.id,
+        trigger_time: parentState.trigger_time, // 0 (participating) or Infinity (skipped)
+        has_fired: false,
+        last_fire_time: -Infinity,
+        fire_count: 0,
+      };
+    } else {
+      // One-time or new event without parent state: sample fresh
+      const prob = evaluateProbabilityFormula(event.probability, generalParams, cellTypeParams);
+      const shouldTrigger = rng.random() <= prob;
+
+      let triggerTime: number;
+      if (shouldTrigger && event.end !== -1) {
+        if (isFinite(event.end)) {
+          triggerTime = rng.random(event.start, event.end);
+        } else {
+          triggerTime = event.start;
+        }
+      } else {
+        triggerTime = Infinity;
+      }
+
+      result[event.id] = {
+        event_id: event.id,
+        trigger_time: triggerTime,
+        has_fired: false,
+        last_fire_time: -Infinity,
+        fire_count: 0,
+      };
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -266,9 +327,9 @@ export function createCell(
       stiffness_nuclei_apical: parent.stiffness_nuclei_apical,
       stiffness_nuclei_basal: parent.stiffness_nuclei_basal,
       k_apical_junction: cellType.k_apical_junction,
-      // v1.1.0 event system - re-initialize for fresh cell cycle
+      // v1.1.0 event system - inherit periodic participation, re-sample one-time
       event_states: useV2Events
-        ? initializeEventStates(effectiveEvents, rng, params.general, cellType)
+        ? inheritEventStates(parent.event_states!, effectiveEvents, rng, params.general, cellType)
         : copyEventStates(parent.event_states),
       has_reached_G2: false,
       has_reached_mitosis: false,
