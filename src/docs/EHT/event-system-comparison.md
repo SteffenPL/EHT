@@ -76,7 +76,7 @@ More sophisticated event orchestration:
    - Can create complex time-dependent behaviors
 
 2. **Special Events**
-   - Pre-registered handlers: `lose_apical_adhesion`, `lose_basal_adhesion`, `apical_constriction`, `start_running`
+   - Pre-registered handlers: `lose_apical_adhesion`, `lose_basal_adhesion`, `lose_apical_interface`, `start_running`
    - Type-safe event dispatch
 
 3. **Event Features**
@@ -129,7 +129,7 @@ function local_loss_apical_connection(state, p, i)
 - Iterates through ALL apical connections
 - Removes connections where `state[a].prototype_idx ≠ state[b].prototype_idx`
 - Effect: Separates different cell types by breaking their adhesions
-- Similar in spirit to TypeScript's `apical_constriction` but type-agnostic
+- Similar in spirit to TypeScript's `lose_apical_interface` but type-agnostic
 
 #### 4. `recovering_local_loss_apical_connection` ⚠️ GLOBAL EVENT
 **Location:** `loss_apical_basal_connection.jl:91-122`
@@ -245,11 +245,11 @@ function processStartRunning(state, cellIndex)
 
 **Not present in Julia.**
 
-#### 5. `processApicalConstriction` ⚠️ GLOBAL EVENT
+#### 5. `processLoseApicalInterface` ⚠️ GLOBAL EVENT
 **Location:** `events.ts:137-224`
 
 ```typescript
-function processApicalConstriction(state, cellIndex)
+function processLoseApicalInterface(state, cellIndex)
 ```
 
 Complex type-specific global event:
@@ -290,13 +290,13 @@ Determines if cell is in running state:
 | **Event dependencies** | ❌ No | ✅ Prerequisites |
 | **Periodic events** | ❌ No | ✅ Yes (period parameter) |
 | **Event state tracking** | Implicit | ✅ Explicit (has_fired, fire_count) |
-| **Global events** | ✅ Yes (local_loss_apical_connection) | ✅ Limited (apical_constriction) |
+| **Global events** | ✅ Yes (local_loss_apical_connection) | ✅ Limited (lose_apical_interface) |
 | **Cytoskeleton degeneration** | ✅ Yes (strain = -1) | ❌ No |
 | **Cell division event** | ✅ Yes | ❌ No (handled elsewhere) |
 | **Cell cycle reset** | ✅ Yes | ❌ No |
 | **Straightness loss** | ❌ No | ✅ Yes |
 | **Running/migration** | ❌ No | ✅ Yes |
-| **Type-specific events** | Via parameter conditions | ✅ Native (apical_constriction) |
+| **Type-specific events** | Via parameter conditions | ✅ Native (lose_apical_interface) |
 
 ---
 
@@ -316,7 +316,7 @@ Determines if cell is in running state:
 
 3. **❌ Global Type-Agnostic Connection Removal**
    - Julia's `local_loss_apical_connection` removes ALL cross-type connections
-   - TypeScript's `apical_constriction` is type-specific
+   - TypeScript's `lose_apical_interface` is type-specific
    - **Impact:** Cannot model global tissue reorganization events
 
 4. **❌ Recovering Connection Event**
@@ -423,7 +423,7 @@ Determines if cell is in running state:
    - Useful for modeling quiescence, arrest, reprogramming
 
 3. **Add type-agnostic global event**
-   - Generalize `apical_constriction` to work on any type
+   - Generalize `lose_apical_interface` to work on any type
    - Or add new `global_loss_apical_connection` event
 
 ### Long-term Enhancements
@@ -460,7 +460,7 @@ To port Julia behaviors to TypeScript:
 ### Medium (4-8 hours each)
 
 - ⚠️ Cell cycle reset event - port logic from Julia
-- ⚠️ Type-agnostic global event - generalize apical_constriction
+- ⚠️ Type-agnostic global event - generalize lose_apical_interface
 - ⚠️ Recovering connection event - port reconnection logic
 
 ### Complex (1-2 days each)

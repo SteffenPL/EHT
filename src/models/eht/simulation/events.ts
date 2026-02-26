@@ -133,7 +133,7 @@ export function processStartRunning(
  * 3. Connect neighboring non-constricting cells across gaps
  * 4. Initialize new links with rest length = current distance
  */
-export function processApicalConstriction(
+export function processLoseApicalInterface(
   state: EHTSimulationState,
   cellIndex: number
 ): void {
@@ -267,7 +267,7 @@ export function updateRunningState(
 const specialEventHandlers: Record<SpecialEventName, (state: EHTSimulationState, cellIndex: number) => void> = {
   'lose_apical_adhesion': processLoseApicalAdhesionOnly,
   'lose_basal_adhesion': processLoseBasalAdhesionOnly,
-  'apical_constriction': processApicalConstriction,
+  'lose_apical_interface': processLoseApicalInterface,
   'start_running': processStartRunning,
   'cell_division': () => {}, // Handled as deferred event in processV2Events
   'cell_cycle_reset': () => {}, // Handled as deferred event in processV2Events
@@ -640,7 +640,7 @@ export function processV2Events(
           processParameterChangeEvent(eventDef, eventState, cell, t, dt, params.general, cellType);
         } else if (eventDef.type === 'special') {
           // Deferred events: collect indices and process after main loop
-          if (eventDef.special_name === 'apical_constriction') {
+          if (eventDef.special_name === 'lose_apical_interface') {
             constrictedTypes.add(cell.typeIndex);
             eventState.has_fired = true;
             eventState.last_fire_time = t;
@@ -685,7 +685,7 @@ export function processV2Events(
   for (const typeIndex of constrictedTypes) {
     const cellIdx = state.cells.findIndex(c => c.typeIndex === typeIndex);
     if (cellIdx !== -1) {
-      processApicalConstriction(state, cellIdx);
+      processLoseApicalInterface(state, cellIdx);
     }
   }
 }

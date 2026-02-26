@@ -46,7 +46,7 @@ and the TypeScript browser implementation (`EHT/src/models/eht/simulation/events
 |---|---|---|---|
 | Lose apical adhesion | `loss_apical_connection` | `processLoseApicalAdhesion` | `processLoseApicalAdhesionOnly` |
 | Lose basal adhesion | `loss_basal_connection` | `processLoseBasalAdhesion` | `processLoseBasalAdhesionOnly` |
-| Apical constriction (cross-type) | `local_loss_apical_connection` / `recovering_local_loss_apical_connection` | `processApicalConstriction` | `processApicalConstriction` |
+| Lose apical interface (cross-type) | `local_loss_apical_connection` / `recovering_local_loss_apical_connection` | `processLoseApicalInterface` | `processLoseApicalInterface` |
 | Start running | (via `CellEvent` on `running_mode`) | `processStartRunning` | `processStartRunning` |
 | Cell division | `divide_cell` | Not implemented | Not implemented |
 | Cell cycle reset | `reset_cell_cycle` | Not implemented | Not implemented |
@@ -142,15 +142,15 @@ Both implementations handle apical and basal link removal similarly:
 - Same pattern as apical, but on `ba_links`
 - No rest length tracking for basal links in TS (basal links have no `rl` field)
 
-### Apical Constriction (Cross-Type Link Cutting)
+### Lose Apical Interface (Cross-Type Link Cutting)
 
 **Julia** has two variants:
 - `local_loss_apical_connection`: removes all cross-type apical links (no reconnection)
 - `recovering_local_loss_apical_connection`: removes cross-type links and reconnects the lose ends of the non-constricting type, using current distance as rest length (negative sign convention)
 
-**TypeScript** (`processApicalConstriction`):
-- Removes all "mixed" links (one cell constricting, one not)
-- Walks the original adjacency graph to find non-constricting neighbors across constricting clusters
+**TypeScript** (`processLoseApicalInterface`):
+- Removes all "mixed" links (one cell of the triggering type, one not)
+- Walks the original adjacency graph to find non-interface neighbors across the triggering cluster
 - Reconnects them with rest length = current distance
 - Processed once per cell type (batch operation), not per cell
 

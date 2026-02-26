@@ -170,7 +170,7 @@ Use this to create event chains, e.g., "lose basal adhesion" → "start running"
 
   'events.special.lose_basal_adhesion': `Removes the cell's basal connections. The cell detaches from the basal membrane.`,
 
-  'events.special.apical_constriction': `Triggers apical constriction for all cells of this type. Apical links between this cell type and other types are severed, and neighboring non-constricting cells are reconnected.`,
+  'events.special.lose_apical_interface': `Severs apical links between this cell type and other cell types at the interface, while preserving links between cells of the same type. Neighboring non-interface cells are reconnected.`,
 
   'events.special.start_running': `Sets the cell's running mode to 3 (immediate running), enabling active migration.`,
 
@@ -196,7 +196,7 @@ There are two kinds of events:
 |------|-------------|
 | \`lose_apical_adhesion\` | Removes the cell's apical links to neighbors. The cell detaches from the apical junction network. |
 | \`lose_basal_adhesion\` | Removes the cell's basal links. The cell detaches from the basal membrane. |
-| \`apical_constriction\` | Severs apical links between this cell type and other types, reconnecting non-constricting neighbors. |
+| \`lose_apical_interface\` | Severs apical links between this cell type and other types at the interface, reconnecting non-interface neighbors. |
 | \`start_running\` | Sets running mode to 3, enabling active cell migration along the basal membrane. |
 | \`cell_division\` | Triggers cell division into two daughter cells (subject to \`p_div_out\`). |
 | \`cell_cycle_reset\` | Resets the cell cycle without dividing — fresh lifespan and re-sampled events. |

@@ -26,7 +26,7 @@ export enum CellCyclePhase {
 export type SpecialEventName =
   | 'lose_apical_adhesion'
   | 'lose_basal_adhesion'
-  | 'apical_constriction'
+  | 'lose_apical_interface'
   | 'start_running'
   | 'cell_division'
   | 'cell_cycle_reset';

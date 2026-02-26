@@ -14,7 +14,7 @@ import { CellCyclePhase } from './types';
  * - time_B_start/end → special event (lose_basal_adhesion) + param event (stiffness_nuclei_basal *= 0.1)
  * - time_S_start/end → param event (stiffness_straightness = 1.0)
  * - time_P_start/end → special event (start_running) [only if run > 0]
- * - time_AC_start/end → special event (apical_constriction)
+ * - time_AC_start/end → special event (lose_apical_interface)
  * - hetero: true → probability: 0.7 on each event
  * - hetero: false → probability: 1.0 on each event
  */
@@ -133,21 +133,21 @@ export function convertLegacyEventsToV2(
     result.push(startRunning);
   }
 
-  // Time AC: Apical constriction
+  // Time AC: Lose apical interface (formerly apical constriction)
   if (isActive(events.time_AC_start, events.time_AC_end)) {
-    const apicalConstriction: SpecialEvent = {
+    const loseApicalInterface: SpecialEvent = {
       type: 'special',
-      id: 'apical_constriction',
-      name: 'Apical Constriction',
+      id: 'lose_apical_interface',
+      name: 'Lose Apical Interface',
       start: events.time_AC_start,
       end: events.time_AC_end,
       period: 0,
       probability,
       prereq: null,
       cell_cycle_phase: CellCyclePhase.Any,
-      special_name: 'apical_constriction',
+      special_name: 'lose_apical_interface',
     };
-    result.push(apicalConstriction);
+    result.push(loseApicalInterface);
   }
 
   return result;
