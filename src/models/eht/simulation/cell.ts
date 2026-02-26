@@ -228,6 +228,7 @@ export function createCell(
       stiffness_straightness: cellType.stiffness_straightness,
       stiffness_nuclei_apical: cellType.stiffness_nuclei_apical,
       stiffness_nuclei_basal: cellType.stiffness_nuclei_basal,
+      k_apical_junction: cellType.k_apical_junction,
       // v1.1.0 event system
       event_states,
       has_reached_G2: false,
@@ -264,6 +265,7 @@ export function createCell(
       stiffness_straightness: parent.stiffness_straightness,
       stiffness_nuclei_apical: parent.stiffness_nuclei_apical,
       stiffness_nuclei_basal: parent.stiffness_nuclei_basal,
+      k_apical_junction: cellType.k_apical_junction,
       // v1.1.0 event system - re-initialize for fresh cell cycle
       event_states: useV2Events
         ? initializeEventStates(effectiveEvents, rng, params.general, cellType)

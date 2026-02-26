@@ -427,6 +427,8 @@ function getCellParameter(cell: CellState, path: string): number | undefined {
       return cell.apical_cytos_strain;
     case 'basal_cytos_strain':
       return cell.basal_cytos_strain;
+    case 'k_apical_junction':
+      return cell.k_apical_junction;
     default:
       console.warn(`[Events] Unknown cell parameter: ${path}`);
       return undefined;
@@ -470,6 +472,9 @@ function setCellParameter(cell: CellState, path: string, value: number): void {
       break;
     case 'basal_cytos_strain':
       cell.basal_cytos_strain = value;
+      break;
+    case 'k_apical_junction':
+      cell.k_apical_junction = value;
       break;
     default:
       console.warn(`[Events] Unknown cell parameter: ${path}`);
@@ -736,6 +741,7 @@ function processCellCycleReset(
   newCell.stiffness_straightness = cellType.stiffness_straightness;
   newCell.stiffness_nuclei_apical = cellType.stiffness_nuclei_apical;
   newCell.stiffness_nuclei_basal = cellType.stiffness_nuclei_basal;
+  newCell.k_apical_junction = cellType.k_apical_junction;
 
   // Re-initialize event states (fresh cycle) using effective events
   const effectiveEvents = getEffectiveEvents(params.general, cellType);

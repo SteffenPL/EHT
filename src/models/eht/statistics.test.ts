@@ -48,6 +48,7 @@ function createTestState(cellTypes: string[]): EHTSimulationState {
         stiffness_nuclei_basal: 1.0,
         apical_cytos_strain: 0,
         basal_cytos_strain: 0,
+        k_apical_junction: 0,
       });
     }
   });
@@ -343,6 +344,7 @@ describe('EHT Statistics - x position calculation', () => {
         stiffness_nuclei_basal: 1.0,
         apical_cytos_strain: 0,
         basal_cytos_strain: 0,
+        k_apical_junction: 0,
       });
     }
 
@@ -407,6 +409,7 @@ describe('EHT Statistics - x position calculation', () => {
         stiffness_nuclei_basal: 1.0,
         apical_cytos_strain: 0,
         basal_cytos_strain: 0,
+        k_apical_junction: 0,
       });
     }
 
@@ -452,7 +455,7 @@ describe('EHT Statistics - x position calculation', () => {
       is_running: false, running_mode: 0, has_inm: false,
       time_A: Infinity, time_B: Infinity, time_S: Infinity, time_P: Infinity, time_AC: Infinity,
       stiffness_apical_apical: 1.0, stiffness_straightness: 100.0,
-      stiffness_nuclei_apical: 1.0, stiffness_nuclei_basal: 1.0, apical_cytos_strain: 0, basal_cytos_strain: 0,
+      stiffness_nuclei_apical: 1.0, stiffness_nuclei_basal: 1.0, apical_cytos_strain: 0, basal_cytos_strain: 0, k_apical_junction: 0,
     });
 
     // Cell 1: LOW apical point - this cell's nucleus is below its own A,
@@ -468,7 +471,7 @@ describe('EHT Statistics - x position calculation', () => {
       is_running: false, running_mode: 0, has_inm: false,
       time_A: Infinity, time_B: Infinity, time_S: Infinity, time_P: Infinity, time_AC: Infinity,
       stiffness_apical_apical: 1.0, stiffness_straightness: 100.0,
-      stiffness_nuclei_apical: 1.0, stiffness_nuclei_basal: 1.0, apical_cytos_strain: 0, basal_cytos_strain: 0,
+      stiffness_nuclei_apical: 1.0, stiffness_nuclei_basal: 1.0, apical_cytos_strain: 0, basal_cytos_strain: 0, k_apical_junction: 0,
     });
 
     // Cell 2: normal position
@@ -483,7 +486,7 @@ describe('EHT Statistics - x position calculation', () => {
       is_running: false, running_mode: 0, has_inm: false,
       time_A: Infinity, time_B: Infinity, time_S: Infinity, time_P: Infinity, time_AC: Infinity,
       stiffness_apical_apical: 1.0, stiffness_straightness: 100.0,
-      stiffness_nuclei_apical: 1.0, stiffness_nuclei_basal: 1.0, apical_cytos_strain: 0, basal_cytos_strain: 0,
+      stiffness_nuclei_apical: 1.0, stiffness_nuclei_basal: 1.0, apical_cytos_strain: 0, basal_cytos_strain: 0, k_apical_junction: 0,
     });
 
     const state: EHTSimulationState = {
@@ -549,6 +552,7 @@ describe('EHT Statistics - x position calculation', () => {
       stiffness_nuclei_basal: 1.0,
       apical_cytos_strain: 0,
       basal_cytos_strain: 0,
+      k_apical_junction: 0,
     });
 
     const state: EHTSimulationState = {
@@ -618,6 +622,7 @@ describe('EHT Statistics - Batch state reconstruction', () => {
         stiffness_nuclei_basal: 1.0,
         apical_cytos_strain: 0,
         basal_cytos_strain: 0,
+        k_apical_junction: 0,
       });
     }
 
@@ -714,6 +719,7 @@ describe('EHT Statistics - Batch state reconstruction', () => {
         stiffness_nuclei_basal: 1.0,
         apical_cytos_strain: 0,
         basal_cytos_strain: 0,
+        k_apical_junction: 0,
       });
     }
 

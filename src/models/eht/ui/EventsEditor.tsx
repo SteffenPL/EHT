@@ -84,6 +84,7 @@ const PARAMETER_OPTIONS: { value: string; label: string }[] = [
   { value: 'eta_A', label: 'Eta A (Apical Rest Length)' },
   { value: 'eta_B', label: 'Eta B (Basal Rest Length)' },
   { value: 'running_mode', label: 'Running Mode' },
+  { value: 'k_apical_junction', label: 'K Apical Junction' },
 ];
 
 // =============================================================================

@@ -90,16 +90,14 @@ function updateCytoskeleton(
  */
 function updateApicalJunctions(
     state: EHTSimulationState,
-    params: EHTParams,
+    _params: EHTParams,
     dt: number
 ): void {
     for (const link of state.ap_links) {
         const ci = state.cells[link.l];
         const cj = state.cells[link.r];
-        const ciType = getCellType(params, ci);
-        const cjType = getCellType(params, cj);
 
-        const kAvg = 0.5 * ciType.k_apical_junction + 0.5 * cjType.k_apical_junction;
+        const kAvg = 0.5 * ci.k_apical_junction + 0.5 * cj.k_apical_junction;
         link.rl = link.rl * Math.exp(-dt * kAvg);
     }
 }

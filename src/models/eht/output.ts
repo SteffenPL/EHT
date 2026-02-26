@@ -173,6 +173,7 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
             stiffness_straightness: Number(row.time_S) < t ? 1.0 : 100.0, // Approximation based on event time
             stiffness_nuclei_apical: !Boolean(row.has_A) ? 0.1 : 1.0,  // Approximation
             stiffness_nuclei_basal: !Boolean(row.has_B) ? 0.1 : 1.0,
+            k_apical_junction: 0,
         };
 
         // Fill in correct stiffness from params as baseline
@@ -187,6 +188,8 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
 
         if (cell.time_S && t > cell.time_S) cell.stiffness_straightness = 1.0;
         else cell.stiffness_straightness = cellType.stiffness_straightness;
+
+        cell.k_apical_junction = cellType.k_apical_junction;
 
         // Recalculate division time
         cell.division_time = cell.birth_time + (cellType.lifespan_end + cellType.lifespan_start) / 2; // Approx

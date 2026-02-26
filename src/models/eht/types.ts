@@ -94,6 +94,7 @@ export interface CellState {
     stiffness_straightness: number;
     stiffness_nuclei_apical: number;
     stiffness_nuclei_basal: number;
+    k_apical_junction: number;
 
     // New v1.1.0 event system
     /** Event states for v1.1.0 event system (keyed by event ID) */
