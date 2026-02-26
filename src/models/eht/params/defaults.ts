@@ -4,6 +4,7 @@
 
 import { cloneDeep, merge } from 'lodash-es';
 import TOML from '@iarna/toml';
+import { restoreInfinityValues } from '@/core/params/toml';
 import type { EHTParams, EHTCellTypeParams, PartialEHTParams, EventDefinition, SpecialEvent, ParameterChangeEvent } from './types';
 import { CellCyclePhase } from './types';
 import { ensureV1_1_0 } from './migration-v1.1';
@@ -357,7 +358,7 @@ function parsePresets(): PresetMeta[] {
     const key = (group ? group + '/' : '') + filename.replace(/-/g, '_').replace(/\s+/g, '_');
 
     try {
-      const parsed = TOML.parse(raw) as { label?: string } & PartialEHTParams;
+      const parsed = restoreInfinityValues(TOML.parse(raw)) as { label?: string } & PartialEHTParams;
       const label = parsed.label ?? filename;
       // Remove label from params (it's metadata, not a param)
       delete (parsed as Record<string, unknown>).label;

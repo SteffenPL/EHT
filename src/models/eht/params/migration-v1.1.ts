@@ -26,9 +26,9 @@ export function convertLegacyEventsToV2(
   const result: EventDefinition[] = [];
   const probability = hetero ? '0.7' : '1';
 
-  // Helper to check if event is active (at least start must be finite)
-  const isActive = (start: number, end: number) =>
-    isFinite(start) || isFinite(end);
+  // Helper to check if event is active (start must be finite)
+  const isActive = (start: number, _end: number) =>
+    isFinite(start);
 
   // Time A: Lose apical adhesion (stiffness reduction is hardcoded in the handler)
   if (isActive(events.time_A_start, events.time_A_end)) {

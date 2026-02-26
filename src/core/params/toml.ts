@@ -21,7 +21,7 @@ export interface TomlParseResult {
  * Recursively restore Infinity values from large numbers after TOML parsing.
  * Handles legacy files that used 1e+308 instead of inf.
  */
-function restoreInfinityValues<T>(obj: T): T {
+export function restoreInfinityValues<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') {
     if (typeof obj === 'number') {
       if (obj >= 1e308) return Infinity as T;
@@ -191,7 +191,7 @@ export async function loadTomlFromUrl(url: string): Promise<SimulationParams> {
  * @returns Object containing params and optional parameterRanges
  */
 export function parseTomlWithRanges(tomlString: string): TomlParseResult {
-  const parsed = TOML.parse(tomlString) as Record<string, unknown>;
+  const parsed = restoreInfinityValues(TOML.parse(tomlString)) as Record<string, unknown>;
 
   // Extract parameter_ranges if present
   let parameterRanges: ParameterRange[] | undefined;
@@ -242,7 +242,7 @@ export function toTomlWithRanges(
  * Includes base params, parameter ranges, time samples, and seeds per config.
  */
 export function parseSimulationConfigToml(tomlString: string): SimulationConfig {
-  const parsed = TOML.parse(tomlString) as Record<string, unknown>;
+  const parsed = restoreInfinityValues(TOML.parse(tomlString)) as Record<string, unknown>;
 
   // Extract parameter_ranges if present
   let parameterRanges: ParameterRange[] = [];
