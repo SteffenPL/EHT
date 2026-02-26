@@ -18,30 +18,8 @@ export interface TomlParseResult {
 }
 
 /**
- * Recursively replace Infinity values with large numbers for TOML serialization.
- * TOML format doesn't support Infinity, so we use 1e308 as a substitute.
- */
-function replaceInfinityValues<T>(obj: T): T {
-  if (obj === null || typeof obj !== 'object') {
-    if (obj === Infinity) return 1e308 as T;
-    if (obj === -Infinity) return -1e308 as T;
-    return obj;
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map(replaceInfinityValues) as T;
-  }
-
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    result[key] = replaceInfinityValues(value);
-  }
-  return result as T;
-}
-
-/**
  * Recursively restore Infinity values from large numbers after TOML parsing.
- * Reverses the transformation done by replaceInfinityValues.
+ * Handles legacy files that used 1e+308 instead of inf.
  */
 function restoreInfinityValues<T>(obj: T): T {
   if (obj === null || typeof obj !== 'object') {
@@ -139,9 +117,7 @@ export function safeParseToml(tomlString: string): {
  * @returns TOML formatted string
  */
 export function toToml(params: SimulationParams): string {
-  // Convert Infinity to a large number that TOML can handle
-  const prepared = replaceInfinityValues(structuredClone(params));
-  return TOML.stringify(prepared);
+  return TOML.stringify(structuredClone(params));
 }
 
 /**
@@ -251,8 +227,7 @@ export function toTomlWithRanges(
   params: SimulationParams,
   parameterRanges?: ParameterRange[]
 ): string {
-  // Convert Infinity to a large number that TOML can handle
-  const prepared = replaceInfinityValues(structuredClone(params));
+  const prepared = structuredClone(params);
 
   // Add parameter_ranges if provided and non-empty
   if (parameterRanges && parameterRanges.length > 0) {
@@ -322,7 +297,7 @@ export function parseSimulationConfigToml(tomlString: string): SimulationConfig 
  */
 export function toSimulationConfigToml(config: SimulationConfig): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const prepared = replaceInfinityValues(structuredClone(config.params)) as any;
+  const prepared = structuredClone(config.params) as any;
 
   prepared.parameter_ranges = config.parameterRanges ?? [];
   prepared.time_samples = config.timeSamples ?? DEFAULT_TIME_SAMPLES;
