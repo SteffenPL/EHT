@@ -276,6 +276,7 @@ export function createDefaultEHTParams(): EHTParams {
 interface PresetMeta {
   key: string;
   label: string;
+  group: string; // folder path relative to presets/, empty for root
   params: PartialEHTParams;
 }
 
@@ -316,7 +317,7 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
 // In non-Vite environments (Node.js CLI, tests), this will be an empty object
 let presetModules: Record<string, string> = {};
 try {
-  presetModules = import.meta.glob('./presets/*.toml', {
+  presetModules = import.meta.glob('./presets/**/*.toml', {
     eager: true,
     query: '?raw',
     import: 'default',
@@ -333,9 +334,12 @@ function parsePresets(): PresetMeta[] {
   const presets: PresetMeta[] = [];
 
   for (const [path, raw] of Object.entries(presetModules)) {
-    // Extract key from filename: ./presets/chick-embryo-control.toml → chick_embryo_control
-    const filename = path.split('/').pop()?.replace('.toml', '') ?? '';
-    const key = filename.replace(/-/g, '_');
+    // Extract group from folder path: ./presets/eric/subfolder/file.toml → eric/subfolder
+    const relativePath = path.replace(/^\.\/presets\//, '');
+    const parts = relativePath.split('/');
+    const filename = parts.pop()?.replace('.toml', '') ?? '';
+    const group = parts.join('/'); // empty for root-level presets
+    const key = (group ? group + '/' : '') + filename.replace(/-/g, '_').replace(/\s+/g, '_');
 
     try {
       const parsed = TOML.parse(raw) as { label?: string } & PartialEHTParams;
@@ -343,14 +347,14 @@ function parsePresets(): PresetMeta[] {
       // Remove label from params (it's metadata, not a param)
       delete (parsed as Record<string, unknown>).label;
 
-      presets.push({ key, label, params: parsed });
+      presets.push({ key, label, group, params: parsed });
     } catch (e) {
       console.error(`Failed to parse preset ${path}:`, e);
     }
   }
 
-  // Sort by label for consistent ordering
-  return presets.sort((a, b) => a.label.localeCompare(b.label));
+  // Sort by group then label for consistent ordering
+  return presets.sort((a, b) => a.group.localeCompare(b.group) || a.label.localeCompare(b.label));
 }
 
 // Parse presets once at module load time
@@ -363,16 +367,19 @@ const loadedPresets = parsePresets();
 export const EHT_PRESETS: Array<{
   key: string;
   label: string;
+  group: string;
   create: () => EHTParams;
 }> = [
   {
     key: 'default',
     label: 'Default',
+    group: '',
     create: () => cloneDeep(DEFAULT_EHT_PARAMS),
   },
   ...loadedPresets.map(preset => ({
     key: preset.key,
     label: preset.label,
+    group: preset.group,
     create: (): EHTParams => mergePresetWithDefaults(preset.params),
   })),
 ];

@@ -12,7 +12,9 @@ import { Label } from '../ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
@@ -210,11 +212,40 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
               <SelectValue placeholder="Choose a preset" />
             </SelectTrigger>
             <SelectContent>
-              {presetOptions.map((preset) => (
-                <SelectItem key={preset.key} value={preset.key}>
-                  {preset.label}
-                </SelectItem>
-              ))}
+              {(() => {
+                // Group presets by their group path
+                const grouped = new Map<string, typeof presetOptions>();
+                for (const preset of presetOptions) {
+                  const group = (preset as { group?: string }).group ?? '';
+                  if (!grouped.has(group)) grouped.set(group, []);
+                  grouped.get(group)!.push(preset);
+                }
+                const elements: React.ReactNode[] = [];
+                for (const [group, items] of grouped) {
+                  if (group === '') {
+                    // Root-level presets without a group header
+                    for (const preset of items) {
+                      elements.push(
+                        <SelectItem key={preset.key} value={preset.key}>
+                          {preset.label}
+                        </SelectItem>
+                      );
+                    }
+                  } else {
+                    elements.push(
+                      <SelectGroup key={group}>
+                        <SelectLabel className="text-xs text-muted-foreground">{group}</SelectLabel>
+                        {items.map((preset) => (
+                          <SelectItem key={preset.key} value={preset.key}>
+                            {preset.label}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
+                  }
+                }
+                return elements;
+              })()}
             </SelectContent>
           </Select>
         </div>
