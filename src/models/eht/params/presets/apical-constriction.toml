@@ -1,8 +1,7 @@
 label = "Apical Constriction"
-
 cell_prop = { }
 parameter_ranges = [ ]
-seeds_per_config = 1
+seeds_per_config = 20
 
 [metadata]
 model = "EHT"
@@ -25,6 +24,77 @@ perimeter = 20
 aspect_ratio = 0
 hard_sphere_nuclei = false
 
+  [[general.default_events]]
+  type = "special"
+  id = "default_cell_division"
+  name = "Cell Division"
+  start = 0
+  end = 1e+308
+  period = 0
+  probability = "p_div_out"
+  cell_cycle_phase = "division"
+  special_name = "cell_division"
+
+  [[general.default_events]]
+  type = "special"
+  id = "default_cell_cycle_reset"
+  name = "Cell Cycle Reset"
+  start = 0
+  end = 1e+308
+  period = 0
+  probability = "1"
+  cell_cycle_phase = "division"
+  special_name = "cell_cycle_reset"
+
+  [[general.default_events]]
+  type = "parameter_change"
+  id = "default_stiffness_apical_apical_g2"
+  name = "Apical Stiffness (G2)"
+  start = 0
+  end = 0
+  period = 0
+  probability = "1"
+  cell_cycle_phase = "g2"
+  target_parameter = "stiffness_apical_apical"
+  formula = "stiffness_apical_apical_div"
+
+  [[general.default_events]]
+  type = "parameter_change"
+  id = "default_R_hard_mitosis"
+  name = "R_hard (Mitosis)"
+  start = 0
+  end = 0
+  period = 0
+  probability = "1"
+  cell_cycle_phase = "mitosis"
+  target_parameter = "R_hard"
+  formula = "R_hard_div"
+
+  [[general.default_events]]
+  type = "parameter_change"
+  id = "inm_contract_apical"
+  name = "INM: Contract Apical"
+  start = 0
+  end = 0
+  period = 0
+  probability = "INM"
+  cell_cycle_phase = "g2"
+  target_parameter = "apical_cytos_strain"
+  formula = "-1"
+
+  [[general.default_events]]
+  type = "parameter_change"
+  id = "inm_extend_basal"
+  name = "INM: Extend Basal"
+  start = 0
+  end = 0
+  period = 0
+  probability = "1"
+  prereq = "inm_contract_apical"
+  cell_cycle_phase = "g2"
+  target_parameter = "basal_cytos_strain"
+  formula = "2"
+
 [cell_types.control]
 N_init = 40
 location = ""
@@ -33,7 +103,7 @@ R_hard_div = 0.7
 R_soft = 1
 dur_G2 = 0.5
 dur_mitosis = 0.5
-k_apical_junction = 0
+k_apical_junction = 1
 k_cytos = 5
 max_cytoskeleton_length = 0
 run = 0
@@ -49,14 +119,16 @@ lifespan_start = 10
 lifespan_end = 21
 INM = 1
 hetero = false
+events_v2 = [ ]
+apical_cytos_strain_init = 0
+basal_cytos_strain_init = 0
+skip_default_events = [ ]
 diffusion = 0.1
 basal_damping_ratio = 1
 max_basal_junction_dist = 0.666666666666666
 cytos_init = 1.5
 basal_membrane_repulsion = 0
 apical_junction_init = 0.333333333333333
-skip_default_events = []
-events_v2 = []
 
   [cell_types.control.color]
   r = 0
@@ -83,7 +155,7 @@ R_hard_div = 0.7
 R_soft = 1
 dur_G2 = 0.5
 dur_mitosis = 0.5
-k_apical_junction = 0
+k_apical_junction = 1
 k_cytos = 5
 max_cytoskeleton_length = 0
 run = 0
@@ -99,13 +171,15 @@ lifespan_start = 10
 lifespan_end = 21
 INM = 1
 hetero = false
+apical_cytos_strain_init = 0
+basal_cytos_strain_init = 0
+skip_default_events = [ "default_cell_division" ]
 diffusion = 0.1
 basal_damping_ratio = 1
 max_basal_junction_dist = 0.666666666666666
 cytos_init = 1.5
 basal_membrane_repulsion = 0
 apical_junction_init = 0.333333333333333
-skip_default_events = []
 
   [cell_types.emt.color]
   r = 255
@@ -124,19 +198,41 @@ skip_default_events = []
   time_AC_start = 1e+308
   time_AC_end = 1e+308
 
-  # Apical constriction: at t=3, set k_apical_junction from 0 to 5
-  # This drives apical junction rest lengths toward 0 via exponential decay
   [[cell_types.emt.events_v2]]
   type = "parameter_change"
   id = "activate_apical_constriction"
   name = "Activate Apical Constriction"
   start = 3
-  end = 1e+308
+  end = "inf"
   period = 0
   probability = "1"
   cell_cycle_phase = "any"
+  special_name = "lose_apical_adhesion"
   target_parameter = "k_apical_junction"
-  formula = "5"
+  formula = "10"
+
+  [[cell_types.emt.events_v2]]
+  id = "activate_apical_constriction_2"
+  name = "Activate Apical Constriction (2)"
+  start = 0
+  end = "inf"
+  period = 0
+  probability = "1"
+  cell_cycle_phase = "any"
+  type = "parameter_change"
+  target_parameter = "stiffness_apical_apical"
+  formula = "old_value * 4"
+
+  [[cell_types.emt.events_v2]]
+  type = "special"
+  id = "lose_basal"
+  name = "Lose Basal Adhesion"
+  start = 3
+  end = "inf
+  period = 0
+  probability = "0.7"
+  cell_cycle_phase = "any"
+  special_name = "lose_basal_adhesion"
 
 [time_samples]
 start = 0
