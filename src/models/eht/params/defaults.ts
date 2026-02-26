@@ -99,14 +99,14 @@ const DEFAULT_GLOBAL_EVENTS: EventDefinition[] = [
 /** Per-cell-type events for control cells (none) */
 const DEFAULT_CONTROL_EVENTS_V2: EventDefinition[] = [];
 
-/** Per-cell-type events for EMT cells (lose apical/basal adhesion with stiffness reduction) */
+/** Per-cell-type events for EMT cells (lose apical/basal adhesion) */
 const DEFAULT_EMT_EVENTS_V2: EventDefinition[] = [
   {
     type: 'special',
     id: 'lose_apical',
     name: 'Lose Apical Adhesion',
     start: 3,
-    end: 12,
+    end: Infinity,
     period: 0,
     probability: '0.7', // hetero = true means 30% skip
     prereq: null,
@@ -114,42 +114,16 @@ const DEFAULT_EMT_EVENTS_V2: EventDefinition[] = [
     special_name: 'lose_apical_adhesion',
   },
   {
-    type: 'parameter_change',
-    id: 'reduce_apical_stiffness',
-    name: 'Reduce Apical Stiffness',
-    start: 3,
-    end: 12,
-    period: 0,
-    probability: '1',
-    prereq: 'lose_apical',
-    cell_cycle_phase: CellCyclePhase.Any,
-    target_parameter: 'stiffness_nuclei_apical',
-    formula: 'old_value * 0.1',
-  },
-  {
     type: 'special',
     id: 'lose_basal',
     name: 'Lose Basal Adhesion',
     start: 3,
-    end: 12,
+    end: Infinity,
     period: 0,
     probability: '0.7',
     prereq: null,
     cell_cycle_phase: CellCyclePhase.Any,
     special_name: 'lose_basal_adhesion',
-  },
-  {
-    type: 'parameter_change',
-    id: 'reduce_basal_stiffness',
-    name: 'Reduce Basal Stiffness',
-    start: 3,
-    end: 12,
-    period: 0,
-    probability: '1',
-    prereq: 'lose_basal',
-    cell_cycle_phase: CellCyclePhase.Any,
-    target_parameter: 'stiffness_nuclei_basal',
-    formula: 'old_value * 0.1',
   },
 ];
 

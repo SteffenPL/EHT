@@ -42,8 +42,6 @@ export {
   updateRunningState,
   processV2Events,
   processAllEvents,
-  processLoseApicalAdhesionOnly,
-  processLoseBasalAdhesionOnly,
 } from './events';
 
 // Initialization

@@ -272,96 +272,13 @@ export function updateRunningState(
  * Maps special event names to their handler functions.
  */
 const specialEventHandlers: Record<SpecialEventName, (state: EHTSimulationState, cellIndex: number) => void> = {
-  'lose_apical_adhesion': processLoseApicalAdhesionOnly,
-  'lose_basal_adhesion': processLoseBasalAdhesionOnly,
+  'lose_apical_adhesion': processLoseApicalAdhesion,
+  'lose_basal_adhesion': processLoseBasalAdhesion,
   'lose_apical_interface': processLoseApicalInterface,
   'start_running': processStartRunning,
   'cell_division': () => {}, // Handled as deferred event in processV2Events
   'cell_cycle_reset': () => {}, // Handled as deferred event in processV2Events
 };
-
-/**
- * Process apical adhesion loss (structural changes only, no stiffness change).
- * For v1.1.0 event system - stiffness changes are handled by separate parameter events.
- */
-export function processLoseApicalAdhesionOnly(
-  state: EHTSimulationState,
-  cellIndex: number
-): void {
-  const cell = state.cells[cellIndex];
-  cell.has_A = false;
-
-  // Find and remove apical links involving this cell
-  const inds: number[] = [];
-  let newCon: ApicalLink = { l: 0, r: 0, rl: 0.0 };
-
-  for (let e = 0; e < state.ap_links.length; e++) {
-    const con = state.ap_links[e];
-    if (con.l === cellIndex) {
-      inds.push(e);
-      newCon.r = con.r;
-    }
-    if (con.r === cellIndex) {
-      inds.push(e);
-      newCon.l = con.l;
-    }
-  }
-
-  if (inds.length === 1) {
-    // Cell at boundary - just remove the link
-    state.ap_links.splice(inds[0], 1);
-  } else if (inds.length === 2) {
-    // Cell in middle - connect neighbors
-    inds.sort((a, b) => b - a); // Sort descending for safe removal
-
-    state.ap_links.splice(inds[0], 1);
-    state.ap_links.splice(inds[1], 1);
-
-    // Calculate new rest length
-    const cellL = state.cells[newCon.l];
-    const cellR = state.cells[newCon.r];
-    newCon.rl = Vector2.from(cellL.A).dist(Vector2.from(cellR.A));
-
-    state.ap_links.push(newCon);
-  }
-}
-
-/**
- * Process basal adhesion loss (structural changes only, no stiffness change).
- * For v1.1.0 event system - stiffness changes are handled by separate parameter events.
- */
-export function processLoseBasalAdhesionOnly(
-  state: EHTSimulationState,
-  cellIndex: number
-): void {
-  const cell = state.cells[cellIndex];
-  cell.has_B = false;
-
-  // Find and remove basal links involving this cell
-  const inds: number[] = [];
-  let newCon: BasalLink = { l: 0, r: 0 };
-
-  for (let e = 0; e < state.ba_links.length; e++) {
-    const con = state.ba_links[e];
-    if (con.l === cellIndex) {
-      inds.push(e);
-      newCon.r = con.r;
-    }
-    if (con.r === cellIndex) {
-      inds.push(e);
-      newCon.l = con.l;
-    }
-  }
-
-  if (inds.length === 1) {
-    state.ba_links.splice(inds[0], 1);
-  } else if (inds.length === 2) {
-    inds.sort((a, b) => b - a);
-    state.ba_links.splice(inds[0], 1);
-    state.ba_links.splice(inds[1], 1);
-    state.ba_links.push(newCon);
-  }
-}
 
 /**
  * Evaluate a math.js formula for a parameter change event.

@@ -565,6 +565,11 @@ export function EventsEditor({ events, onChange, disabled, cellTypeKey }: Events
                 }`}>
                   {event.type === 'special' ? 'S' : 'P'}
                 </span>
+                {depth > 0 && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                    Dep
+                  </span>
+                )}
                 <span className="font-medium">{event.name || event.id}</span>
                 {hasChildren && (
                   <span className="text-muted-foreground/60 text-[10px]">

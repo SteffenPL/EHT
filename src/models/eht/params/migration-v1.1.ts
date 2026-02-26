@@ -10,8 +10,8 @@ import { CellCyclePhase } from './types';
  * Convert legacy EMT event times to new v1.1.0 event definitions.
  *
  * Migration rules:
- * - time_A_start/end → special event (lose_apical_adhesion) + param event (stiffness_nuclei_apical *= 0.1)
- * - time_B_start/end → special event (lose_basal_adhesion) + param event (stiffness_nuclei_basal *= 0.1)
+ * - time_A_start/end → special event (lose_apical_adhesion) — stiffness reduction is automatic
+ * - time_B_start/end → special event (lose_basal_adhesion) — stiffness reduction is automatic
  * - time_S_start/end → param event (stiffness_straightness = 1.0)
  * - time_P_start/end → special event (start_running) [only if run > 0]
  * - time_AC_start/end → special event (lose_apical_interface)
@@ -30,15 +30,14 @@ export function convertLegacyEventsToV2(
   const isActive = (start: number, end: number) =>
     isFinite(start) && isFinite(end);
 
-  // Time A: Lose apical adhesion + reduce stiffness
+  // Time A: Lose apical adhesion (stiffness reduction is hardcoded in the handler)
   if (isActive(events.time_A_start, events.time_A_end)) {
-    // Special event: removes apical links
     const loseApical: SpecialEvent = {
       type: 'special',
       id: 'lose_apical',
       name: 'Lose Apical Adhesion',
       start: events.time_A_start,
-      end: events.time_A_end,
+      end: Infinity,
       period: 0,
       probability,
       prereq: null,
@@ -46,33 +45,16 @@ export function convertLegacyEventsToV2(
       special_name: 'lose_apical_adhesion',
     };
     result.push(loseApical);
-
-    // Parameter event: reduce apical stiffness (depends on special event)
-    const reduceApicalStiffness: ParameterChangeEvent = {
-      type: 'parameter_change',
-      id: 'reduce_apical_stiffness',
-      name: 'Reduce Apical Stiffness',
-      start: events.time_A_start,
-      end: events.time_A_end,
-      period: 0,
-      probability: '1', // Always fires if prereq fired
-      prereq: 'lose_apical',
-      cell_cycle_phase: CellCyclePhase.Any,
-      target_parameter: 'stiffness_nuclei_apical',
-      formula: 'old_value * 0.1',
-    };
-    result.push(reduceApicalStiffness);
   }
 
-  // Time B: Lose basal adhesion + reduce stiffness
+  // Time B: Lose basal adhesion (stiffness reduction is hardcoded in the handler)
   if (isActive(events.time_B_start, events.time_B_end)) {
-    // Special event: removes basal links
     const loseBasal: SpecialEvent = {
       type: 'special',
       id: 'lose_basal',
       name: 'Lose Basal Adhesion',
       start: events.time_B_start,
-      end: events.time_B_end,
+      end: Infinity,
       period: 0,
       probability,
       prereq: null,
@@ -80,22 +62,6 @@ export function convertLegacyEventsToV2(
       special_name: 'lose_basal_adhesion',
     };
     result.push(loseBasal);
-
-    // Parameter event: reduce basal stiffness (depends on special event)
-    const reduceBasalStiffness: ParameterChangeEvent = {
-      type: 'parameter_change',
-      id: 'reduce_basal_stiffness',
-      name: 'Reduce Basal Stiffness',
-      start: events.time_B_start,
-      end: events.time_B_end,
-      period: 0,
-      probability: '1', // Always fires if prereq fired
-      prereq: 'lose_basal',
-      cell_cycle_phase: CellCyclePhase.Any,
-      target_parameter: 'stiffness_nuclei_basal',
-      formula: 'old_value * 0.1',
-    };
-    result.push(reduceBasalStiffness);
   }
 
   // Time S: Lose straightness (parameter change only)

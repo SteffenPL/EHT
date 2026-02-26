@@ -166,9 +166,9 @@ Use this to create event chains, e.g., "lose basal adhesion" → "start running"
 - **G2**: After entering G2 phase (preparing for division)
 - **Mitosis**: During mitosis`,
 
-  'events.special.lose_apical_adhesion': `Removes the cell's apical connections to neighbors. The cell's apical point detaches from the apical junction network.`,
+  'events.special.lose_apical_adhesion': `Removes the cell's apical connections to neighbors and reduces apical stiffness (\`stiffness_nuclei_apical\`) to 10%. The cell's apical point detaches from the apical junction network.`,
 
-  'events.special.lose_basal_adhesion': `Removes the cell's basal connections. The cell detaches from the basal membrane.`,
+  'events.special.lose_basal_adhesion': `Removes the cell's basal connections and reduces basal stiffness (\`stiffness_nuclei_basal\`) to 10%. The cell detaches from the basal membrane.`,
 
   'events.special.lose_apical_interface': `Severs apical links between this cell type and other cell types at the interface, while preserving links between cells of the same type. Neighboring non-interface cells are reconnected.`,
 
@@ -194,8 +194,8 @@ There are two kinds of events:
 
 | Name | Description |
 |------|-------------|
-| \`lose_apical_adhesion\` | Removes the cell's apical links to neighbors. The cell detaches from the apical junction network. |
-| \`lose_basal_adhesion\` | Removes the cell's basal links. The cell detaches from the basal membrane. |
+| \`lose_apical_adhesion\` | Removes the cell's apical links and reduces apical stiffness to 10%. |
+| \`lose_basal_adhesion\` | Removes the cell's basal links and reduces basal stiffness to 10%. |
 | \`lose_apical_interface\` | Severs apical links between this cell type and other types at the interface, reconnecting non-interface neighbors. |
 | \`start_running\` | Sets running mode to 3, enabling active cell migration along the basal membrane. |
 | \`cell_division\` | Triggers cell division into two daughter cells (subject to \`p_div_out\`). |
@@ -256,7 +256,7 @@ The \`formula\` field is a math.js expression that computes the new parameter va
 
 Events can depend on other events via the \`prereq\` field. A prerequisite event must have fired (on the same cell) before the dependent event can trigger. This creates event chains, e.g.:
 
-1. \`lose_apical_adhesion\` fires → 2. \`reduce_apical_stiffness\` fires (prereq: \`lose_apical\`)
+1. \`lose_apical_adhesion\` fires → 2. \`start_running\` fires (prereq: \`lose_apical\`)
 
 ## Default vs Per-Type Events
 

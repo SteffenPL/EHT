@@ -44,8 +44,8 @@ and the TypeScript browser implementation (`EHT/src/models/eht/simulation/events
 
 | Event | Julia function | TS v1.0.0 | TS v1.1.0 |
 |---|---|---|---|
-| Lose apical adhesion | `loss_apical_connection` | `processLoseApicalAdhesion` | `processLoseApicalAdhesionOnly` |
-| Lose basal adhesion | `loss_basal_connection` | `processLoseBasalAdhesion` | `processLoseBasalAdhesionOnly` |
+| Lose apical adhesion | `loss_apical_connection` | `processLoseApicalAdhesion` | `processLoseApicalAdhesion` |
+| Lose basal adhesion | `loss_basal_connection` | `processLoseBasalAdhesion` | `processLoseBasalAdhesion` |
 | Lose apical interface (cross-type) | `local_loss_apical_connection` / `recovering_local_loss_apical_connection` | `processLoseApicalInterface` | `processLoseApicalInterface` |
 | Start running | (via `CellEvent` on `running_mode`) | `processStartRunning` | `processStartRunning` |
 | Cell division | `divide_cell` | Not implemented | Not implemented |
@@ -124,11 +124,11 @@ Both implementations handle apical and basal link removal similarly:
 4. If 1 neighbor: just remove the edge
 5. Also modifies `apical_cytos_strain = -1` and `stiffness_nuclei_apical *= 0.1`
 
-**TypeScript** (`processLoseApicalAdhesion` / `processLoseApicalAdhesionOnly`):
+**TypeScript** (`processLoseApicalAdhesion`):
 1. Find all links with `l === cellIndex` or `r === cellIndex`
 2. If 2 links: remove both, reconnect neighbors, **set rest length = current distance** (`Vector2.dist`)
 3. If 1 link: just remove it
-4. Legacy also sets `stiffness_nuclei_apical *= 0.1`; v1.1.0 "Only" variant does not (left to parameter events)
+4. Also sets `stiffness_nuclei_apical *= 0.1`
 
 **Difference**: Julia sums the old rest lengths; TypeScript uses the current geometric distance. This produces different mechanical behavior after reconnection.
 
@@ -138,8 +138,9 @@ Both implementations handle apical and basal link removal similarly:
 - Same pattern as apical, but on `basalcons`
 - Sets `basal_cytos_strain = -1` and `stiffness_nuclei_basal *= 0.1`
 
-**TypeScript** (`processLoseBasalAdhesion` / `processLoseBasalAdhesionOnly`):
+**TypeScript** (`processLoseBasalAdhesion`):
 - Same pattern as apical, but on `ba_links`
+- Also sets `stiffness_nuclei_basal *= 0.1`
 - No rest length tracking for basal links in TS (basal links have no `rl` field)
 
 ### Lose Apical Interface (Cross-Type Link Cutting)
