@@ -7,6 +7,11 @@ type SimulationParams = any;
 type PartialSimulationParams = any;
 import { DEFAULT_PARAMS, DEFAULT_CONTROL_CELL } from './defaults';
 import { mergeWith, isPlainObject } from 'lodash-es';
+import { ensureV1_1_0 } from '@/models/eht/params/migration-v1.1';
+import { ensureV1_2_0 } from '@/models/eht/params/migration-v1.2';
+import { ensureV1_3_0 } from '@/models/eht/params/migration-v1.3';
+import { ensureV1_4_0 } from '@/models/eht/params/migration-v1.4';
+import { ensureV1_5_0 } from '@/models/eht/params/migration-v1.5';
 
 /**
  * Custom merge function that handles nested objects properly.
@@ -54,6 +59,10 @@ export function mergeWithDefaults(
     mergeWith(result.cell_prop, partial.cell_prop, customMerge);
   }
 
+  // Detect if input is pre-v1.1.0 (needs legacy event migration)
+  const inputVersion = partial.metadata?.version ?? '1.0.0';
+  const isPreV1_1 = inputVersion < '1.1.0';
+
   // Replace cell types entirely when provided in TOML
   // This ensures that importing a TOML with different cell type names
   // doesn't leave stale default types (e.g., importing 'EHT' shouldn't keep 'emt')
@@ -63,12 +72,18 @@ export function mergeWithDefaults(
     for (const [typeName, partialType] of Object.entries(partial.cell_types)) {
       // Each imported type is merged over control defaults for completeness
       const newType = structuredClone(DEFAULT_CONTROL_CELL);
+      // For pre-v1.1.0 files, remove events_v2 from defaults so migration
+      // can convert legacy v1 events instead of keeping empty defaults
+      if (isPreV1_1) {
+        delete (newType as unknown as Record<string, unknown>).events_v2;
+      }
       mergeWith(newType, partialType, customMerge);
       result.cell_types[typeName] = newType;
     }
   }
 
-  return result;
+  // Run EHT migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0 → v1.4.0 → v1.5.0
+  return ensureV1_5_0(ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(result)))));
 }
 
 /**
