@@ -2,7 +2,7 @@
  * Events Editor UI for EHT v1.1.0 event system.
  * Provides components for editing cell type events.
  */
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -454,26 +454,28 @@ export function EventsEditor({ events, onChange, disabled, cellTypeKey }: Events
   }, [events, onChange]);
 
   const handleEventDelete = useCallback((index: number) => {
-    const newEvents = events.filter((_, i) => i !== index);
+    // Also clear prereq references pointing to the deleted event
+    const deletedId = events[index].id;
+    const newEvents = events
+      .filter((_, i) => i !== index)
+      .map(e => e.prereq === deletedId ? { ...e, prereq: null } : e);
     onChange(newEvents);
   }, [events, onChange]);
 
-  const handleMoveUp = useCallback((index: number) => {
-    if (index <= 0) return;
+  /**
+   * Swap two events within the same sibling group (same prereq).
+   * siblingIndices: the array indices of events sharing the same prereq, in order.
+   * posInSiblings: the position within that sibling list to swap with the next.
+   */
+  const handleSwapSiblings = useCallback((siblingIndices: number[], posInSiblings: number) => {
+    const a = siblingIndices[posInSiblings];
+    const b = siblingIndices[posInSiblings + 1];
     const newEvents = [...events];
-    [newEvents[index - 1], newEvents[index]] = [newEvents[index], newEvents[index - 1]];
-    onChange(newEvents);
-  }, [events, onChange]);
-
-  const handleMoveDown = useCallback((index: number) => {
-    if (index >= events.length - 1) return;
-    const newEvents = [...events];
-    [newEvents[index], newEvents[index + 1]] = [newEvents[index + 1], newEvents[index]];
+    [newEvents[a], newEvents[b]] = [newEvents[b], newEvents[a]];
     onChange(newEvents);
   }, [events, onChange]);
 
   const handleAddEvent = useCallback((type: 'special' | 'parameter_change') => {
-    // Generate unique ID
     let counter = 1;
     let newId = `event_${counter}`;
     while (events.some(e => e.id === newId)) {
@@ -494,22 +496,78 @@ export function EventsEditor({ events, onChange, disabled, cellTypeKey }: Events
 
     let newEvent: EventDefinition;
     if (type === 'special') {
-      newEvent = {
-        ...baseEvent,
-        type: 'special',
-        special_name: 'lose_apical_adhesion',
-      };
+      newEvent = { ...baseEvent, type: 'special', special_name: 'lose_apical_adhesion' as SpecialEventName };
     } else {
-      newEvent = {
-        ...baseEvent,
-        type: 'parameter_change',
-        target_parameter: 'stiffness_nuclei_apical',
-        formula: 'old_value * 0.1',
-      };
+      newEvent = { ...baseEvent, type: 'parameter_change', target_parameter: 'stiffness_nuclei_apical', formula: 'old_value * 0.1' };
     }
 
     onChange([...events, newEvent]);
   }, [events, onChange]);
+
+  // Build children map: prereq id (or null for roots) -> array indices in display order
+  const { childrenMap } = useMemo(() => {
+    const map = new Map<string | null, number[]>();
+    const ids = new Set(events.map(e => e.id));
+    for (let i = 0; i < events.length; i++) {
+      // Treat as root if prereq doesn't reference a valid event id
+      const key = events[i].prereq && ids.has(events[i].prereq!) ? events[i].prereq! : null;
+      const list = map.get(key);
+      if (list) list.push(i);
+      else map.set(key, [i]);
+    }
+    return { childrenMap: map, eventIds: ids };
+  }, [events]);
+
+  // Collect all accordion default values across the tree
+  const allAccordionValues = useMemo(() => events.map((_, i) => `event-${i}`), [events]);
+
+  // Recursive renderer
+  const renderEventTree = (parentId: string | null, depth: number): React.ReactNode => {
+    const siblingIndices = childrenMap.get(parentId) ?? [];
+    if (siblingIndices.length === 0) return null;
+
+    return siblingIndices.map((arrayIdx, posInSiblings) => {
+      const event = events[arrayIdx];
+      const children = childrenMap.get(event.id);
+      const hasChildren = children && children.length > 0;
+
+      return (
+        <div key={`${cellTypeKey}-${event.id}-${arrayIdx}`} className={depth > 0 ? 'ml-4 border-l-2 border-muted-foreground/25 pl-2' : ''}>
+          <AccordionItem value={`event-${arrayIdx}`} className="border-0">
+            <AccordionTrigger className="py-1 px-2 text-xs bg-muted/50 rounded-t-md hover:no-underline">
+              <span className="flex items-center gap-2">
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                  event.type === 'special'
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                    : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                }`}>
+                  {event.type === 'special' ? 'S' : 'P'}
+                </span>
+                <span className="font-medium">{event.name || event.id}</span>
+                {hasChildren && (
+                  <span className="text-muted-foreground/60 text-[10px]">
+                    +{children!.length} dep{children!.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </span>
+            </AccordionTrigger>
+            <AccordionContent className="pt-0 pb-1">
+              <EventEditor
+                event={event}
+                allEvents={events}
+                onChange={(updated) => handleEventChange(arrayIdx, updated)}
+                onDelete={() => handleEventDelete(arrayIdx)}
+                onMoveUp={posInSiblings > 0 ? () => handleSwapSiblings(siblingIndices, posInSiblings - 1) : undefined}
+                onMoveDown={posInSiblings < siblingIndices.length - 1 ? () => handleSwapSiblings(siblingIndices, posInSiblings) : undefined}
+                disabled={disabled}
+              />
+            </AccordionContent>
+          </AccordionItem>
+          {renderEventTree(event.id, depth + 1)}
+        </div>
+      );
+    });
+  };
 
   return (
     <div className="space-y-2">
@@ -546,39 +604,8 @@ export function EventsEditor({ events, onChange, disabled, cellTypeKey }: Events
           No events configured. Add a special event or parameter change.
         </div>
       ) : (
-        <Accordion type="multiple" className="space-y-1" defaultValue={events.map((_, i) => `event-${i}`)}>
-          {events.map((event, index) => (
-            <AccordionItem key={`${cellTypeKey}-${event.id}-${index}`} value={`event-${index}`} className="border-0">
-              <AccordionTrigger className="py-1 px-2 text-xs bg-muted/50 rounded-t-md hover:no-underline">
-                <span className="flex items-center gap-2">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                    event.type === 'special'
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                      : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                  }`}>
-                    {event.type === 'special' ? 'S' : 'P'}
-                  </span>
-                  <span className="font-medium">{event.name || event.id}</span>
-                  {event.prereq && (
-                    <span className="text-muted-foreground">
-                      (after: {event.prereq})
-                    </span>
-                  )}
-                </span>
-              </AccordionTrigger>
-              <AccordionContent className="pt-0 pb-1">
-                <EventEditor
-                  event={event}
-                  allEvents={events}
-                  onChange={(updated) => handleEventChange(index, updated)}
-                  onDelete={() => handleEventDelete(index)}
-                  onMoveUp={index > 0 ? () => handleMoveUp(index) : undefined}
-                  onMoveDown={index < events.length - 1 ? () => handleMoveDown(index) : undefined}
-                  disabled={disabled}
-                />
-              </AccordionContent>
-            </AccordionItem>
-          ))}
+        <Accordion type="multiple" className="space-y-1" defaultValue={allAccordionValues}>
+          {renderEventTree(null, 0)}
         </Accordion>
       )}
     </div>
