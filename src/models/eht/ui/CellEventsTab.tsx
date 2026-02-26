@@ -9,6 +9,7 @@ import type { EHTParams, EHTCellTypeParams, EventDefinition } from '../params/ty
 import { CellCyclePhase } from '../params/types';
 import { DEFAULT_EVENT_PRESETS } from '../params/defaults';
 import { Input } from '@/components/ui/input';
+import { NumericTextInput } from '@/components/params/inputs/NumericTextInput';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -72,32 +73,18 @@ function CompactEventCard({
   onCopy,
   disabled,
 }: CompactEventCardProps) {
-  const isActive = isFinite(event.start) && isFinite(event.end);
+  const isActive = event.end !== -1;
 
   const handleActiveToggle = (checked: boolean) => {
     if (checked) {
-      onEventChange({ ...event, start: 0, end: 10 });
+      onEventChange({ ...event, end: 10 });
     } else {
-      onEventChange({ ...event, start: Infinity, end: Infinity });
+      onEventChange({ ...event, end: -1 });
     }
   };
 
   const handleProbabilityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onEventChange({ ...event, probability: e.target.value });
-  };
-
-  const handleStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseFloat(e.target.value);
-    if (!isNaN(parsed)) {
-      onEventChange({ ...event, start: Math.max(0, parsed) });
-    }
-  };
-
-  const handleEndChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const parsed = parseFloat(e.target.value);
-    if (!isNaN(parsed)) {
-      onEventChange({ ...event, end: Math.max(0, parsed) });
-    }
   };
 
   return (
@@ -145,26 +132,20 @@ function CompactEventCard({
       {/* Time range */}
       <div className="flex items-center gap-0.5">
         <span className="text-muted-foreground text-[10px]">t:</span>
-        <Input
-          type="number"
-          value={isActive ? event.start : ''}
-          onChange={handleStartChange}
+        <NumericTextInput
+          value={event.start}
+          onChange={(v) => onEventChange({ ...event, start: v })}
           disabled={disabled || !isActive}
           min={0}
-          step={0.1}
           className="h-5 text-xs w-full px-1"
-          placeholder="---"
         />
         <span className="text-muted-foreground">-</span>
-        <Input
-          type="number"
-          value={isActive ? event.end : ''}
-          onChange={handleEndChange}
+        <NumericTextInput
+          value={event.end}
+          onChange={(v) => onEventChange({ ...event, end: v })}
           disabled={disabled || !isActive}
           min={0}
-          step={0.1}
           className="h-5 text-xs w-full px-1"
-          placeholder="---"
         />
       </div>
 

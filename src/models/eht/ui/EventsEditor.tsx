@@ -126,15 +126,13 @@ interface TimeRangeInputProps {
 }
 
 function TimeRangeInput({ start, end, onChangeStart, onChangeEnd, disabled }: TimeRangeInputProps) {
-  const isActive = isFinite(start) && isFinite(end);
+  const isActive = end !== -1;
 
   const handleActiveToggle = (checked: boolean) => {
     if (checked) {
-      onChangeStart(0);
       onChangeEnd(10);
     } else {
-      onChangeStart(Infinity);
-      onChangeEnd(Infinity);
+      onChangeEnd(-1);
     }
   };
 
@@ -146,31 +144,25 @@ function TimeRangeInput({ start, end, onChangeStart, onChangeEnd, disabled }: Ti
         disabled={disabled}
         title="Active"
       />
-      {isActive ? (
-        <>
-          <NumberInput
-            value={start}
-            onChange={onChangeStart}
-            disabled={disabled}
-            min={0}
-            step={0.1}
-            label="Start"
-            className="w-20"
-          />
-          <span className="text-muted-foreground">-</span>
-          <NumberInput
-            value={end}
-            onChange={onChangeEnd}
-            disabled={disabled}
-            min={0}
-            step={0.1}
-            label="End"
-            className="w-20"
-          />
-        </>
-      ) : (
-        <span className="text-xs text-muted-foreground">Inactive</span>
-      )}
+      <NumberInput
+        value={start}
+        onChange={onChangeStart}
+        disabled={disabled || !isActive}
+        min={0}
+        step={0.1}
+        label="Start"
+        className="w-20"
+      />
+      <span className="text-muted-foreground">-</span>
+      <NumberInput
+        value={end}
+        onChange={onChangeEnd}
+        disabled={disabled || !isActive}
+        min={0}
+        step={0.1}
+        label="End"
+        className="w-20"
+      />
     </div>
   );
 }

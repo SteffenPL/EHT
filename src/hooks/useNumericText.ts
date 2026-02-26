@@ -41,6 +41,7 @@ export function useNumericText({ value, onChange, integer, min, max }: UseNumeri
       onChange(clamp(parsed));
     } else {
       setIsValid(false);
+      onChange(clamp(0));
     }
   }, [onChange, clamp]);
 

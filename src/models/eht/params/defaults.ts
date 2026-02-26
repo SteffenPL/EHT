@@ -10,6 +10,7 @@ import { ensureV1_1_0 } from './migration-v1.1';
 import { ensureV1_2_0 } from './migration-v1.2';
 import { ensureV1_3_0 } from './migration-v1.3';
 import { ensureV1_4_0 } from './migration-v1.4';
+import { ensureV1_5_0 } from './migration-v1.5';
 
 // =============================================================================
 // Default Events
@@ -258,7 +259,7 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
 export const DEFAULT_EHT_PARAMS: EHTParams = {
   metadata: {
     model: 'EHT',
-    version: '1.4.0',
+    version: '1.5.0',
   },
   general: {
     t_end: 48,
@@ -332,8 +333,8 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
     }
   }
 
-  // Apply migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0 → v1.4.0
-  return ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(base))));
+  // Apply migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0 → v1.4.0 → v1.5.0
+  return ensureV1_5_0(ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(base)))));
 }
 
 // Load all TOML presets at build time using Vite's import.meta.glob

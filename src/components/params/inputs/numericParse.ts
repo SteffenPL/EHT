@@ -6,7 +6,7 @@
 /** Parse a text string into a number, returning null for invalid input. */
 export function parseNumericText(text: string): number | null {
   const trimmed = text.trim().toLowerCase();
-  if (trimmed === '') return null;
+  if (trimmed === '') return 0;
   if (trimmed === 'inf' || trimmed === 'infinity') return Infinity;
   if (trimmed === '-inf' || trimmed === '-infinity') return -Infinity;
   const parsed = Number(trimmed);

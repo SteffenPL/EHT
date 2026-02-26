@@ -24,7 +24,7 @@ describe('parseNumericText', () => {
   });
 
   it('returns null for invalid input', () => {
-    expect(parseNumericText('')).toBeNull();
+    expect(parseNumericText('')).toBe(0);
     expect(parseNumericText('abc')).toBeNull();
     expect(parseNumericText('--2')).toBeNull();
     expect(parseNumericText('1.2.3')).toBeNull();

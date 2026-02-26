@@ -40,6 +40,30 @@ function replaceInfinityValues<T>(obj: T): T {
 }
 
 /**
+ * Recursively restore Infinity values from large numbers after TOML parsing.
+ * Reverses the transformation done by replaceInfinityValues.
+ */
+function restoreInfinityValues<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    if (typeof obj === 'number') {
+      if (obj >= 1e308) return Infinity as T;
+      if (obj <= -1e308) return -Infinity as T;
+    }
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(restoreInfinityValues) as T;
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    result[key] = restoreInfinityValues(value);
+  }
+  return result as T;
+}
+
+/**
  * Parse TOML string into partial parameters.
  * Does not merge with defaults - returns only what was in the file.
  *
@@ -49,7 +73,7 @@ function replaceInfinityValues<T>(obj: T): T {
  */
 export function parseToml(tomlString: string): PartialSimulationParams {
   const parsed = TOML.parse(tomlString);
-  return parsed as PartialSimulationParams;
+  return restoreInfinityValues(parsed) as PartialSimulationParams;
 }
 
 /**
