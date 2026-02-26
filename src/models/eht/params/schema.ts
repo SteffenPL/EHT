@@ -76,20 +76,6 @@ export const eventDefinitionSchema = z.discriminatedUnion('type', [
 /** Events array schema */
 export const eventsArraySchema = z.array(eventDefinitionSchema);
 
-/** Global event definition schema */
-export const globalEventDefinitionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  start: z.number(),
-  end: z.number(),
-  period: z.number().nonnegative(),
-  target_parameter: z.string(),
-  formula: z.string(),
-});
-
-/** Global events array schema */
-export const globalEventsArraySchema = z.array(globalEventDefinitionSchema);
-
 // =============================================================================
 // Legacy Event System Schema (v1.0.0)
 // =============================================================================
@@ -167,7 +153,6 @@ export const ehtGeneralParamsSchema = z.object({
   aspect_ratio: z.number(),                   // 0=line, >0=curve above, <0=curve below; |aspect|=b/a
   hard_sphere_nuclei: z.boolean(),            // If true, use R_hard instead of R_soft for nuclei spring rest length
   default_events: eventsArraySchema,         // Default events applied to all cell types (v1.2.0)
-  global_events: globalEventsArraySchema,    // Global events that modify simulation-wide parameters
 });
 
 /** Cell property params schema (legacy - empty, properties moved to cell types) */

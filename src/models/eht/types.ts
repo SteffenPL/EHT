@@ -110,18 +110,6 @@ export interface GeometryState {
     curvature_2: number; // Vertical membrane curvature (1/b)
 }
 
-/** Global event state - tracks per-global-event status */
-export interface GlobalEventState {
-    /** Sampled trigger time */
-    trigger_time: number;
-    /** Whether the event has fired at least once */
-    has_fired: boolean;
-    /** Time of last fire (for periodic events) */
-    last_fire_time: number;
-    /** Number of times the event has fired */
-    fire_count: number;
-}
-
 /** Complete simulation state for EHT */
 export interface EHTSimulationState {
     cells: CellState[];
@@ -133,8 +121,6 @@ export interface EHTSimulationState {
     basalGeometry: BasalGeometry; // Pre-computed basal curve geometry
     /** RNG seed for reproducibility (stored for deterministic replay) */
     rngSeed: string;
-    /** Global event states (keyed by event ID) */
-    global_event_states?: Record<string, GlobalEventState>;
 }
 
 /** Initial state for a new simulation */

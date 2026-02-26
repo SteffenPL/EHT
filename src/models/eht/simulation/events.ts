@@ -7,10 +7,8 @@
 import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
 import { evaluate } from 'mathjs';
-import { createBasalGeometry } from '@/core/math';
 import type { EHTSimulationState, ApicalLink, BasalLink, CellState, CellEventState } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, ParameterChangeEvent, SpecialEvent, SpecialEventName } from '../params/types';
-import { computeEllipseFromPerimeter } from '../params/geometry';
 import { createCell, getCellType, getEffectiveEvents, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
 import { divideSingleCell } from './division';
 
@@ -748,124 +746,6 @@ function processCellCycleReset(
   state.cells[cellIndex] = newCell;
 }
 
-// =============================================================================
-// Global Events
-// =============================================================================
-
-/** Supported global event target parameters */
-const GLOBAL_TARGET_PARAMS = new Set(['mu', 'perimeter', 'aspect_ratio', 'p_div_out']);
-
-/**
- * Get a general parameter value by name.
- */
-function getGeneralParameter(params: EHTParams, name: string): number | undefined {
-  switch (name) {
-    case 'mu': return params.general.mu;
-    case 'perimeter': return params.general.perimeter;
-    case 'aspect_ratio': return params.general.aspect_ratio;
-    case 'p_div_out': return params.general.p_div_out;
-    default: return undefined;
-  }
-}
-
-/**
- * Set a general parameter value by name.
- */
-function setGeneralParameter(params: EHTParams, name: string, value: number): void {
-  switch (name) {
-    case 'mu': params.general.mu = value; break;
-    case 'perimeter': params.general.perimeter = value; break;
-    case 'aspect_ratio': params.general.aspect_ratio = value; break;
-    case 'p_div_out': params.general.p_div_out = value; break;
-  }
-}
-
-/**
- * Process global events that modify simulation-wide parameters.
- * These fire once per timestep (not per cell).
- */
-export function processGlobalEvents(
-  state: EHTSimulationState,
-  params: EHTParams,
-  dt: number
-): void {
-  const globalEvents = params.general.global_events;
-  if (!globalEvents || globalEvents.length === 0) return;
-  if (!state.global_event_states) return;
-
-  const t = state.t;
-  let geometryChanged = false;
-
-  for (const eventDef of globalEvents) {
-    const eventState = state.global_event_states[eventDef.id];
-    if (!eventState) continue;
-
-    // Check if event should fire
-    if (!isFinite(eventState.trigger_time)) continue;
-
-    let shouldFire = false;
-
-    if (eventDef.period === 0) {
-      // One-time event
-      if (eventState.has_fired) continue;
-      if (eventState.trigger_time === 0) {
-        shouldFire = true;
-      } else {
-        shouldFire = t <= eventState.trigger_time && t + dt > eventState.trigger_time;
-      }
-    } else {
-      // Periodic event
-      if (t + dt < eventState.trigger_time) continue;
-
-      if (!eventState.has_fired && t <= eventState.trigger_time && t + dt > eventState.trigger_time) {
-        shouldFire = true;
-      } else if (eventState.has_fired && (t - eventState.last_fire_time) >= eventDef.period) {
-        shouldFire = true;
-      }
-    }
-
-    if (!shouldFire) continue;
-
-    // Validate target parameter
-    if (!GLOBAL_TARGET_PARAMS.has(eventDef.target_parameter)) {
-      console.warn(`[GlobalEvents] Unknown target parameter: ${eventDef.target_parameter}`);
-      continue;
-    }
-
-    // Get current value and evaluate formula
-    const oldValue = getGeneralParameter(params, eventDef.target_parameter);
-    if (oldValue === undefined) continue;
-
-    const newValue = evaluateFormula(
-      eventDef.formula,
-      oldValue,
-      t,
-      dt,
-      eventDef.period,
-      params.general
-    );
-
-    setGeneralParameter(params, eventDef.target_parameter, newValue);
-
-    // Track if geometry needs recomputation
-    if (eventDef.target_parameter === 'perimeter' || eventDef.target_parameter === 'aspect_ratio') {
-      geometryChanged = true;
-    }
-
-    // Update event state
-    eventState.has_fired = true;
-    eventState.last_fire_time = t;
-    eventState.fire_count++;
-  }
-
-  // Recompute basal geometry if perimeter or aspect_ratio changed
-  if (geometryChanged) {
-    const geo = computeEllipseFromPerimeter(params.general.perimeter, params.general.aspect_ratio);
-    state.basalGeometry = createBasalGeometry(geo.curvature_1, geo.curvature_2, 360);
-    state.geometry = { curvature_1: geo.curvature_1, curvature_2: geo.curvature_2 };
-  }
-}
-
 /**
  * Process all events for the current timestep.
  */
@@ -875,6 +755,5 @@ export function processAllEvents(
   dt: number,
   rng: SeededRandom
 ): void {
-  processGlobalEvents(state, params, dt);
   processV2Events(state, params, dt, rng);
 }

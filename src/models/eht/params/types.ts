@@ -70,17 +70,6 @@ export interface SpecialEvent extends BaseEventDefinition {
 /** Union type for all event definitions */
 export type EventDefinition = ParameterChangeEvent | SpecialEvent;
 
-/** Global event definition - modifies simulation-wide parameters over time */
-export interface GlobalEventDefinition {
-  id: string;
-  name: string;
-  start: number;
-  end: number;
-  period: number;           // 0 = one-time, >0 = periodic
-  target_parameter: string; // 'mu' | 'perimeter' | 'aspect_ratio' | 'p_div_out'
-  formula: string;          // math.js: old_value, t, dt, period
-}
-
 // =============================================================================
 // Legacy Event System (v1.0.0 - kept for backwards compatibility)
 // =============================================================================
@@ -158,7 +147,6 @@ export interface EHTGeneralParams {
   aspect_ratio: number;     // Shape: 0=line, >0=curve above, <0=curve below; |aspect|=b/a
   hard_sphere_nuclei: boolean; // If true, use R_hard instead of R_soft for nuclei spring rest length
   default_events: EventDefinition[]; // Default events applied to all cell types (v1.2.0)
-  global_events: GlobalEventDefinition[]; // Global events that modify simulation-wide parameters
 }
 
 /** Cell property parameters (legacy - kept empty for backwards compatibility) */

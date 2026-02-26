@@ -87,11 +87,6 @@ export function migrateV1_3_0toV1_4_0(params: EHTParams): EHTParams {
     } as ParameterChangeEvent);
   }
 
-  // Add global_events if missing
-  if (!migrated.general.global_events) {
-    migrated.general.global_events = [];
-  }
-
   // For cell types named 'emt', add 'default_cell_division' to skip_default_events
   for (const [typeName, cellType] of Object.entries(migrated.cell_types)) {
     const ct = cellType as EHTCellTypeParams;
