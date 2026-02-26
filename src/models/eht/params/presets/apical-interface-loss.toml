@@ -62,8 +62,6 @@ events_v2 = []
   r = 0
   g = 128
   b = 0
-
-
 [cell_types.emt]
 N_init = 10
 location = "bottom"
@@ -100,8 +98,6 @@ skip_default_events = []
   r = 255
   g = 0
   b = 255
-
-
   # Loss of apical interface: detach emt cells from control cells apically
   # at t=3..10, then connect neighboring control cells across the gap
   [[cell_types.emt.events_v2]]

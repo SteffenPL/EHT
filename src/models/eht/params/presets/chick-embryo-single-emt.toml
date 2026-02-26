@@ -58,8 +58,6 @@ apical_junction_init = 0.333333333333333
   r = 0
   g = 128
   b = 0
-
-
 [cell_types.emt]
 N_init = 1
 location = "bottom"
@@ -95,8 +93,6 @@ apical_junction_init = 0.333333333333333
   r = 255
   g = 0
   b = 255
-
-
 [time_samples]
 start = 0
 end = 48

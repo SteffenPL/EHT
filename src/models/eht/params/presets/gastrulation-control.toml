@@ -58,8 +58,6 @@ apical_junction_init = 0.333333333333333
   r = 0
   g = 128
   b = 0
-
-
 [cell_types.emt]
 N_init = 1
 location = "bottom"
