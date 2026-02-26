@@ -59,17 +59,6 @@ apical_junction_init = 0.333333333333333
   g = 128
   b = 0
 
-  [cell_types.control.events]
-  time_A_start = inf
-  time_A_end = inf
-  time_B_start = inf
-  time_B_end = inf
-  time_S_start = inf
-  time_S_end = inf
-  time_P_start = inf
-  time_P_end = inf
-  time_AC_start = inf
-  time_AC_end = inf
 
 [cell_types.emt]
 N_init = 0
@@ -107,17 +96,6 @@ apical_junction_init = 0.333333333333333
   g = 0
   b = 255
 
-  [cell_types.emt.events]
-  time_A_start = inf
-  time_A_end = inf
-  time_B_start = inf
-  time_B_end = inf
-  time_S_start = inf
-  time_S_end = inf
-  time_P_start = inf
-  time_P_end = inf
-  time_AC_start = inf
-  time_AC_end = inf
 
 [time_samples]
 start = 0

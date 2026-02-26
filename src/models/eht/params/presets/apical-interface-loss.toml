@@ -63,17 +63,6 @@ events_v2 = []
   g = 128
   b = 0
 
-  [cell_types.control.events]
-  time_A_start = inf
-  time_A_end = inf
-  time_B_start = inf
-  time_B_end = inf
-  time_S_start = inf
-  time_S_end = inf
-  time_P_start = inf
-  time_P_end = inf
-  time_AC_start = inf
-  time_AC_end = inf
 
 [cell_types.emt]
 N_init = 10
@@ -112,17 +101,6 @@ skip_default_events = []
   g = 0
   b = 255
 
-  [cell_types.emt.events]
-  time_A_start = inf
-  time_A_end = inf
-  time_B_start = inf
-  time_B_end = inf
-  time_S_start = inf
-  time_S_end = inf
-  time_P_start = inf
-  time_P_end = inf
-  time_AC_start = inf
-  time_AC_end = inf
 
   # Loss of apical interface: detach emt cells from control cells apically
   # at t=3..10, then connect neighboring control cells across the gap
