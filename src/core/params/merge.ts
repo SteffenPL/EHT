@@ -59,9 +59,24 @@ export function mergeWithDefaults(
     mergeWith(result.cell_prop, partial.cell_prop, customMerge);
   }
 
-  // Detect if input is pre-v1.1.0 (needs legacy event migration)
+  // Detect input version for migration-aware merging
   const inputVersion = partial.metadata?.version ?? '1.0.0';
-  const isPreV1_1 = inputVersion < '1.1.0';
+
+  // Set the metadata version to the input version so migration checks work correctly.
+  // Without this, the result would have the default version (1.5.0) which skips all migrations.
+  result.metadata = { ...result.metadata, ...partial.metadata, version: inputVersion };
+
+  // Strip fields from defaults that only exist in later versions,
+  // so the migration chain can add them properly
+  if (inputVersion < '1.2.0') {
+    delete result.general.default_events;
+  }
+  if (inputVersion < '1.1.0') {
+    // Strip skip_default_events from cell type defaults for pre-v1.1.0
+    for (const ct of Object.values(result.cell_types)) {
+      delete (ct as unknown as Record<string, unknown>).skip_default_events;
+    }
+  }
 
   // Replace cell types entirely when provided in TOML
   // This ensures that importing a TOML with different cell type names
@@ -74,8 +89,9 @@ export function mergeWithDefaults(
       const newType = structuredClone(DEFAULT_CONTROL_CELL);
       // For pre-v1.1.0 files, remove events_v2 from defaults so migration
       // can convert legacy v1 events instead of keeping empty defaults
-      if (isPreV1_1) {
+      if (inputVersion < '1.1.0') {
         delete (newType as unknown as Record<string, unknown>).events_v2;
+        delete (newType as unknown as Record<string, unknown>).skip_default_events;
       }
       mergeWith(newType, partialType, customMerge);
       result.cell_types[typeName] = newType;

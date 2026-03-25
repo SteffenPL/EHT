@@ -298,9 +298,14 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
     base.metadata = { ...base.metadata, ...partial.metadata };
   }
 
-  // Detect if preset is pre-v1.1.0 (needs legacy event migration)
+  // Detect input version for migration-aware merging
   const presetVersion = partial.metadata?.version ?? '1.0.0';
-  const isPreV1_1 = presetVersion < '1.1.0';
+
+  // Strip fields from defaults that only exist in later versions,
+  // so the migration chain can add them properly
+  if (presetVersion < '1.2.0') {
+    delete (base.general as unknown as Record<string, unknown>).default_events;
+  }
 
   // Merge cell types - each cell type gets merged with DEFAULT_CONTROL_CELL
   if (partial.cell_types) {
@@ -314,10 +319,11 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
       if (typeParams) {
         // Use existing cell type as base if it exists, otherwise use DEFAULT_CONTROL_CELL
         const baseType = base.cell_types[typeName] ?? cloneDeep(DEFAULT_CONTROL_CELL);
-        // For pre-v1.1.0 presets, remove events_v2 from the base so migration
-        // can convert the legacy v1 events instead of keeping the default events_v2
-        if (isPreV1_1) {
+        // For pre-v1.1.0 presets, remove events_v2 and skip_default_events from the base
+        // so migration can convert the legacy v1 events properly
+        if (presetVersion < '1.1.0') {
           delete (baseType as unknown as Record<string, unknown>).events_v2;
+          delete (baseType as unknown as Record<string, unknown>).skip_default_events;
         }
         base.cell_types[typeName] = merge(baseType, typeParams);
       }

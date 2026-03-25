@@ -87,10 +87,10 @@ export function migrateV1_3_0toV1_4_0(params: EHTParams): EHTParams {
     } as ParameterChangeEvent);
   }
 
-  // For cell types named 'emt', add 'default_cell_division' to skip_default_events
+  // For non-control cell types, add 'default_cell_division' to skip_default_events
   for (const [typeName, cellType] of Object.entries(migrated.cell_types)) {
     const ct = cellType as EHTCellTypeParams;
-    if (typeName === 'emt') {
+    if (typeName !== 'control') {
       if (!ct.skip_default_events) {
         ct.skip_default_events = [];
       }
