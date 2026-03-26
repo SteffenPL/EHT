@@ -33,7 +33,7 @@ const SECTIONS: SectionDefinition[] = [
   { key: 'initial', label: 'Initial Setup', fields: ['N_init', 'location'] },
   { key: 'geometry', label: 'Geometry', fields: ['R_hard', 'R_hard_div', 'R_soft'] },
   { key: 'appearance', label: 'Appearance', fields: ['color'] },
-  { key: 'stiffness', label: 'Stiffness', fields: ['k_apical_junction', 'k_cytos', 'stiffness_apical_apical', 'stiffness_apical_apical_div', 'stiffness_nuclei_apical', 'stiffness_nuclei_basal', 'stiffness_repulsion', 'stiffness_straightness'] },
+  { key: 'stiffness', label: 'Stiffness', fields: ['k_apical_junction', 'k_cytos', 'stiffness_apical_apical', 'stiffness_apical_apical_div', 'stiffness_nuclei_apical', 'stiffness_nuclei_basal', 'stiffness_repulsion', 'stiffness_straightness', 'external_force'] },
   { key: 'strain', label: 'Cytoskeleton Strain', fields: ['apical_cytos_strain_init', 'basal_cytos_strain_init'] },
   { key: 'division', label: 'Division & Lifecycle', fields: ['lifespan_start', 'lifespan_end', 'dur_G2', 'dur_mitosis', 'INM'] },
   { key: 'cellTypeProps', label: 'Cell-Type Properties', fields: ['diffusion', 'basal_damping_ratio', 'max_basal_junction_dist', 'cytos_init', 'basal_membrane_repulsion', 'apical_junction_init', 'max_cytoskeleton_length'] },
@@ -638,6 +638,16 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 onChange={(v) => updateCellType(key, 'stiffness_straightness', v)}
                 disabled={disabled}
                 min={0}
+              />
+            ))}
+          </CellTypeRow>
+          <CellTypeRow label="External Force" description={desc('external_force')}>
+            {cellTypeKeys.map((key) => (
+              <StringCell
+                key={key}
+                value={getCellType(key).external_force}
+                onChange={(v) => updateCellType(key, 'external_force', v)}
+                disabled={disabled}
               />
             ))}
           </CellTypeRow>

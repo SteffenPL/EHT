@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Vector2 } from '@/core/math/vector2';
 import { calcExternalForces, zeroForces, CellForces } from './forces';
 import { createDefaultEHTParams } from '../params/defaults';
 import { StraightLineGeometry, CircularGeometry } from '@/core/math/basal-geometry';
