@@ -2,6 +2,36 @@
 
 > **📹 Firefox Users:** Video export works in Firefox, but requires **WebM (VP9)** format instead of H.264 due to a [known Firefox bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1918769). The app will automatically select the best format for your browser. See [FIREFOX_VIDEO_EXPORT_SOLUTION.md](FIREFOX_VIDEO_EXPORT_SOLUTION.md) for details.
 
+## 1.5.0 (2026-03-26)
+
+### 2026-03-26
+- Added per-cell-type external force (`external_force` parameter) with math.js formula support — variables: `x`, `y`, `alpha`, `r`, `t`, `T` (tangent), `N` (normal). Scalar formulas auto-wrap as convergent tangential flow.
+- Added abstract `center` property to `BasalGeometry` (line/circle/ellipse)
+- Updated deploy script
+
+### 2026-03-25
+- Improved TOML parameter import handling
+
+### 2026-02-26
+- Major rework of the cell events system: v2 events with global default events, per-cell-type events, event period handling (`dt` support), prerequisite chains, and cell cycle phase gating
+- Renamed `apical_constriction` to `lose_apical_interface` across event system
+- Added `k_apical_junction` as a per-cell-type parameter
+- Added new presets: apical constriction, apical interface loss, oscillating cell size
+
+### 2026-02-25
+- Added parameter change events for apical stiffness (G2) and R_hard (mitosis) as default events
+- Cell cycle reset now restores all cell properties to type defaults
+
+### 2026-02-13–14
+- Refactored INM (Interkinetic Nuclear Migration) to use cytoskeleton strain values instead of hard-coded behavior
+- Event probability now uses math.js string formulas (e.g. `p_div_out`, `INM`)
+- Added default cell event mechanism with cell division as a default event
+- Added parameter help icons with LaTeX/KaTeX support
+
+### 2026-02-10–12
+- Added dynamic cell events system (v1.1.0 event architecture)
+- Added Cell Events editor UI tab
+
 ## 1.0.2 (2026-02-03)
 
 ### 2026-02-03
