@@ -135,6 +135,10 @@ Routes: `/docs/eht/model`, `/docs/eht/statistics`
 
 ## Development Notes
 
+- **Adding EHT cell type parameters**: Requires changes to 4 files: `params/types.ts` (interface), `params/schema.ts` (Zod schema with `.default()`), `params/defaults.ts` (both `DEFAULT_CONTROL_CELL` and `DEFAULT_EMT_CELL`), `params/descriptions.ts` (help popover text). Zod `.default()` handles missing fields from older TOML files — no migration needed for optional params with defaults.
+- **Adding new forces**: Force functions follow the signature `calcXForces(state, params, forces): void` and accumulate in-place. Add to `calcAllForces` in [src/models/eht/simulation/forces.ts](src/models/eht/simulation/forces.ts). Forces are additive and separable.
+- **Cell type UI**: The `CellTypesTab.tsx` uses a `SECTIONS` array to group fields — add new fields to the appropriate section's `fields` array, then add a `<CellTypeRow>` in the JSX. Use `StringCell` for text inputs, `NumberCell` for numeric.
+- **math.js formulas**: The codebase uses `import { evaluate } from 'mathjs'` (not `math.evaluate`). For vector results, use `matrix([x, y])` and extract via `.toArray()`.
 - **Parameter descriptions**: All EHT model parameters must be documented in [src/models/eht/params/descriptions.ts](src/models/eht/params/descriptions.ts) using dot-notation keys (e.g. `general.t_end`, `cell_types.R_soft`, `events.formula`). Descriptions support LaTeX math via KaTeX and are displayed as help popovers in the UI.
 - **In-place state mutation**: For performance, the EHT model mutates state in-place during `step()` rather than creating new objects
 - **Deterministic RNG**: Use `SeededRandom` from [src/core/math/random.ts](src/core/math/random.ts) for reproducible simulations
