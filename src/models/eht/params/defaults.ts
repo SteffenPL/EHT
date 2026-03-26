@@ -177,6 +177,7 @@ export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
   cytos_init: 0.0,
   basal_membrane_repulsion: 0.0,
   apical_junction_init: 0.0,
+  external_force: "0",
 };
 
 /** Default EMT cell type */
@@ -228,6 +229,7 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
   cytos_init: 0.0,
   basal_membrane_repulsion: 0.0,
   apical_junction_init: 0.0,
+  external_force: "0",
 };
 
 /** Default EHT simulation parameters */

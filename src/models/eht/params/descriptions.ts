@@ -92,6 +92,23 @@ $$d\\mathbf{x} = \\sqrt{2D}\\, d\\mathbf{W}$$`,
 
   'cell_types.max_cytoskeleton_length': `Maximum allowed cytoskeleton length. Prevents cells from stretching too far.`,
 
+  'cell_types.external_force': `External force formula applied to cell nuclei. A **math.js** expression evaluated per cell per substep.
+
+**Available variables:**
+- \`x\`, \`y\`: Cartesian position relative to geometry center
+- \`alpha\`: Polar angle ($0$ at bottom, $\\pm\\pi$ at top)
+- \`r\`: Distance from geometry center
+- \`t\`: Simulation time (hours)
+- \`T\`: Unit tangent vector (counter-clockwise)
+- \`N\`: Unit outward normal vector (away from center)
+
+**Auto-wrapping:** If the formula does not contain \`T\` or \`N\`, it is treated as a scalar and wrapped as \`-(scalar) * sign(alpha) * T\`, producing tangential flow converging at the bottom ($\\alpha = 0$).
+
+**Examples:**
+- \`10\` → magnitude-10 tangential flow toward bottom
+- \`5 * T + 3 * N\` → tangential + radial force (used as-is)
+- \`10 * sin(t)\` → time-varying tangential flow`,
+
   // === Running Behavior ===
   'cell_types.run': `Probability that an extruded cell becomes a "running" cell (migrating along the basal membrane). Value between 0 and 1.`,
 
