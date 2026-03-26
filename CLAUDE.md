@@ -10,6 +10,8 @@ Browser-based multi-model cell simulation platform for Epithelial-to-Hematopoiet
 
 React 18 + TypeScript, Vite, Pixi.js, shadcn/ui + Tailwind, TOML params, CSV export, Vitest
 
+**Path aliases**: `@/` maps to `src/` (configured in tsconfig.json and vite.config.ts)
+
 ## Commands
 
 ```bash
@@ -17,6 +19,7 @@ React 18 + TypeScript, Vite, Pixi.js, shadcn/ui + Tailwind, TOML params, CSV exp
 npm run dev              # Start dev server (Vite will display the port)
 npm run build            # TypeScript compile + production build
 npm run preview          # Preview production build
+npx tsc --noEmit         # Type-check only (no emit)
 
 # Testing
 npm run test             # Run all tests once
@@ -113,6 +116,7 @@ cli/                   # Headless CLI interface
 - [src/core/batch/runner.ts](src/core/batch/runner.ts) - Batch simulation with worker pool support
 - [src/models/eht/index.ts](src/models/eht/index.ts) - EHT model definition and registration
 - [src/models/eht/simulation/step.ts](src/models/eht/simulation/step.ts) - EHT timestep (forces, constraints, events)
+- [src/core/math/basal-geometry.ts](src/core/math/basal-geometry.ts) - Basal curve geometry (line/circle/ellipse) with projection, arc length, normals
 - [src/hooks/useSimulation.ts](src/hooks/useSimulation.ts) - React hook for single simulation state management
 
 ### Batch Simulations
@@ -143,6 +147,7 @@ Routes: `/docs/eht/model`, `/docs/eht/statistics`
 - **In-place state mutation**: For performance, the EHT model mutates state in-place during `step()` rather than creating new objects
 - **Deterministic RNG**: Use `SeededRandom` from [src/core/math/random.ts](src/core/math/random.ts) for reproducible simulations
 - **Parameter validation**: Models use Zod schemas for runtime parameter validation
+- **Parameter migrations**: Migration chain in `params/migration-v1.*.ts` (v1.1→v1.5). Add a migration when changing parameter semantics or restructuring; use Zod `.default()` for simple additions. The chain runs in `mergePresetWithDefaults()` in `defaults.ts`.
 - **TOML format**: Parameters can be imported/exported as TOML files
 - **URL state**: Parameters can be encoded in URL for sharing
 - **CSV snapshots**: Simulations can be saved/loaded as CSV files with metadata
