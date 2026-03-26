@@ -41,17 +41,19 @@ The scope variable list is maintained as a named structure to allow easy extensi
 
 ## Auto-Wrapping Rule
 
-If the formula string does **not** contain `T` or `N`, it is treated as a scalar and wrapped as:
+If the formula string does **not** contain `T` or `N` (checked via word-boundary regex `/\bT\b|\bN\b/`), it is treated as a scalar and wrapped as:
 
 ```
-(formula) * sign(alpha) * T
+-(formula) * sign(alpha) * T
 ```
 
-This produces a tangential force converging at `alpha = 0` (bottom of geometry).
+The negation is needed because `T` points counter-clockwise (increasing alpha), so `-sign(alpha) * T` pushes cells **toward** `alpha = 0`. Without the negation, `sign(alpha) * T` would produce diverging flow.
+
+**Note on `sign(0)`**: At `alpha = 0` (the convergence point), `sign(0) = 0` produces zero force. This is correct — cells at the target need no external push. The force varies continuously through zero at the convergence point.
 
 Examples:
-- `"10"` becomes `10 * sign(alpha) * T` (magnitude-10 tangential flow toward bottom)
-- `"10 * sin(alpha)"` becomes `10 * sin(alpha) * sign(alpha) * T`
+- `"10"` becomes `-(10) * sign(alpha) * T` (magnitude-10 tangential flow toward bottom)
+- `"10 * sin(alpha)"` becomes `-(10 * sin(alpha)) * sign(alpha) * T`
 - `"5 * T + 3 * N"` stays as-is (already contains vector variables)
 
 ## Parameter Definition
@@ -94,7 +96,7 @@ external_force = "5 * T + 3 * N"
 
 Key: `cell_types.external_force`
 
-Description: Formula for external force applied to cell nuclei. Available variables: `x`, `y` (Cartesian from geometry center), `alpha`, `r` (polar coords), `t` (time), `T` (tangent vector, CCW), `N` (outward normal). Scalar formulas are auto-wrapped as `scalar * sign(alpha) * T`.
+Description: Formula for external force applied to cell nuclei. Available variables: `x`, `y` (Cartesian from geometry center), `alpha`, `r` (polar coords), `t` (time), `T` (tangent vector, CCW), `N` (outward normal). Scalar formulas are auto-wrapped as `-(scalar) * sign(alpha) * T` to converge at the bottom.
 
 ## Force Computation
 
@@ -117,13 +119,19 @@ Algorithm per cell:
 3. Compute `alpha = atan2(x, -y)`, `r = sqrt(x^2 + y^2)`
 4. Compute `T = [cos(alpha), sin(alpha)]`, `N = [sin(alpha), -cos(alpha)]` as math.js matrices
 5. Build scope: `{ x, y, alpha, r, t: state.t, T, N }`
-6. Determine formula: if original contains `T` or `N`, use as-is; else wrap as `(original) * sign(alpha) * T`
-7. Evaluate via `math.evaluate(formula, scope)`
-8. Convert result (math.js matrix or number) to `Vector2`; add to `forces[i].f`
+6. Determine formula: if original matches `/\bT\b|\bN\b/`, use as-is; else wrap as `-(original) * sign(alpha) * T`
+7. Evaluate via `evaluate(formula, scope)` (imported from `mathjs`, matching existing pattern in events.ts)
+8. Convert result to `Vector2`: if math.js matrix, extract `[x, y]` via `.toArray()`; if number, treat as zero vector (scalar without direction — shouldn't happen after wrapping, but defensive). If result is neither matrix nor number, apply zero force.
+9. Add result to `forces[i].f`
+
+### Edge cases
+
+- **`r = 0`** (nucleus at geometry center): `alpha = atan2(0, 0) = 0` in JavaScript. `T` and `N` are computed from this angle, giving `T = (1, 0)` and `N = (0, -1)`. This is acceptable — the direction is arbitrary but deterministic, and the `sign(0) = 0` in auto-wrapped formulas produces zero force anyway.
+- **Straight line geometry**: center is `(0, 0)` (on the membrane). Polar coordinates are relative to the origin, which may not be centered on the tissue. This is a known limitation; for straight geometries, Cartesian coordinates (`x`, `y`) are more natural.
 
 ### Error handling
 
-On evaluation error: log warning, apply zero force (consistent with event formula error handling).
+On evaluation error or unexpected result type: log warning, apply zero force (consistent with event formula error handling).
 
 ### Integration into `calcAllForces`
 
@@ -143,7 +151,7 @@ calcExternalForces(state, params, forces);   // NEW
 - `StraightLineGeometry` uses `(0, 0)` as center (consistent with `shapeCenter()`)
 - Need to handle center access: use a helper that returns `(geometry as any).center ?? new Vector2(0, 0)` or add a `center` getter to the abstract `BasalGeometry` class
 
-Preferred approach: add an abstract `center` getter to `BasalGeometry`, implemented by each subclass.
+Preferred approach: add an abstract `center` getter to `BasalGeometry`, implemented by each subclass. Non-breaking: `CircularGeometry` and `EllipticalGeometry` already have a `center` field; `StraightLineGeometry` just needs to add it returning `Vector2(0, 0)`.
 
 ## UI
 
@@ -160,6 +168,7 @@ Help popover via `descriptions.ts` explaining variables, auto-wrapping, and exam
 5. **`src/models/eht/simulation/forces.ts`** — add `calcExternalForces`, call from `calcAllForces`
 6. **`src/core/math/basal-geometry.ts`** — add abstract `center` getter to `BasalGeometry` (return `Vector2(0,0)` for line)
 7. **`src/models/eht/ui/`** — add text input for external force in cell type panel (if not auto-generated)
+8. **Tests** — add tests for `calcExternalForces`: default "0" produces no force, scalar auto-wrapping, vector formula pass-through, error handling, r=0 edge case
 
 ## No Duplication with Events
 
@@ -167,4 +176,4 @@ The event system handles discrete parameter changes at specific trigger times. T
 
 ## Performance
 
-`math.evaluate()` per cell per substep. For typical runs (50-100 cells, 1 substep), overhead is negligible. Skip optimization: cells with `external_force === "0"` bypass evaluation entirely. Future optimization path: switch to `math.compile()` caching if needed.
+`evaluate()` per cell per substep. For typical runs (50-100 cells, 1 substep), overhead is negligible. Skip optimization: cells with `external_force === "0"` bypass evaluation entirely. Future optimization path: switch to `math.compile()` caching per formula string (especially relevant for batch simulations running in Web Workers).
