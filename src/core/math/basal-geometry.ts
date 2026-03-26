@@ -22,6 +22,7 @@ export abstract class BasalGeometry {
   abstract readonly curvature_1: number;
   abstract readonly curvature_2: number;
   abstract readonly perimeter: number;
+  abstract readonly center: Vector2;
 
   /**
    * Project a point onto the basal curve.
@@ -67,6 +68,7 @@ export class StraightLineGeometry extends BasalGeometry {
   readonly curvature_1 = 0;
   readonly curvature_2 = 0;
   readonly perimeter = Infinity;
+  readonly center = new Vector2(0, 0);
 
   projectPoint(pos: Vector2): Vector2 {
     return new Vector2(pos.x, 0);
