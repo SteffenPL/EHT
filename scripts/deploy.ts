@@ -2,8 +2,8 @@ import { execSync } from 'child_process';
 import prompts from 'prompts';
 import { parseArgs } from 'util';
 
-const TARGET_BASE = '/Users/SteffenPlunder/Documents/Workspace/steffenpl.github.io/src/internal/eht';
-const PAGES_REPO = '/Users/SteffenPlunder/Documents/Workspace/steffenpl.github.io';
+const TARGET_BASE = '/Users/SteffenPlunder/Documents/Workspace/internal/eht';
+const PAGES_REPO = '/Users/SteffenPlunder/Documents/Workspace/internal';
 
 interface DeployOptions {
   source: 'current' | 'tag' | 'commit';
@@ -120,7 +120,7 @@ async function deploy(options: DeployOptions) {
 
     // Commit to pages repo
     const sourceLabel = options.ref || 'HEAD';
-    execSync(`cd "${PAGES_REPO}" && git add src/internal/eht && git commit -m "Deploy EHT: ${sourceLabel} → ${options.target}" && git push origin main`, { stdio: 'inherit' });
+    execSync(`cd "${PAGES_REPO}" && git add eht && git commit -m "Deploy EHT: ${sourceLabel} → ${options.target}" && git push origin main`, { stdio: 'inherit' });
 
     console.log('\n✓ Deployed successfully!');
   } catch (error) {
