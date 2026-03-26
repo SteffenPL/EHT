@@ -4,6 +4,7 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
+import { evaluate, matrix } from 'mathjs';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 import { getCellType } from './cell';
@@ -201,6 +202,86 @@ export function calcApicalJunctionForces(
   }
 }
 
+/** Regex to detect vector variables T or N in formula */
+const VECTOR_VAR_REGEX = /\bT\b|\bN\b/;
+
+/**
+ * Build the scope for external force formula evaluation.
+ * Kept as a named function for easy extension with additional variables.
+ */
+function buildExternalForceScope(
+  x: number,
+  y: number,
+  alpha: number,
+  r: number,
+  t: number
+): Record<string, unknown> {
+  const T = matrix([Math.cos(alpha), Math.sin(alpha)]);
+  const N = matrix([Math.sin(alpha), -Math.cos(alpha)]);
+  return { x, y, alpha, r, t, T, N };
+}
+
+/**
+ * Convert a math.js evaluation result to a Vector2 force.
+ * Handles matrix results (extract [x,y]) and unexpected types (return zero).
+ */
+function resultToVector2(result: unknown): Vector2 {
+  if (result != null && typeof result === 'object' && 'toArray' in result) {
+    const arr = (result as { toArray: () => number[] }).toArray() as number[];
+    if (arr.length >= 2 && typeof arr[0] === 'number' && typeof arr[1] === 'number') {
+      return new Vector2(arr[0], arr[1]);
+    }
+  }
+  return Vector2.zero();
+}
+
+/**
+ * Calculate external forces from user-defined formulas.
+ * Each cell type can specify a math.js formula for an external force
+ * applied to cell nuclei.
+ */
+export function calcExternalForces(
+  state: EHTSimulationState,
+  params: EHTParams,
+  forces: CellForces[]
+): void {
+  const cells = state.cells;
+  const center = state.basalGeometry.center;
+
+  for (let i = 0; i < cells.length; i++) {
+    const ci = cells[i];
+    const cellType = getCellType(params, ci);
+    const formula = cellType.external_force;
+
+    // Skip if no external force
+    if (!formula || formula === '0') continue;
+
+    // Compute position relative to geometry center
+    const x = ci.pos.x - center.x;
+    const y = ci.pos.y - center.y;
+
+    // Polar coordinates: alpha=0 at bottom, +pi/2 at right, ±pi at top
+    const alpha = Math.atan2(x, -y);
+    const r = Math.sqrt(x * x + y * y);
+
+    // Build scope
+    const scope = buildExternalForceScope(x, y, alpha, r, state.t);
+
+    // Determine effective formula: auto-wrap scalars
+    const effectiveFormula = VECTOR_VAR_REGEX.test(formula)
+      ? formula
+      : `-(${formula}) * sign(alpha) * T`;
+
+    try {
+      const result = evaluate(effectiveFormula, scope);
+      const force = resultToVector2(result);
+      forces[i].f = forces[i].f.add(force);
+    } catch (error) {
+      console.warn(`[ExternalForce] Failed to evaluate formula "${formula}":`, error);
+    }
+  }
+}
+
 /**
  * Calculate all forces for the current state.
  */
@@ -215,6 +296,7 @@ export function calcAllForces(
   calcBasalNucleiForces(state, params, forces);
   calcStraightnessForces(state, params, forces);
   calcApicalJunctionForces(state, params, forces);
+  calcExternalForces(state, params, forces);
 
   return forces;
 }
