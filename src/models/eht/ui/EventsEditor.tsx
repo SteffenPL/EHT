@@ -184,7 +184,7 @@ export function EventEditor({
   // Get available prerequisites (other events except self)
   const prereqOptions = allEvents
     .filter(e => e.id !== event.id)
-    .map(e => ({ value: e.id, label: e.name || e.id }));
+    .map(e => ({ value: e.id, label: e.id }));
 
   const handleBaseFieldChange = <K extends keyof EventDefinition>(
     field: K,
@@ -195,22 +195,15 @@ export function EventEditor({
 
   return (
     <div className="border rounded-md p-3 space-y-3 bg-card">
-      {/* Header: ID, Name, Type, Delete */}
+      {/* Header: ID, Type, Delete */}
       <div className="flex items-center gap-2">
         <Input
           value={event.id}
           onChange={(e) => handleBaseFieldChange('id', e.target.value)}
           disabled={disabled}
-          className="h-7 text-xs w-24"
+          className="h-7 text-xs flex-1"
           placeholder="ID"
           title="Unique identifier"
-        />
-        <Input
-          value={event.name}
-          onChange={(e) => handleBaseFieldChange('name', e.target.value)}
-          disabled={disabled}
-          className="h-7 text-xs flex-1"
-          placeholder="Name"
         />
         <Select
           value={event.type}
@@ -508,7 +501,6 @@ export function EventsEditor({ events, onChange, disabled }: EventsEditorProps) 
 
     const baseEvent = {
       id: newId,
-      name: `New Event ${counter}`,
       start: 0,
       end: Infinity,
       period: 0,
@@ -567,7 +559,7 @@ export function EventsEditor({ events, onChange, disabled }: EventsEditorProps) 
             <AccordionItem key={event.id || index} value={`event-${index}`} className="border-none">
               <AccordionTrigger className="py-1 px-2 text-xs hover:no-underline rounded-md hover:bg-muted/50">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{event.name || event.id}</span>
+                  <span className="font-medium">{event.id}</span>
                   <span className="text-muted-foreground">({event.type === 'special' ? event.special_name : (event as ParameterChangeEvent).target_parameter})</span>
                   {event.prereq && (
                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-orange-500/15 text-orange-600 dark:text-orange-400">

@@ -112,8 +112,8 @@ function CompactEventCard({
       </button>
 
       {/* Name — truncated within its grid column */}
-      <span className="font-medium truncate" title={event.name || event.id}>
-        {event.name || event.id}
+      <span className="font-medium truncate" title={event.id}>
+        {event.id}
       </span>
 
       {/* Probability */}
@@ -189,7 +189,7 @@ function EventEditDialog({ event, allEvents, onSave, onDelete, onClose, disabled
     <Dialog open={event !== null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-sm">Edit Event: {event?.name || event?.id}</DialogTitle>
+          <DialogTitle className="text-sm">Edit Event: {event?.id}</DialogTitle>
         </DialogHeader>
         {event && (
           <EventEditor
@@ -312,7 +312,6 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
 
     const baseEvent = {
       id: newId,
-      name: `New Event ${counter}`,
       start: 0,
       end: 10,
       period: 0,
@@ -449,7 +448,7 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
                     className="h-6 text-xs gap-1"
                   >
                     <Plus className="h-3 w-3" />
-                    {preset.name}
+                    {preset.id}
                   </Button>
                 ))}
               </div>
@@ -475,8 +474,8 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
                                 disabled={disabled}
                                 className="h-3.5 w-3.5"
                               />
-                              <span className="text-xs text-muted-foreground truncate" title={event.name}>
-                                {event.name || event.id}
+                              <span className="text-xs text-muted-foreground truncate" title={event.id}>
+                                {event.id}
                               </span>
                             </div>
                           ))}
@@ -494,8 +493,8 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
                               disabled={disabled}
                               className="h-3.5 w-3.5"
                             />
-                            <span className="text-xs text-muted-foreground truncate" title={event.name}>
-                              {event.name || event.id}
+                            <span className="text-xs text-muted-foreground truncate" title={event.id}>
+                              {event.id}
                             </span>
                           </div>
                         ))}

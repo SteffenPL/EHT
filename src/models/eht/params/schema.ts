@@ -45,7 +45,6 @@ export const specialEventNameSchema = z.enum([
 /** Base event definition schema (shared fields) */
 export const baseEventDefinitionSchema = z.object({
   id: z.string(),
-  name: z.string(),
   start: z.number(),
   end: z.number(),
   period: z.union([z.number().nonnegative(), z.literal('dt')]),

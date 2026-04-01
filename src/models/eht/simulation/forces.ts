@@ -205,6 +205,9 @@ export function calcApicalJunctionForces(
 /** Regex to detect vector variables T or N in formula */
 const VECTOR_VAR_REGEX = /\bT\b|\bN\b/;
 
+/** Cache of formulas that failed to evaluate — only warn once per formula */
+const failedFormulas = new Map<string, string>();
+
 /**
  * Build the scope for external force formula evaluation.
  * Kept as a named function for easy extension with additional variables.

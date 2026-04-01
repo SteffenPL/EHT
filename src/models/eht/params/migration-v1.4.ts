@@ -41,7 +41,7 @@ export function migrateV1_3_0toV1_4_0(params: EHTParams): EHTParams {
     defaultEvents.push({
       type: 'special',
       id: 'default_cell_cycle_reset',
-      name: 'Cell Cycle Reset',
+
       start: 0,
       end: Infinity,
       period: 0,
@@ -58,7 +58,7 @@ export function migrateV1_3_0toV1_4_0(params: EHTParams): EHTParams {
     defaultEvents.push({
       type: 'parameter_change',
       id: 'default_stiffness_apical_apical_g2',
-      name: 'Apical Stiffness (G2)',
+
       start: 0,
       end: 0,
       period: 0,
@@ -75,7 +75,7 @@ export function migrateV1_3_0toV1_4_0(params: EHTParams): EHTParams {
     defaultEvents.push({
       type: 'parameter_change',
       id: 'default_R_hard_mitosis',
-      name: 'R_hard (Mitosis)',
+
       start: 0,
       end: 0,
       period: 0,

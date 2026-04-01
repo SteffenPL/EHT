@@ -47,7 +47,7 @@ export function migrateV1_2_0toV1_3_0(params: EHTParams): EHTParams {
     defaultEvents.push({
       type: 'special',
       id: 'default_cell_division',
-      name: 'Cell Division',
+
       start: 0,
       end: Infinity,
       period: 0,
@@ -63,7 +63,7 @@ export function migrateV1_2_0toV1_3_0(params: EHTParams): EHTParams {
     defaultEvents.push({
       type: 'parameter_change',
       id: 'default_increase_R_hard',
-      name: 'Increase R_hard',
+
       start: 0,
       end: Infinity,
       period: 0.1,
@@ -80,7 +80,7 @@ export function migrateV1_2_0toV1_3_0(params: EHTParams): EHTParams {
     defaultEvents.push({
       type: 'parameter_change',
       id: 'inm_contract_apical',
-      name: 'INM: Contract Apical',
+
       start: 0,
       end: 0,
       period: 0,
@@ -96,7 +96,7 @@ export function migrateV1_2_0toV1_3_0(params: EHTParams): EHTParams {
     defaultEvents.push({
       type: 'parameter_change',
       id: 'inm_extend_basal',
-      name: 'INM: Extend Basal',
+
       start: 0,
       end: 0,
       period: 0,

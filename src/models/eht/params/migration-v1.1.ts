@@ -35,7 +35,7 @@ export function convertLegacyEventsToV2(
     const loseApical: SpecialEvent = {
       type: 'special',
       id: 'lose_apical',
-      name: 'Lose Apical Adhesion',
+
       start: events.time_A_start,
       end: events.time_A_end,
       period: 0,
@@ -52,7 +52,7 @@ export function convertLegacyEventsToV2(
     const loseBasal: SpecialEvent = {
       type: 'special',
       id: 'lose_basal',
-      name: 'Lose Basal Adhesion',
+
       start: events.time_B_start,
       end: events.time_B_end,
       period: 0,
@@ -69,7 +69,7 @@ export function convertLegacyEventsToV2(
     const loseStraightness: ParameterChangeEvent = {
       type: 'parameter_change',
       id: 'lose_straightness',
-      name: 'Lose Straightness',
+
       start: events.time_S_start,
       end: events.time_S_end,
       period: 0,
@@ -87,7 +87,7 @@ export function convertLegacyEventsToV2(
     const startRunning: SpecialEvent = {
       type: 'special',
       id: 'start_running',
-      name: 'Start Running',
+
       start: events.time_P_start,
       end: events.time_P_end,
       period: 0,
@@ -104,7 +104,7 @@ export function convertLegacyEventsToV2(
     const loseApicalInterface: SpecialEvent = {
       type: 'special',
       id: 'lose_apical_interface',
-      name: 'Lose Apical Interface',
+
       start: events.time_AC_start,
       end: events.time_AC_end,
       period: 0,

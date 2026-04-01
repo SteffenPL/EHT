@@ -29,6 +29,8 @@ function migrateEvents(events: EventDefinition[]): void {
       event.start = 0;
       event.end = -1;
     }
+    // Remove deprecated name field
+    delete (event as any).name;
     // Rename apical_constriction → lose_apical_interface
     if (event.type === 'special') {
       const special = event as SpecialEvent;
@@ -36,9 +38,6 @@ function migrateEvents(events: EventDefinition[]): void {
         special.special_name = 'lose_apical_interface';
         if (special.id === 'apical_constriction') {
           special.id = 'lose_apical_interface';
-        }
-        if (special.name === 'Apical Constriction') {
-          special.name = 'Lose Apical Interface';
         }
       }
     }

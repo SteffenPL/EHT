@@ -33,10 +33,8 @@ export type SpecialEventName =
 
 /** Base properties shared by all event types */
 export interface BaseEventDefinition {
-  /** Unique identifier (used for prerequisites) */
+  /** Unique identifier (used for prerequisites and display) */
   id: string;
-  /** Human-readable display name */
-  name: string;
   /** Earliest time event can occur */
   start: number;
   /** Latest time event can occur */

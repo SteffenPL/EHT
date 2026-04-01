@@ -22,7 +22,6 @@ const DEFAULT_GLOBAL_EVENTS: EventDefinition[] = [
   {
     type: 'special',
     id: 'default_cell_division',
-    name: 'Cell Division',
     start: 0,
     end: Infinity,
     period: 0,
@@ -34,7 +33,6 @@ const DEFAULT_GLOBAL_EVENTS: EventDefinition[] = [
   {
     type: 'special',
     id: 'default_cell_cycle_reset',
-    name: 'Cell Cycle Reset',
     start: 0,
     end: Infinity,
     period: 0,
@@ -46,7 +44,6 @@ const DEFAULT_GLOBAL_EVENTS: EventDefinition[] = [
   {
     type: 'parameter_change',
     id: 'default_stiffness_apical_apical_g2',
-    name: 'Apical Stiffness (G2)',
     start: 0,
     end: Infinity,
     period: 0,
@@ -59,7 +56,6 @@ const DEFAULT_GLOBAL_EVENTS: EventDefinition[] = [
   {
     type: 'parameter_change',
     id: 'default_R_hard_mitosis',
-    name: 'R_hard (Mitosis)',
     start: 0,
     end: Infinity,
     period: 0,
@@ -72,7 +68,6 @@ const DEFAULT_GLOBAL_EVENTS: EventDefinition[] = [
   {
     type: 'parameter_change',
     id: 'inm_contract_apical',
-    name: 'INM: Contract Apical',
     start: 0,
     end: Infinity,
     period: 0,
@@ -85,7 +80,6 @@ const DEFAULT_GLOBAL_EVENTS: EventDefinition[] = [
   {
     type: 'parameter_change',
     id: 'inm_extend_basal',
-    name: 'INM: Extend Basal',
     start: 0,
     end: Infinity,
     period: 0,
@@ -105,7 +99,6 @@ const DEFAULT_EMT_EVENTS_V2: EventDefinition[] = [
   {
     type: 'special',
     id: 'lose_apical',
-    name: 'Lose Apical Adhesion',
     start: 3,
     end: Infinity,
     period: 0,
@@ -117,7 +110,6 @@ const DEFAULT_EMT_EVENTS_V2: EventDefinition[] = [
   {
     type: 'special',
     id: 'lose_basal',
-    name: 'Lose Basal Adhesion',
     start: 3,
     end: Infinity,
     period: 0,
@@ -417,7 +409,6 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
   cell_division: {
     type: 'special',
     id: 'default_cell_division',
-    name: 'Cell Division',
     start: 0,
     end: Infinity,
     period: 0,
@@ -429,7 +420,6 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
   cell_cycle_reset: {
     type: 'special',
     id: 'default_cell_cycle_reset',
-    name: 'Cell Cycle Reset',
     start: 0,
     end: Infinity,
     period: 0,
@@ -441,7 +431,6 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
   change_apical_strain: {
     type: 'parameter_change',
     id: 'default_change_apical_strain',
-    name: 'Change Apical Strain',
     start: 0,
     end: Infinity,
     period: 0,
@@ -454,7 +443,6 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
   change_basal_strain: {
     type: 'parameter_change',
     id: 'default_change_basal_strain',
-    name: 'Change Basal Strain',
     start: 0,
     end: Infinity,
     period: 0,
@@ -467,7 +455,6 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
   stiffness_apical_apical_g2: {
     type: 'parameter_change',
     id: 'default_stiffness_apical_apical_g2',
-    name: 'Apical Stiffness (G2)',
     start: 0,
     end: Infinity,
     period: 0,
@@ -480,7 +467,6 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
   R_hard_mitosis: {
     type: 'parameter_change',
     id: 'default_R_hard_mitosis',
-    name: 'R_hard (Mitosis)',
     start: 0,
     end: Infinity,
     period: 0,
@@ -493,7 +479,6 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
   inm_contract_apical: {
     type: 'parameter_change',
     id: 'inm_contract_apical',
-    name: 'INM: Contract Apical',
     start: 0,
     end: Infinity,
     period: 0,
@@ -506,7 +491,6 @@ export const DEFAULT_EVENT_PRESETS: Record<string, EventDefinition> = {
   inm_extend_basal: {
     type: 'parameter_change',
     id: 'inm_extend_basal',
-    name: 'INM: Extend Basal',
     start: 0,
     end: Infinity,
     period: 0,
