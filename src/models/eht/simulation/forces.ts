@@ -208,6 +208,11 @@ const VECTOR_VAR_REGEX = /\bT\b|\bN\b/;
 /** Cache of formulas that failed to evaluate — only warn once per formula */
 const failedFormulas = new Map<string, string>();
 
+/** Get the parsing error for a given external_force formula, or undefined if valid. */
+export function getExternalForceError(formula: string): string | undefined {
+  return failedFormulas.get(formula);
+}
+
 /**
  * Build the scope for external force formula evaluation.
  * Kept as a named function for easy extension with additional variables.
@@ -275,12 +280,21 @@ export function calcExternalForces(
       ? formula
       : `-(${formula}) * sign(alpha) * T`;
 
+    // Skip formulas already known to be invalid — use NaN force
+    if (failedFormulas.has(formula)) {
+      forces[i].f = new Vector2(NaN, NaN);
+      continue;
+    }
+
     try {
       const result = evaluate(effectiveFormula, scope);
       const force = resultToVector2(result);
       forces[i].f = forces[i].f.add(force);
     } catch (error) {
-      console.warn(`[ExternalForce] Failed to evaluate formula "${formula}":`, error);
+      const msg = error instanceof Error ? error.message : String(error);
+      failedFormulas.set(formula, msg);
+      console.warn(`[ExternalForce] Invalid formula "${formula}": ${msg}`);
+      forces[i].f = new Vector2(NaN, NaN);
     }
   }
 }

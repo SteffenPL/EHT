@@ -5,6 +5,7 @@ import { useState, useCallback } from 'react';
 import type { ModelUITabProps } from '@/core/registry';
 import type { EHTParams, EHTCellTypeParams } from '../params/types';
 import { DEFAULT_CONTROL_CELL } from '../params/defaults';
+import { getExternalForceError } from '../simulation/forces';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -642,14 +643,26 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
             ))}
           </CellTypeRow>
           <CellTypeRow label="External Force" description={desc('external_force')}>
-            {cellTypeKeys.map((key) => (
-              <StringCell
-                key={key}
-                value={getCellType(key).external_force}
-                onChange={(v) => updateCellType(key, 'external_force', v)}
-                disabled={disabled}
-              />
-            ))}
+            {cellTypeKeys.map((key) => {
+              const formula = getCellType(key).external_force;
+              const error = getExternalForceError(formula);
+              return (
+                <td key={key} className="py-1 px-1">
+                  <Input
+                    type="text"
+                    value={formula}
+                    onChange={(e) => updateCellType(key, 'external_force', e.target.value)}
+                    disabled={disabled}
+                    className={`h-6 text-xs font-mono ${error ? 'border-destructive' : ''}`}
+                  />
+                  {error && (
+                    <div className="text-[10px] text-destructive mt-0.5 truncate" title={error}>
+                      {error}
+                    </div>
+                  )}
+                </td>
+              );
+            })}
           </CellTypeRow>
 
           {/* Cytoskeleton Strain */}

@@ -127,7 +127,7 @@ describe('calcExternalForces', () => {
     expect(forces[0].f.y).toBeCloseTo(0, 5);
   });
 
-  it('handles invalid formula gracefully (zero force + warning)', () => {
+  it('handles invalid formula gracefully (NaN force + warning)', () => {
     const params = createDefaultEHTParams();
     params.cell_types.control.external_force = 'invalid_func()';
 
@@ -138,8 +138,8 @@ describe('calcExternalForces', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     calcExternalForces(state, params, forces);
 
-    expect(forces[0].f.x).toBe(0);
-    expect(forces[0].f.y).toBe(0);
+    expect(forces[0].f.x).toBeNaN();
+    expect(forces[0].f.y).toBeNaN();
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
   });
