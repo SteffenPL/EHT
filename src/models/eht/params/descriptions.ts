@@ -99,15 +99,17 @@ $$d\\mathbf{x} = \\sqrt{2D}\\, d\\mathbf{W}$$`,
 - \`alpha\`: Polar angle ($0$ at bottom, $\\pm\\pi$ at top)
 - \`r\`: Distance from geometry center
 - \`t\`: Simulation time (hours)
-- \`T\`: Unit tangent vector (counter-clockwise)
-- \`N\`: Unit outward normal vector (away from center)
+- \`N\`: Unit inward normal from basal geometry (into tissue, toward center). Computed from the basal curve at the cell's projected position. Points in the same direction as \`delta\`.
+- \`T\`: Unit tangent vector, perpendicular to \`N\` (counter-clockwise: $T = (-N_y, N_x)$).
+- \`delta\`: Signed distance from basal curve ($\\langle \\mathbf{N}, \\mathbf{X} - \\mathbf{a} \\rangle$ where $\\mathbf{N}$ is the inward normal, $\\mathbf{a}$ the projection onto the curve). Positive above, zero on, negative below the basal line. $\\mathbf{N} \\approx \\nabla \\delta$.
 
 **Auto-wrapping:** If the formula does not contain \`T\` or \`N\`, it is treated as a scalar and wrapped as \`-(scalar) * sign(alpha) * T\`, producing tangential flow converging at the bottom ($\\alpha = 0$).
 
 **Examples:**
 - \`10\` → magnitude-10 tangential flow toward bottom
 - \`5 * T + 3 * N\` → tangential + radial force (used as-is)
-- \`10 * sin(t)\` → time-varying tangential flow`,
+- \`10 * sin(t)\` → time-varying tangential flow
+- \`delta * N\` → push cells away from basal surface proportional to distance`,
 
   // === Running Behavior ===
   'cell_types.run': `Probability that an extruded cell becomes a "running" cell (migrating along the basal membrane). Value between 0 and 1.`,

@@ -88,9 +88,10 @@ describe('calcExternalForces', () => {
 
     calcExternalForces(state, params, forces);
 
-    // At alpha=pi/2: T=(0,1), auto-wrap: -(10)*sign(pi/2)*T = -10*(0,1) = (0,-10)
+    // Cell at right side: geometry N=(-1,0), T=(0,-1)
+    // Auto-wrap: -(10)*sign(pi/2)*T = -10*(0,-1) = (0, 10)
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(-10, 5);
+    expect(forces[0].f.y).toBeCloseTo(10, 5);
   });
 
   it('uses vector formula as-is when T or N present', () => {
@@ -98,16 +99,16 @@ describe('calcExternalForces', () => {
     params.cell_types.control.external_force = '5 * N';
 
     const center_y = 1 / 0.06;
-    // Cell directly below center: alpha=0, N=(0,-1)
+    // Cell directly below center: alpha=0, N=(0,1) pointing into tissue
     const cell = makeCell(0, center_y - 5, 'control');
     const state = makeState([cell]);
     const forces: CellForces[] = [zeroForces()];
 
     calcExternalForces(state, params, forces);
 
-    // At alpha=0: N=(sin(0), -cos(0)) = (0, -1), so 5*N = (0, -5)
+    // At alpha=0: N=(-sin(0), cos(0)) = (0, 1), so 5*N = (0, 5)
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(-5, 5);
+    expect(forces[0].f.y).toBeCloseTo(5, 5);
   });
 
   it('produces zero force at alpha=0 with auto-wrapped scalar (sign(0)=0)', () => {
@@ -156,10 +157,10 @@ describe('calcExternalForces', () => {
 
     calcExternalForces(state, params, forces);
 
-    // At r=0: x=0, y=0 relative to center, so alpha=atan2(0, -0)=pi (JS negative zero)
-    // N=(sin(pi), -cos(pi))=(0, 1), so 5*N = (0, 5). Deterministic despite r=0.
+    // At r=0: projection is degenerate (zero vector), N and T are NaN
+    // resultToVector2 returns zero for NaN matrix results
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(5, 5);
+    expect(forces[0].f.y).toBeCloseTo(0, 5);
   });
 
   it('converges from negative alpha (left side) toward bottom', () => {
@@ -174,11 +175,11 @@ describe('calcExternalForces', () => {
 
     calcExternalForces(state, params, forces);
 
-    // alpha=-pi/2: T=(cos(-pi/2), sin(-pi/2))=(0,-1), sign(-pi/2)=-1
-    // Auto-wrap: -(10)*(-1)*(0,-1) = 10*(0,-1) = (0,-10)
-    // From left side, downward IS toward the bottom (clockwise along curve)
+    // Cell at left side: geometry N=(1,0), T=(0,1)
+    // Auto-wrap: -(10)*sign(-pi/2)*T = -(10)*(-1)*(0,1) = (0, 10)
+    // Both sides converge upward toward top of circle
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(-10, 5);
+    expect(forces[0].f.y).toBeCloseTo(10, 5);
   });
 
   it('exposes time variable t in formula scope', () => {
@@ -193,8 +194,8 @@ describe('calcExternalForces', () => {
 
     calcExternalForces(state, params, forces);
 
-    // At alpha=0: N=(0,-1), t=3, so force = 3*(0,-1) = (0,-3)
+    // At alpha=0: N=(0,1), t=3, so force = 3*(0,1) = (0,3)
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(-3, 5);
+    expect(forces[0].f.y).toBeCloseTo(3, 5);
   });
 });

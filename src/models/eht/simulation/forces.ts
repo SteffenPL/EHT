@@ -222,11 +222,14 @@ function buildExternalForceScope(
   y: number,
   alpha: number,
   r: number,
-  t: number
+  t: number,
+  delta: number,
+  nGeom: Vector2
 ): Record<string, unknown> {
-  const T = matrix([Math.cos(alpha), Math.sin(alpha)]);
-  const N = matrix([Math.sin(alpha), -Math.cos(alpha)]);
-  return { x, y, alpha, r, t, T, N };
+  // N from geometry normal (into tissue, toward center); T perpendicular (CCW)
+  const N = matrix([nGeom.x, nGeom.y]);
+  const T = matrix([-nGeom.y, nGeom.x]);
+  return { x, y, alpha, r, t, T, N, delta };
 }
 
 /**
@@ -272,8 +275,18 @@ export function calcExternalForces(
     const alpha = Math.atan2(x, -y);
     const r = Math.sqrt(x * x + y * y);
 
+    // Signed distance from basal curve: delta = <N, X - a>
+    // where N = outward normal (into tissue), a = projection of X onto geometry
+    // delta > 0 above basal line, delta = 0 on it, delta < 0 below
+    const posVec = new Vector2(ci.pos.x, ci.pos.y);
+    const a = state.basalGeometry.projectPoint(posVec);
+    const nGeom = state.basalGeometry.getNormal(a);
+    const dx = ci.pos.x - a.x;
+    const dy = ci.pos.y - a.y;
+    const delta = nGeom.x * dx + nGeom.y * dy;
+
     // Build scope
-    const scope = buildExternalForceScope(x, y, alpha, r, state.t);
+    const scope = buildExternalForceScope(x, y, alpha, r, state.t, delta, nGeom);
 
     // Determine effective formula: auto-wrap scalars
     const effectiveFormula = VECTOR_VAR_REGEX.test(formula)
