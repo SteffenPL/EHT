@@ -1,8 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { processGlobalEvents } from './global-events';
+import { performTimestep } from './step';
+import { initializeEHTSimulation } from './init';
+import { createInitialEHTState } from '../types';
 import type { EHTParams } from '../params/types';
 import { StraightLineGeometry } from '@/core/math/basal-geometry';
 import { DEFAULT_EHT_PARAMS } from '../params/defaults';
+import { computeEllipseFromPerimeter } from '../params/geometry';
+import { SeededRandom } from '@/core/math/random';
+import { Vector2 } from '@/core/math/vector2';
 import type { EHTSimulationState } from '../types';
 
 function makeTestState(t: number, params?: EHTParams): EHTSimulationState {
@@ -126,5 +132,56 @@ describe('processGlobalEvents', () => {
     }];
     processGlobalEvents(state, 0.1);
     expect(state.params!.general.aspect_ratio).toBe(0.5);
+  });
+});
+
+describe('integration: geometry change during simulation', () => {
+  it('shrinks perimeter mid-simulation via global event', () => {
+    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    params.general.global_events = [{
+      id: 'shrink_at_t2',
+      start: 1.5,
+      end: 2.5,
+      period: 0,
+      target_parameter: 'general.perimeter',
+      formula: 'old_value * 0.8',
+    }];
+
+    // Initialize
+    const state = createInitialEHTState();
+    const rng = new SeededRandom('test');
+    initializeEHTSimulation(params, state, rng);
+
+    const originalPerimeter = state.params!.general.perimeter;
+    const originalGeom = computeEllipseFromPerimeter(
+      originalPerimeter, params.general.aspect_ratio
+    );
+
+    // Step before event window — perimeter unchanged
+    state.t = 1.0;
+    performTimestep(state, params, new SeededRandom('step_1'));
+    expect(state.params!.general.perimeter).toBe(originalPerimeter);
+    expect(state.geometry!.curvature_1).toBeCloseTo(originalGeom.curvature_1, 6);
+
+    // Step into event window — event fires
+    state.t = 2.0;
+    performTimestep(state, params, new SeededRandom('step_2'));
+
+    // Perimeter should have changed
+    expect(state.params!.general.perimeter).toBeCloseTo(originalPerimeter * 0.8);
+
+    // Geometry should have been rebuilt with new curvatures
+    const expectedGeom = computeEllipseFromPerimeter(
+      originalPerimeter * 0.8, params.general.aspect_ratio
+    );
+    expect(state.geometry!.curvature_1).toBeCloseTo(expectedGeom.curvature_1, 6);
+
+    // All basal points should be on the new curve
+    for (const cell of state.cells) {
+      const B = new Vector2(cell.B.x, cell.B.y);
+      const projected = state.basalGeometry.projectPoint(B);
+      expect(cell.B.x).toBeCloseTo(projected.x, 4);
+      expect(cell.B.y).toBeCloseTo(projected.y, 4);
+    }
   });
 });
