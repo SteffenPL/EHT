@@ -58,6 +58,7 @@ function makeState(cells: CellState[], geometry: 'line' | 'circle' = 'circle'): 
     basalGeometry,
     geometry: { curvature_1: 0.06, curvature_2: 0.06 },
     rngSeed: 'test',
+    global_event_states: {},
   };
 }
 

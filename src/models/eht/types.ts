@@ -4,6 +4,7 @@
 
 import type { BasalGeometry } from '@/core/math';
 import { StraightLineGeometry } from '@/core/math';
+import type { EHTParams } from './params/types';
 
 /** Cell phase enum */
 export enum CellPhase {
@@ -122,6 +123,10 @@ export interface EHTSimulationState {
     basalGeometry: BasalGeometry; // Pre-computed basal curve geometry
     /** RNG seed for reproducibility (stored for deterministic replay) */
     rngSeed: string;
+    /** Simulation-local mutable copy of params (modified by global events) */
+    params?: EHTParams;
+    /** Tracking state for global events */
+    global_event_states: Record<string, { last_fired: number; fire_count: number }>;
 }
 
 /** Initial state for a new simulation */
@@ -134,5 +139,6 @@ export function createInitialEHTState(seed: string = 'default'): EHTSimulationSt
         step_count: 0,
         basalGeometry: new StraightLineGeometry(), // Placeholder, will be replaced during init
         rngSeed: seed,
+        global_event_states: {},
     };
 }

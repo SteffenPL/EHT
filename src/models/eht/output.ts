@@ -102,7 +102,8 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
             t: 0,
             step_count: 0,
             basalGeometry: createBasalGeometry(0, 0, 360),
-            rngSeed: String(params.general.random_seed)
+            rngSeed: String(params.general.random_seed),
+            global_event_states: {},
         };
     }
 
@@ -121,7 +122,8 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
         geometry: { curvature_1, curvature_2 },
         basalGeometry: createBasalGeometry(curvature_1, curvature_2, 360),
         // Use seed from params since it's not saved in CSV (would require schema change)
-        rngSeed: String(params.general.random_seed)
+        rngSeed: String(params.general.random_seed),
+        global_event_states: {},
     };
 
     // Map from cell ID to array index

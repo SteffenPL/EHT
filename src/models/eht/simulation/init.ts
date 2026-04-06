@@ -21,6 +21,9 @@ export function initializeEHTSimulation(
 ): void {
   const pg = params.general;
 
+  // Store a mutable simulation-local copy of params
+  state.params = structuredClone(params);
+
   // Compute and store geometry from perimeter/aspect_ratio
   const geometry = computeEllipseFromPerimeter(pg.perimeter, pg.aspect_ratio);
   state.geometry = {

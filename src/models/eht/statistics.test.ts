@@ -65,6 +65,7 @@ function createTestState(cellTypes: string[]): EHTSimulationState {
     },
     basalGeometry: new StraightLineGeometry(),
     rngSeed: 'test-seed',
+    global_event_states: {},
   };
 }
 
@@ -357,6 +358,7 @@ describe('EHT Statistics - x position calculation', () => {
       geometry: { curvature_1: 0, curvature_2: 0 },
       basalGeometry: new StraightLineGeometry(),
       rngSeed: 'test-seed',
+    global_event_states: {},
     };
 
     const params = createTestParams(['control']);
@@ -422,6 +424,7 @@ describe('EHT Statistics - x position calculation', () => {
       geometry: { curvature_1: 0, curvature_2: 0 },
       basalGeometry: new StraightLineGeometry(),
       rngSeed: 'test-seed',
+    global_event_states: {},
     };
 
     const params = createTestParams(['control']);
@@ -498,6 +501,7 @@ describe('EHT Statistics - x position calculation', () => {
       geometry: { curvature_1: 0, curvature_2: 0 },
       basalGeometry: new StraightLineGeometry(),
       rngSeed: 'test-seed',
+    global_event_states: {},
     };
 
     const params = createTestParams(['control']);
@@ -564,6 +568,7 @@ describe('EHT Statistics - x position calculation', () => {
       geometry: { curvature_1: 0, curvature_2: 0 },
       basalGeometry: new StraightLineGeometry(),
       rngSeed: 'test-seed',
+    global_event_states: {},
     };
 
     const params = createTestParams(['control']);
@@ -635,6 +640,7 @@ describe('EHT Statistics - Batch state reconstruction', () => {
       geometry: { curvature_1: 0, curvature_2: 0 },
       basalGeometry: new StraightLineGeometry(),
       rngSeed: 'test-seed',
+    global_event_states: {},
     };
 
     const params = createTestParams(['control']);
@@ -732,6 +738,7 @@ describe('EHT Statistics - Batch state reconstruction', () => {
       geometry: { curvature_1: curvature, curvature_2: curvature },
       basalGeometry: circularGeometry,
       rngSeed: 'test-seed',
+    global_event_states: {},
     };
 
     const params = createTestParams(['control']);
