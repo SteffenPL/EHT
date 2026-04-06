@@ -1,26 +1,40 @@
 import { describe, it, expect } from 'vitest';
 import { rebuildGeometryIfNeeded } from './rebuild-geometry';
-import type { EHTSimulationState } from '../types';
+import type { EHTSimulationState, CellState } from '../types';
+import { CellPhase } from '../types';
 import type { EHTParams } from '../params/types';
 import { createBasalGeometry } from '@/core/math';
 import { DEFAULT_EHT_PARAMS } from '../params/defaults';
 import { computeEllipseFromPerimeter } from '../params/geometry';
 
-function makeCell(x: number, y: number) {
+function makeCell(x: number, y: number): CellState {
   return {
     id: 0,
     typeIndex: 'control',
     pos: { x, y: y + 1 },
     A: { x, y: y + 2 },
     B: { x, y },
-    vel: { x: 0, y: 0 },
-    age: 0,
-    t_birth: 0,
+    R_hard: 0.4,
+    R_soft: 1.2,
+    eta_A: 1,
+    eta_B: 1,
     has_A: true,
     has_B: true,
-    has_divided: false,
-    running: false,
-    apical_constriction: false,
+    apical_cytos_strain: 0,
+    basal_cytos_strain: 0,
+    phase: CellPhase.G1,
+    birth_time: 0,
+    division_time: 10,
+    is_running: false,
+    running_mode: 0,
+    has_inm: false,
+    time_A: Infinity,
+    time_B: Infinity,
+    time_S: Infinity,
+    time_P: Infinity,
+    time_AC: Infinity,
+    stiffness_apical_apical: 2,
+    stiffness_straightness: 5,
     stiffness_nuclei_apical: 1,
     stiffness_nuclei_basal: 1,
     k_apical_junction: 1,

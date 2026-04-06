@@ -11,6 +11,8 @@ import { getCellType, updateCellPhase } from './cell';
 import { calcAllForces, CellForces } from './forces';
 import { applyAllConstraints } from './constraints';
 import { processAllEvents } from './events';
+import { processGlobalEvents } from './global-events';
+import { rebuildGeometryIfNeeded } from './rebuild-geometry';
 
 /**
  * Update cytoskeleton rest lengths (eta_A, eta_B).
@@ -160,6 +162,12 @@ export function performTimestep(
 ): void {
     const pg = params.general;
     const fullDt = pg.dt;
+
+    // Process global events (may mutate state.params)
+    processGlobalEvents(state, fullDt);
+
+    // Rebuild geometry if global events changed perimeter/aspect_ratio
+    rebuildGeometryIfNeeded(state);
 
     // Update cell phases
     for (const cell of state.cells) {
