@@ -6,17 +6,10 @@ import { Vector2 } from './vector2';
 
 /**
  * Get the center of curvature for the basal membrane.
- * For curvature_1 = curvature_2 = 0, returns origin.
- * For non-zero curvatures, center is at y = 1/curvature_2.
+ * Always returns origin (0,0) — geometry is centered at origin.
  */
-export function shapeCenter(curvature_1: number, curvature_2: number): Vector2 {
-  if (curvature_1 === 0 && curvature_2 === 0) {
-    return new Vector2(0, 0);
-  }
-  if (curvature_2 === 0) {
-    return new Vector2(0, 0);
-  }
-  return new Vector2(0, 1 / curvature_2);
+export function shapeCenter(_curvature_1: number, _curvature_2: number): Vector2 {
+  return new Vector2(0, 0);
 }
 
 /**

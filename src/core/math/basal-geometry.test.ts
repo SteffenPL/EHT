@@ -20,6 +20,20 @@ import {
 import { Vector2 } from './vector2';
 import { assertClose } from '@/test/helpers';
 
+describe('center-at-origin', () => {
+  it('CircularGeometry center is at (0,0)', () => {
+    const geom = new CircularGeometry(0.06, 0.06);
+    expect(geom.center.x).toBeCloseTo(0);
+    expect(geom.center.y).toBeCloseTo(0);
+  });
+
+  it('EllipticalGeometry center is at (0,0)', () => {
+    const geom = new EllipticalGeometry(0.05, 0.1);
+    expect(geom.center.x).toBeCloseTo(0);
+    expect(geom.center.y).toBeCloseTo(0);
+  });
+});
+
 describe('createBasalGeometry Factory', () => {
   it('should create StraightLineGeometry for zero curvature', () => {
     const geom = createBasalGeometry(0, 0);

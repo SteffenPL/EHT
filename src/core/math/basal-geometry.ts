@@ -106,7 +106,7 @@ export class CircularGeometry extends BasalGeometry {
     this.radius = Math.abs(1 / curvature_1);
     this.perimeter = 2 * Math.PI * this.radius;
     this.dir = -Math.sign(curvature_2);
-    this.center = new Vector2(0, 1 / curvature_2);
+    this.center = new Vector2(0, 0);
   }
 
   projectPoint(pos: Vector2): Vector2 {
@@ -171,7 +171,7 @@ export class EllipticalGeometry extends BasalGeometry {
     this.a = Math.abs(1 / curvature_1);
     this.b = Math.abs(1 / curvature_2);
     this.dir = -Math.sign(curvature_2);
-    this.center = new Vector2(0, 1 / curvature_2);
+    this.center = new Vector2(0, 0);
     this.numPoints = numPoints;
 
     // Pre-compute discretized curve

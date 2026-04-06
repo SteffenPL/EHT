@@ -310,23 +310,23 @@ describe('shapeCenter', () => {
     expect(center.y).toBe(0);
   });
 
-  it('should compute center for circle', () => {
+  it('should return origin for circle', () => {
     const radius = 5;
     const curvature = 1 / radius;
     const center = shapeCenter(curvature, curvature);
 
     expect(center.x).toBe(0);
-    expect(center.y).toBe(radius);
+    expect(center.y).toBe(0);
   });
 
-  it('should compute center for ellipse', () => {
+  it('should return origin for ellipse', () => {
     const a = 10, b = 5;
     const curvature_1 = 1 / a;
     const curvature_2 = 1 / b;
     const center = shapeCenter(curvature_1, curvature_2);
 
     expect(center.x).toBe(0);
-    expect(center.y).toBe(b);
+    expect(center.y).toBe(0);
   });
 });
 

@@ -80,9 +80,8 @@ describe('calcExternalForces', () => {
     const params = createDefaultEHTParams();
     params.cell_types.control.external_force = '10';
 
-    // Cell at alpha = pi/2 (right side of circle, center at (0, 1/0.06))
-    const center_y = 1 / 0.06; // ~16.67
-    const cell = makeCell(5, center_y, 'control'); // x=5, y=center → alpha=pi/2
+    // Cell at alpha = pi/2 (right side of circle, center at origin)
+    const cell = makeCell(5, 0, 'control'); // x=5, y=0 → alpha=pi/2
     const state = makeState([cell]);
     const forces: CellForces[] = [zeroForces()];
 
@@ -98,9 +97,8 @@ describe('calcExternalForces', () => {
     const params = createDefaultEHTParams();
     params.cell_types.control.external_force = '5 * N';
 
-    const center_y = 1 / 0.06;
     // Cell directly below center: alpha=0, N=(0,1) pointing into tissue
-    const cell = makeCell(0, center_y - 5, 'control');
+    const cell = makeCell(0, -5, 'control');
     const state = makeState([cell]);
     const forces: CellForces[] = [zeroForces()];
 
@@ -115,9 +113,8 @@ describe('calcExternalForces', () => {
     const params = createDefaultEHTParams();
     params.cell_types.control.external_force = '10';
 
-    const center_y = 1 / 0.06;
     // Cell directly below center: alpha=0
-    const cell = makeCell(0, center_y - 5, 'control');
+    const cell = makeCell(0, -5, 'control');
     const state = makeState([cell]);
     const forces: CellForces[] = [zeroForces()];
 
@@ -149,9 +146,8 @@ describe('calcExternalForces', () => {
     const params = createDefaultEHTParams();
     params.cell_types.control.external_force = '5 * N';
 
-    const center_y = 1 / 0.06;
-    // Cell exactly at geometry center: r=0, alpha=atan2(0,0)=0
-    const cell = makeCell(0, center_y, 'control');
+    // Cell exactly at geometry center (origin): r=0, alpha=atan2(0,0)=0
+    const cell = makeCell(0, 0, 'control');
     const state = makeState([cell]);
     const forces: CellForces[] = [zeroForces()];
 
@@ -167,9 +163,8 @@ describe('calcExternalForces', () => {
     const params = createDefaultEHTParams();
     params.cell_types.control.external_force = '10';
 
-    const center_y = 1 / 0.06;
-    // Cell at alpha = -pi/2 (left side): x=-5, y=center
-    const cell = makeCell(-5, center_y, 'control');
+    // Cell at alpha = -pi/2 (left side): x=-5, y=0
+    const cell = makeCell(-5, 0, 'control');
     const state = makeState([cell]);
     const forces: CellForces[] = [zeroForces()];
 
@@ -186,8 +181,7 @@ describe('calcExternalForces', () => {
     const params = createDefaultEHTParams();
     params.cell_types.control.external_force = 't * N';
 
-    const center_y = 1 / 0.06;
-    const cell = makeCell(0, center_y - 5, 'control');
+    const cell = makeCell(0, -5, 'control');
     const state = makeState([cell]);
     state.t = 3.0;
     const forces: CellForces[] = [zeroForces()];
