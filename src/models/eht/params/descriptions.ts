@@ -143,6 +143,14 @@ Formula: $drl \\times (1 + \\text{strain})$`,
 
   'general.default_events': `Default events applied to all cell types. Each cell type can opt out of specific events using \`skip_default_events\`.`,
 
+  'general.global_events': `Global events that modify simulation parameters (e.g., geometry) during the simulation run.`,
+  'global_events.id': `Unique identifier for the global event.`,
+  'global_events.start': `Earliest simulation time the event can trigger.`,
+  'global_events.end': `Latest simulation time the event can trigger.`,
+  'global_events.period': `Repeat interval in simulation time units. Use 0 for one-time events.`,
+  'global_events.target_parameter': `Dot-notation path to the parameter to modify (e.g., $\\texttt{general.perimeter}$).`,
+  'global_events.formula': `math.js formula to compute the new value. Available variables: $\\texttt{old\\_value}$ (current value), $\\texttt{t}$ (current time), $\\texttt{dt}$ (timestep).`,
+
   // === Event System (v1.1.0) ===
   'events.formula': `A **math.js** expression to compute the new parameter value. Available variables:
 

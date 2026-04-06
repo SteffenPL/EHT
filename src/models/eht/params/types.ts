@@ -69,6 +69,26 @@ export interface SpecialEvent extends BaseEventDefinition {
 export type EventDefinition = ParameterChangeEvent | SpecialEvent;
 
 // =============================================================================
+// Global Event System
+// =============================================================================
+
+/** Global event - updates a global parameter using a math.js formula */
+export interface GlobalEvent {
+  /** Unique identifier */
+  id: string;
+  /** Earliest trigger time */
+  start: number;
+  /** Latest trigger time */
+  end: number;
+  /** Repeat interval (0 = one-time, 'dt' = every timestep) */
+  period: number | 'dt';
+  /** Target parameter path in dot-notation (e.g., 'general.perimeter') */
+  target_parameter: string;
+  /** math.js formula. Variables: old_value, t, dt */
+  formula: string;
+}
+
+// =============================================================================
 // Legacy Event System (v1.0.0 - kept for backwards compatibility)
 // =============================================================================
 
@@ -146,6 +166,7 @@ export interface EHTGeneralParams {
   aspect_ratio: number;     // Shape: 0=line, >0=curve above, <0=curve below; |aspect|=b/a
   hard_sphere_nuclei: boolean; // If true, use R_hard instead of R_soft for nuclei spring rest length
   default_events: EventDefinition[]; // Default events applied to all cell types (v1.2.0)
+  global_events: GlobalEvent[]; // Global events that modify simulation parameters mid-run
 }
 
 /** Cell property parameters (legacy - kept empty for backwards compatibility) */

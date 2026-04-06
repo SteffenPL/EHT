@@ -247,6 +247,7 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     aspect_ratio: 1,   // Circle
     hard_sphere_nuclei: true,
     default_events: DEFAULT_GLOBAL_EVENTS,
+    global_events: [],
   },
   cell_prop: {
     // All properties moved to per-cell-type in cell_types
