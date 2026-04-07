@@ -8,6 +8,7 @@ import { createBasalGeometry } from '@/core/math';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams, GlobalEvent, ParameterChangeEvent } from '../params/types';
 import { CellCyclePhase } from '../params/types';
+import { evaluate } from 'mathjs';
 import { computeEllipseFromPerimeter, ramanujanPerimeter } from '../params/geometry';
 import { createCell, type CreateCellInput } from './cell';
 
@@ -16,6 +17,9 @@ import { createCell, type CreateCellInput } from './cell';
  * Global formulas → GlobalEvent with period:'dt' appended to global_events.
  * Per-cell formulas → ParameterChangeEvent with period:'dt' appended to events_v2.
  * Mutates the params object in place.
+ *
+ * Also evaluates each formula at t=0 to set the initial param value,
+ * so that init (geometry, cell positions) uses the formula's t=0 value.
  */
 export function generateFormulaEvents(params: EHTParams): void {
   // Generate global events from general.formulas
@@ -33,6 +37,14 @@ export function generateFormulaEvents(params: EHTParams): void {
       init_value: initValue,
     };
     params.general.global_events.push(event);
+
+    // Evaluate at t=0 so init uses the formula's initial value
+    try {
+      const t0Value = evaluate(formula, { old_value: initValue, init_value: initValue, t: 0, dt: 0 });
+      if (typeof t0Value === 'number' && isFinite(t0Value)) {
+        (params.general as unknown as Record<string, unknown>)[fieldName] = t0Value;
+      }
+    } catch { /* keep original value on error */ }
   }
 
   // Generate per-cell events from cell_types.*.formulas
@@ -61,6 +73,14 @@ export function generateFormulaEvents(params: EHTParams): void {
         init_value: initValue,
       };
       cellType.events_v2.push(event);
+
+      // Evaluate at t=0 so init uses the formula's initial value
+      try {
+        const t0Value = evaluate(formula, { old_value: initValue, init_value: initValue, t: 0, dt: 0 });
+        if (typeof t0Value === 'number' && isFinite(t0Value)) {
+          (cellType as unknown as Record<string, unknown>)[fieldName] = t0Value;
+        }
+      } catch { /* keep original value on error */ }
     }
   }
 }

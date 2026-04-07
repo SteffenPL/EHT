@@ -54,6 +54,29 @@ describe('generateFormulaEvents', () => {
     expect(generated!.init_value).toBe(200);
   });
 
+  it('evaluates formula at t=0 to set initial param value', () => {
+    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    params.general.perimeter = 999; // preset value that should be overridden
+    params.general.formulas = { perimeter: '100 * (1 + t)' };
+    generateFormulaEvents(params);
+
+    // At t=0: 100 * (1 + 0) = 100, overrides the preset 999
+    expect(params.general.perimeter).toBe(100);
+    // init_value captures the original preset
+    const generated = params.general.global_events.find(e => e.id === '__formula_perimeter');
+    expect(generated!.init_value).toBe(999);
+  });
+
+  it('evaluates cell type formula at t=0 to set initial param value', () => {
+    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    params.cell_types.control.stiffness_nuclei_apical = 50;
+    params.cell_types.control.formulas = { stiffness_nuclei_apical: 'init_value * 0.1' };
+    generateFormulaEvents(params);
+
+    // At t=0: 50 * 0.1 = 5
+    expect(params.cell_types.control.stiffness_nuclei_apical).toBe(5);
+  });
+
   it('generates events for multiple formulas', () => {
     const params = structuredClone(DEFAULT_EHT_PARAMS);
     params.general.formulas = {
