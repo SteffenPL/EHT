@@ -20,7 +20,7 @@ import { createCell, type CreateCellInput } from './cell';
 export function generateFormulaEvents(params: EHTParams): void {
   // Generate global events from general.formulas
   for (const [fieldName, formula] of Object.entries(params.general.formulas)) {
-    const initValue = (params.general as Record<string, unknown>)[fieldName];
+    const initValue = (params.general as unknown as Record<string, unknown>)[fieldName];
     if (typeof initValue !== 'number') continue;
 
     const event: GlobalEvent = {
@@ -44,7 +44,7 @@ export function generateFormulaEvents(params: EHTParams): void {
     }
 
     for (const [fieldName, formula] of Object.entries(cellType.formulas)) {
-      const initValue = (cellType as Record<string, unknown>)[fieldName];
+      const initValue = (cellType as unknown as Record<string, unknown>)[fieldName];
       if (typeof initValue !== 'number') continue;
 
       const event: ParameterChangeEvent = {

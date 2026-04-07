@@ -5,7 +5,6 @@ import { createInitialEHTState } from '../types';
 import { DEFAULT_EHT_PARAMS } from '../params/defaults';
 import { computeEllipseFromPerimeter } from '../params/geometry';
 import { SeededRandom } from '@/core/math/random';
-import type { EHTParams } from '../params/types';
 
 describe('generateFormulaEvents', () => {
   it('does nothing when formulas maps are empty', () => {
@@ -104,8 +103,6 @@ describe('integration: formula-driven parameters', () => {
     const state = createInitialEHTState();
     const rng = new SeededRandom('test');
     initializeEHTSimulation(params, state, rng);
-
-    const initStiffness = params.cell_types.control.stiffness_nuclei_apical;
 
     // Run a timestep — formula fires and sets stiffness to 99
     performTimestep(state, params, new SeededRandom('step_1'));
