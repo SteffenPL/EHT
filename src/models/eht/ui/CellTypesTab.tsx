@@ -86,6 +86,69 @@ function NumberCell({ value, onChange, disabled, min, max }: NumberCellProps) {
   );
 }
 
+/** Table cell that shows either a number input or formula text input */
+function FormulaCell({
+  fieldName,
+  numericValue,
+  formulas,
+  onFormulaChange,
+  onFormulaClear,
+  onNumericChange,
+  disabled,
+  min,
+  max,
+}: {
+  fieldName: string;
+  numericValue: number;
+  formulas: Record<string, string>;
+  onFormulaChange: (field: string, formula: string) => void;
+  onFormulaClear: (field: string) => void;
+  onNumericChange: (value: number) => void;
+  disabled?: boolean;
+  min?: number;
+  max?: number;
+}) {
+  const formula = formulas[fieldName];
+  const isFormula = formula !== undefined && formula !== '';
+
+  return (
+    <td className="py-1 px-1">
+      <div className="flex items-center gap-0.5">
+        {isFormula ? (
+          <input
+            type="text"
+            value={formula}
+            onChange={(e) => onFormulaChange(fieldName, e.target.value)}
+            disabled={disabled}
+            className="h-6 text-xs w-20 font-mono border rounded px-1"
+            placeholder="formula"
+          />
+        ) : (
+          <NumericTextInput
+            value={numericValue}
+            onChange={onNumericChange}
+            disabled={disabled}
+            min={min}
+            max={max}
+            className="h-6 text-xs w-20"
+          />
+        )}
+        <button
+          onClick={() => isFormula
+            ? onFormulaClear(fieldName)
+            : onFormulaChange(fieldName, String(numericValue))
+          }
+          disabled={disabled}
+          className={`text-[9px] px-0.5 rounded border leading-none h-5 disabled:opacity-50 ${isFormula ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+          title={isFormula ? 'Switch to constant' : 'Switch to formula'}
+        >
+          f(x)
+        </button>
+      </div>
+    </td>
+  );
+}
+
 function StringCell({ value, onChange, disabled }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
@@ -352,6 +415,21 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     onChange(newParams);
   };
 
+  const updateCellFormula = useCallback((typeKey: string, field: string, formula: string) => {
+    const newParams = structuredClone(params);
+    const ct = newParams.cell_types[typeKey] as EHTCellTypeParams;
+    ct.formulas = { ...ct.formulas, [field]: formula };
+    onChange(newParams);
+  }, [params, onChange]);
+
+  const clearCellFormula = useCallback((typeKey: string, field: string) => {
+    const newParams = structuredClone(params);
+    const ct = newParams.cell_types[typeKey] as EHTCellTypeParams;
+    const { [field]: _, ...rest } = ct.formulas;
+    ct.formulas = rest;
+    onChange(newParams);
+  }, [params, onChange]);
+
   const addCellType = useCallback((sourceKey?: string) => {
     const newParams = structuredClone(params);
     // Generate unique key
@@ -529,10 +607,14 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
           <CellTypeRow label="R Soft" description={desc('R_soft')}>
             {cellTypeKeys.map((key) => (
-              <NumberCell
+              <FormulaCell
                 key={key}
-                value={getCellType(key).R_soft}
-                onChange={(v) => updateCellType(key, 'R_soft', v)}
+                fieldName="R_soft"
+                numericValue={getCellType(key).R_soft}
+                formulas={getCellType(key).formulas}
+                onFormulaChange={(f, v) => updateCellFormula(key, f, v)}
+                onFormulaClear={(f) => clearCellFormula(key, f)}
+                onNumericChange={(v) => updateCellType(key, 'R_soft', v)}
                 disabled={disabled}
                 min={0}
               />
@@ -600,10 +682,14 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
           <CellTypeRow label="Stiff Nuclei-Apical" description={desc('stiffness_nuclei_apical')}>
             {cellTypeKeys.map((key) => (
-              <NumberCell
+              <FormulaCell
                 key={key}
-                value={getCellType(key).stiffness_nuclei_apical}
-                onChange={(v) => updateCellType(key, 'stiffness_nuclei_apical', v)}
+                fieldName="stiffness_nuclei_apical"
+                numericValue={getCellType(key).stiffness_nuclei_apical}
+                formulas={getCellType(key).formulas}
+                onFormulaChange={(f, v) => updateCellFormula(key, f, v)}
+                onFormulaClear={(f) => clearCellFormula(key, f)}
+                onNumericChange={(v) => updateCellType(key, 'stiffness_nuclei_apical', v)}
                 disabled={disabled}
                 min={0}
               />
@@ -611,10 +697,14 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
           <CellTypeRow label="Stiff Nuclei-Basal" description={desc('stiffness_nuclei_basal')}>
             {cellTypeKeys.map((key) => (
-              <NumberCell
+              <FormulaCell
                 key={key}
-                value={getCellType(key).stiffness_nuclei_basal}
-                onChange={(v) => updateCellType(key, 'stiffness_nuclei_basal', v)}
+                fieldName="stiffness_nuclei_basal"
+                numericValue={getCellType(key).stiffness_nuclei_basal}
+                formulas={getCellType(key).formulas}
+                onFormulaChange={(f, v) => updateCellFormula(key, f, v)}
+                onFormulaClear={(f) => clearCellFormula(key, f)}
+                onNumericChange={(v) => updateCellType(key, 'stiffness_nuclei_basal', v)}
                 disabled={disabled}
                 min={0}
               />
@@ -622,10 +712,14 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
           <CellTypeRow label="Stiff Repulsion" description={desc('stiffness_repulsion')}>
             {cellTypeKeys.map((key) => (
-              <NumberCell
+              <FormulaCell
                 key={key}
-                value={getCellType(key).stiffness_repulsion}
-                onChange={(v) => updateCellType(key, 'stiffness_repulsion', v)}
+                fieldName="stiffness_repulsion"
+                numericValue={getCellType(key).stiffness_repulsion}
+                formulas={getCellType(key).formulas}
+                onFormulaChange={(f, v) => updateCellFormula(key, f, v)}
+                onFormulaClear={(f) => clearCellFormula(key, f)}
+                onNumericChange={(v) => updateCellType(key, 'stiffness_repulsion', v)}
                 disabled={disabled}
                 min={0}
               />
@@ -633,10 +727,14 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
           </CellTypeRow>
           <CellTypeRow label="Stiff Straightness" description={desc('stiffness_straightness')}>
             {cellTypeKeys.map((key) => (
-              <NumberCell
+              <FormulaCell
                 key={key}
-                value={getCellType(key).stiffness_straightness}
-                onChange={(v) => updateCellType(key, 'stiffness_straightness', v)}
+                fieldName="stiffness_straightness"
+                numericValue={getCellType(key).stiffness_straightness}
+                formulas={getCellType(key).formulas}
+                onFormulaChange={(f, v) => updateCellFormula(key, f, v)}
+                onFormulaClear={(f) => clearCellFormula(key, f)}
+                onNumericChange={(v) => updateCellType(key, 'stiffness_straightness', v)}
                 disabled={disabled}
                 min={0}
               />
