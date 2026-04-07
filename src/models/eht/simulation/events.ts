@@ -293,7 +293,8 @@ function evaluateFormula(
   birthTime: number,
   generalParams?: import('../params/types').EHTGeneralParams,
   cellTypeParams?: EHTCellTypeParams,
-  initValue?: number
+  initValue?: number,
+  cellContext?: { alpha: number; r: number; delta: number }
 ): number {
   try {
     const scope: Record<string, number> = {
@@ -306,6 +307,13 @@ function evaluateFormula(
 
     if (initValue !== undefined) {
       scope.init_value = initValue;
+    }
+
+    // Expose cell spatial context
+    if (cellContext) {
+      scope.alpha = cellContext.alpha;
+      scope.r = cellContext.r;
+      scope.delta = cellContext.delta;
     }
 
     // Expose general params in formula scope
@@ -486,6 +494,7 @@ function processParameterChangeEvent(
   event: ParameterChangeEvent,
   eventState: CellEventState,
   cell: CellState,
+  state: EHTSimulationState,
   t: number,
   dt: number,
   generalParams?: import('../params/types').EHTGeneralParams,
@@ -496,8 +505,20 @@ function processParameterChangeEvent(
     return;
   }
 
+  // Compute cell spatial context for formula scope
+  const center = state.basalGeometry.center;
+  const cx = cell.pos.x - center.x;
+  const cy = cell.pos.y - center.y;
+  const alpha = Math.atan2(cx, -cy);
+  const r = Math.sqrt(cx * cx + cy * cy);
+  const posVec = Vector2.from(cell.pos);
+  const proj = state.basalGeometry.projectPoint(posVec);
+  const nGeom = state.basalGeometry.getNormal(proj);
+  const delta = nGeom.x * (cell.pos.x - proj.x) + nGeom.y * (cell.pos.y - proj.y);
+  const cellContext = { alpha, r, delta };
+
   const effectivePeriod = resolveEffectivePeriod(event.period, dt);
-  const newValue = evaluateFormula(event.formula, oldValue, t, dt, effectivePeriod, cell.birth_time, generalParams, cellTypeParams, event.init_value);
+  const newValue = evaluateFormula(event.formula, oldValue, t, dt, effectivePeriod, cell.birth_time, generalParams, cellTypeParams, event.init_value, cellContext);
   setCellParameter(cell, event.target_parameter, newValue);
 
   // Update event state
@@ -568,7 +589,7 @@ export function processV2Events(
 
       if (shouldEventFire(eventState, eventDef, cell, t, dt)) {
         if (eventDef.type === 'parameter_change') {
-          processParameterChangeEvent(eventDef, eventState, cell, t, dt, params.general, cellType);
+          processParameterChangeEvent(eventDef, eventState, cell, state, t, dt, params.general, cellType);
         } else if (eventDef.type === 'special') {
           // Deferred events: collect indices and process after main loop
           if (eventDef.special_name === 'lose_apical_interface') {
