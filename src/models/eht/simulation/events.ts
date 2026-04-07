@@ -292,7 +292,8 @@ function evaluateFormula(
   period: number,
   birthTime: number,
   generalParams?: import('../params/types').EHTGeneralParams,
-  cellTypeParams?: EHTCellTypeParams
+  cellTypeParams?: EHTCellTypeParams,
+  initValue?: number
 ): number {
   try {
     const scope: Record<string, number> = {
@@ -302,6 +303,10 @@ function evaluateFormula(
       period: period || 1, // Avoid division by zero
       age: t - birthTime,
     };
+
+    if (initValue !== undefined) {
+      scope.init_value = initValue;
+    }
 
     // Expose general params in formula scope
     if (generalParams) {
@@ -492,7 +497,7 @@ function processParameterChangeEvent(
   }
 
   const effectivePeriod = resolveEffectivePeriod(event.period, dt);
-  const newValue = evaluateFormula(event.formula, oldValue, t, dt, effectivePeriod, cell.birth_time, generalParams, cellTypeParams);
+  const newValue = evaluateFormula(event.formula, oldValue, t, dt, effectivePeriod, cell.birth_time, generalParams, cellTypeParams, event.init_value);
   setCellParameter(cell, event.target_parameter, newValue);
 
   // Update event state

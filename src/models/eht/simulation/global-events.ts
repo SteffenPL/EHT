@@ -82,11 +82,14 @@ export function processGlobalEvents(state: EHTSimulationState, dt: number): void
     const oldValue = getNestedValue(params as unknown as Record<string, unknown>, event.target_parameter);
 
     // Evaluate formula
-    const scope = {
+    const scope: Record<string, number> = {
       old_value: oldValue as number,
       t: state.t,
       dt,
     };
+    if (event.init_value !== undefined) {
+      scope.init_value = event.init_value;
+    }
     const newValue = evaluate(event.formula, scope);
 
     // Set new value

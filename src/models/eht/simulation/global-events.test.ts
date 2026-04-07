@@ -133,6 +133,21 @@ describe('processGlobalEvents', () => {
     processGlobalEvents(state, 0.1);
     expect(state.params!.general.aspect_ratio).toBe(0.5);
   });
+
+  it('provides init_value variable when present on event', () => {
+    const state = makeTestState(5);
+    state.params!.general.global_events = [{
+      id: 'with_init',
+      start: 0,
+      end: 100,
+      period: 0,
+      target_parameter: 'general.perimeter',
+      formula: 'init_value * 0.5 + t',
+      init_value: 200,
+    }];
+    processGlobalEvents(state, 0.1);
+    expect(state.params!.general.perimeter).toBe(200 * 0.5 + 5);
+  });
 });
 
 describe('integration: geometry change during simulation', () => {
