@@ -217,13 +217,13 @@ export function initializeEHTSimulation(
   state.cells = [];
   for (let i = 0; i < cellInputs.length; i++) {
     const typeKey = typeAssignments[i];
-    const cellType = params.cell_types[typeKey];
+    const cellType = state.params!.cell_types[typeKey];
     if (!cellType) {
       console.warn("No cell type found for key", typeKey);
       continue;
     }
     const cell = createCell(
-      params,
+      state.params!,
       state,
       rng,
       cellInputs[i],

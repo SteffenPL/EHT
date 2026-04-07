@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { generateFormulaEvents } from './init';
+import { generateFormulaEvents, initializeEHTSimulation } from './init';
+import { performTimestep } from './step';
+import { createInitialEHTState } from '../types';
 import { DEFAULT_EHT_PARAMS } from '../params/defaults';
+import { computeEllipseFromPerimeter } from '../params/geometry';
+import { SeededRandom } from '@/core/math/random';
 import type { EHTParams } from '../params/types';
 
 describe('generateFormulaEvents', () => {
@@ -62,5 +66,56 @@ describe('generateFormulaEvents', () => {
     expect(params.general.global_events).toHaveLength(2);
     expect(params.general.global_events.find(e => e.id === '__formula_perimeter')).toBeDefined();
     expect(params.general.global_events.find(e => e.id === '__formula_aspect_ratio')).toBeDefined();
+  });
+});
+
+describe('integration: formula-driven parameters', () => {
+  it('perimeter formula updates geometry each timestep', () => {
+    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    params.general.formulas = { perimeter: 'init_value - t * 2' };
+
+    const state = createInitialEHTState();
+    const rng = new SeededRandom('test');
+    initializeEHTSimulation(params, state, rng);
+
+    const initPerimeter = state.params!.general.perimeter;
+    expect(initPerimeter).toBe(105);
+
+    // First timestep: formula fires at t=0, gives 105 - 0*2 = 105 (no change yet)
+    performTimestep(state, params, new SeededRandom('step_1'));
+
+    // Second timestep: t has advanced, formula gives 105 - t*2 < 105
+    performTimestep(state, params, new SeededRandom('step_2'));
+
+    expect(state.params!.general.perimeter).toBeLessThan(initPerimeter);
+
+    // Geometry should have been rebuilt with new curvatures
+    const expectedGeom = computeEllipseFromPerimeter(
+      state.params!.general.perimeter,
+      state.params!.general.aspect_ratio
+    );
+    expect(state.geometry!.curvature_1).toBeCloseTo(expectedGeom.curvature_1, 6);
+  });
+
+  it('cell type formula updates per-cell parameter each timestep', () => {
+    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    params.cell_types.control.formulas = { stiffness_nuclei_apical: '99' };
+
+    const state = createInitialEHTState();
+    const rng = new SeededRandom('test');
+    initializeEHTSimulation(params, state, rng);
+
+    const initStiffness = params.cell_types.control.stiffness_nuclei_apical;
+
+    // Run a timestep — formula fires and sets stiffness to 99
+    performTimestep(state, params, new SeededRandom('step_1'));
+
+    // All control cells should have updated stiffness
+    const controlCells = state.cells.filter(c => c.typeIndex === 'control');
+    expect(controlCells.length).toBeGreaterThan(0);
+
+    for (const cell of controlCells) {
+      expect(cell.stiffness_nuclei_apical).toBe(99);
+    }
   });
 });

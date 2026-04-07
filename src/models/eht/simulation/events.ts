@@ -564,10 +564,12 @@ export function processV2Events(
 
   for (let i = 0; i < state.cells.length; i++) {
     const cell = state.cells[i];
-    const cellType = params.cell_types[cell.typeIndex] as EHTCellTypeParams;
+    // Use state.params (has synthetic formula events) if available, fall back to params
+    const effectiveParams = state.params ?? params;
+    const cellType = effectiveParams.cell_types[cell.typeIndex] as EHTCellTypeParams;
 
     // Get effective events (merged default + per-type)
-    const effectiveEvents = getEffectiveEvents(params.general, cellType);
+    const effectiveEvents = getEffectiveEvents(effectiveParams.general, cellType);
 
     // Skip if no events
     if (effectiveEvents.length === 0 || !cell.event_states) {
