@@ -6,9 +6,64 @@
 import { SeededRandom } from '@/core/math/random';
 import { createBasalGeometry } from '@/core/math';
 import type { EHTSimulationState } from '../types';
-import type { EHTParams } from '../params/types';
+import type { EHTParams, GlobalEvent, ParameterChangeEvent } from '../params/types';
+import { CellCyclePhase } from '../params/types';
 import { computeEllipseFromPerimeter, ramanujanPerimeter } from '../params/geometry';
 import { createCell, type CreateCellInput } from './cell';
+
+/**
+ * Scan formula maps on params and generate synthetic events.
+ * Global formulas → GlobalEvent with period:'dt' appended to global_events.
+ * Per-cell formulas → ParameterChangeEvent with period:'dt' appended to events_v2.
+ * Mutates the params object in place.
+ */
+export function generateFormulaEvents(params: EHTParams): void {
+  // Generate global events from general.formulas
+  for (const [fieldName, formula] of Object.entries(params.general.formulas)) {
+    const initValue = (params.general as Record<string, unknown>)[fieldName];
+    if (typeof initValue !== 'number') continue;
+
+    const event: GlobalEvent = {
+      id: `__formula_${fieldName}`,
+      start: 0,
+      end: Infinity,
+      period: 'dt',
+      target_parameter: `general.${fieldName}`,
+      formula,
+      init_value: initValue,
+    };
+    params.general.global_events.push(event);
+  }
+
+  // Generate per-cell events from cell_types.*.formulas
+  for (const [, cellType] of Object.entries(params.cell_types)) {
+    if (!cellType.formulas || Object.keys(cellType.formulas).length === 0) continue;
+
+    if (!cellType.events_v2) {
+      cellType.events_v2 = [];
+    }
+
+    for (const [fieldName, formula] of Object.entries(cellType.formulas)) {
+      const initValue = (cellType as Record<string, unknown>)[fieldName];
+      if (typeof initValue !== 'number') continue;
+
+      const event: ParameterChangeEvent = {
+        id: `__formula_${fieldName}`,
+        type: 'parameter_change',
+        start: 0,
+        end: Infinity,
+        period: 'dt',
+        probability: '1',
+        prereq: null,
+        cell_cycle_phase: CellCyclePhase.Any,
+        target_parameter: fieldName,
+        formula,
+        init_value: initValue,
+      };
+      cellType.events_v2.push(event);
+    }
+  }
+}
 
 /**
  * Initialize the EHT simulation with cells.
@@ -23,6 +78,9 @@ export function initializeEHTSimulation(
 
   // Store a mutable simulation-local copy of params
   state.params = structuredClone(params);
+
+  // Generate synthetic events from formula maps
+  generateFormulaEvents(state.params);
 
   // Compute and store geometry from perimeter/aspect_ratio
   const geometry = computeEllipseFromPerimeter(pg.perimeter, pg.aspect_ratio);
