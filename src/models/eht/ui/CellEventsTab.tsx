@@ -274,7 +274,8 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
   }, [params, onChange]);
 
   const getEvents = (cellTypeKey: string): EventDefinition[] =>
-    (params.cell_types[cellTypeKey] as EHTCellTypeParams).events_v2 || [];
+    ((params.cell_types[cellTypeKey] as EHTCellTypeParams).events_v2 || [])
+      .filter(e => !e.id.startsWith('__formula_'));
 
   const updateEvents = useCallback((cellTypeKey: string, events: EventDefinition[]) => {
     const newParams = structuredClone(params);
