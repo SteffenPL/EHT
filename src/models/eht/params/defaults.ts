@@ -170,6 +170,7 @@ export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
   basal_membrane_repulsion: 0.0,
   apical_junction_init: 0.0,
   external_force: "0",
+  formulas: {},
 };
 
 /** Default EMT cell type */
@@ -222,6 +223,7 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
   basal_membrane_repulsion: 0.0,
   apical_junction_init: 0.0,
   external_force: "0",
+  formulas: {},
 };
 
 /** Default EHT simulation parameters */
@@ -248,6 +250,7 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     hard_sphere_nuclei: true,
     default_events: DEFAULT_GLOBAL_EVENTS,
     global_events: [],
+    formulas: {},
   },
   cell_prop: {
     // All properties moved to per-cell-type in cell_types

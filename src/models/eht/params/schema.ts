@@ -58,6 +58,7 @@ export const parameterChangeEventSchema = baseEventDefinitionSchema.extend({
   type: z.literal('parameter_change'),
   target_parameter: z.string(),
   formula: z.string(),
+  init_value: z.number().optional(),
 });
 
 /** Special event schema */
@@ -133,6 +134,7 @@ export const ehtCellTypeSchema = z.object({
   basal_membrane_repulsion: z.number().nonnegative(),
   apical_junction_init: z.number().nonnegative(),
   external_force: z.string().default("0"),
+  formulas: z.record(z.string(), z.string()).default({}),
 });
 
 /** Global event schema */
@@ -143,6 +145,7 @@ export const globalEventSchema = z.object({
   period: z.union([z.number(), z.literal('dt')]),
   target_parameter: z.string(),
   formula: z.string(),
+  init_value: z.number().optional(),
 });
 
 /** Global events array schema */
@@ -167,6 +170,7 @@ export const ehtGeneralParamsSchema = z.object({
   hard_sphere_nuclei: z.boolean(),            // If true, use R_hard instead of R_soft for nuclei spring rest length
   default_events: eventsArraySchema,         // Default events applied to all cell types (v1.2.0)
   global_events: globalEventsArraySchema.default([]),  // Global events for mid-simulation param changes
+  formulas: z.record(z.string(), z.string()).default({}),          // Formula overrides for general params
 });
 
 /** Cell property params schema (legacy - empty, properties moved to cell types) */

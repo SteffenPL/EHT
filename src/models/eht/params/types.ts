@@ -56,6 +56,8 @@ export interface ParameterChangeEvent extends BaseEventDefinition {
   target_parameter: string;
   /** math.js formula - variables: old_value, t, dt, period */
   formula: string;
+  /** Initial value captured at init time (available as init_value in formula scope) */
+  init_value?: number;
 }
 
 /** Special event - hard-coded functions selected by name */
@@ -86,6 +88,8 @@ export interface GlobalEvent {
   target_parameter: string;
   /** math.js formula. Variables: old_value, t, dt */
   formula: string;
+  /** Initial value captured at init time (available as init_value in formula scope) */
+  init_value?: number;
 }
 
 // =============================================================================
@@ -146,6 +150,7 @@ export interface EHTCellTypeParams {
   basal_membrane_repulsion: number; // Basal membrane repulsion strength
   apical_junction_init: number;     // Initial apical junction distance
   external_force: string;           // External force formula (math.js expression), default "0"
+  formulas: Record<string, string>; // Formula overrides for cell type params (field name → math.js expression)
 }
 
 /** EHT general simulation parameters */
@@ -167,6 +172,7 @@ export interface EHTGeneralParams {
   hard_sphere_nuclei: boolean; // If true, use R_hard instead of R_soft for nuclei spring rest length
   default_events: EventDefinition[]; // Default events applied to all cell types (v1.2.0)
   global_events: GlobalEvent[]; // Global events that modify simulation parameters mid-run
+  formulas: Record<string, string>; // Formula overrides for general params (field name → math.js expression)
 }
 
 /** Cell property parameters (legacy - kept empty for backwards compatibility) */

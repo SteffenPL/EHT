@@ -149,7 +149,10 @@ Formula: $drl \\times (1 + \\text{strain})$`,
   'global_events.end': `Latest simulation time the event can trigger.`,
   'global_events.period': `Repeat interval in simulation time units. Use 0 for one-time events.`,
   'global_events.target_parameter': `Dot-notation path to the parameter to modify (e.g., $\\texttt{general.perimeter}$).`,
-  'global_events.formula': `math.js formula to compute the new value. Available variables: $\\texttt{old\\_value}$ (current value), $\\texttt{t}$ (current time), $\\texttt{dt}$ (timestep).`,
+  'global_events.formula': `math.js formula to compute the new value. Available variables: $\\texttt{old\\_value}$ (current value), $\\texttt{init\\_value}$ (initial constant value), $\\texttt{t}$ (current time), $\\texttt{dt}$ (timestep).`,
+
+  'general.formulas': `Formula overrides for general parameters. Keys are field names (e.g., "perimeter"), values are math.js expressions. Available variables: $\\texttt{old\\_value}$ (current value), $\\texttt{init\\_value}$ (initial constant value), $\\texttt{t}$ (time), $\\texttt{dt}$ (timestep).`,
+  'cell_types.formulas': `Formula overrides for cell type parameters. Keys are field names (e.g., "R\\_soft"), values are math.js expressions. Available variables: $\\texttt{old\\_value}$, $\\texttt{init\\_value}$, $\\texttt{t}$, $\\texttt{dt}$, $\\texttt{alpha}$ (polar angle), $\\texttt{r}$ (distance from center), $\\texttt{age}$ (cell age), $\\texttt{delta}$ (signed distance from basal curve).`,
 
   // === Event System (v1.1.0) ===
   'events.formula': `A **math.js** expression to compute the new parameter value. Available variables:
