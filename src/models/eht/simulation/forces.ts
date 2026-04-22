@@ -8,6 +8,7 @@ import { evaluate, matrix } from 'mathjs';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 import { getCellType } from './cell';
+import { formulaFunctions } from './formula-functions';
 
 /** Force accumulator for a cell */
 export interface CellForces {
@@ -224,12 +225,12 @@ function buildExternalForceScope(
   r: number,
   t: number,
   delta: number,
-  nGeom: Vector2
+  nGeom: Vector2,
+  constants?: Record<string, number>
 ): Record<string, unknown> {
-  // N from geometry normal (into tissue, toward center); T perpendicular (CCW)
   const N = matrix([nGeom.x, nGeom.y]);
   const T = matrix([-nGeom.y, nGeom.x]);
-  return { x, y, alpha, r, t, T, N, delta };
+  return { x, y, alpha, r, t, T, N, delta, ...formulaFunctions, ...(constants ?? {}) };
 }
 
 /**
@@ -286,7 +287,7 @@ export function calcExternalForces(
     const delta = nGeom.x * dx + nGeom.y * dy;
 
     // Build scope
-    const scope = buildExternalForceScope(x, y, alpha, r, state.t, delta, nGeom);
+    const scope = buildExternalForceScope(x, y, alpha, r, state.t, delta, nGeom, params.constants);
 
     // Determine effective formula: auto-wrap scalars
     const effectiveFormula = VECTOR_VAR_REGEX.test(formula)

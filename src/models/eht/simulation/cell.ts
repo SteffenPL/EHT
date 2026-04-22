@@ -9,6 +9,7 @@ import { evaluate } from 'mathjs';
 import type { EHTSimulationState, CellState, CellEventState } from '../types';
 import { CellPhase } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, EHTGeneralParams } from '../params/types';
+import { formulaFunctions } from './formula-functions';
 import { CellCyclePhase } from '../params/types';
 
 /**
@@ -18,10 +19,14 @@ import { CellCyclePhase } from '../params/types';
 function evaluateProbabilityFormula(
   formula: string,
   generalParams?: EHTGeneralParams,
-  cellTypeParams?: EHTCellTypeParams
+  cellTypeParams?: EHTCellTypeParams,
+  constants?: Record<string, number>
 ): number {
   try {
-    const scope: Record<string, number> = {};
+    const scope: Record<string, unknown> = {
+      ...formulaFunctions,
+      ...(constants ?? {}),
+    };
     if (generalParams) {
       scope.p_div_out = generalParams.p_div_out;
       scope.mu = generalParams.mu;
@@ -80,7 +85,8 @@ export function initializeEventStates(
   events: EventDefinition[] | undefined,
   rng: SeededRandom,
   generalParams?: EHTGeneralParams,
-  cellTypeParams?: EHTCellTypeParams
+  cellTypeParams?: EHTCellTypeParams,
+  constants?: Record<string, number>
 ): Record<string, CellEventState> {
   const eventStates: Record<string, CellEventState> = {};
 
@@ -90,7 +96,7 @@ export function initializeEventStates(
 
   for (const event of events) {
     // Determine if this event should be skipped based on probability formula
-    const prob = evaluateProbabilityFormula(event.probability, generalParams, cellTypeParams);
+    const prob = evaluateProbabilityFormula(event.probability, generalParams, cellTypeParams, constants);
     const shouldTrigger = rng.random() <= prob;
 
     let triggerTime: number;
@@ -153,7 +159,8 @@ export function inheritEventStates(
   events: EventDefinition[],
   rng: SeededRandom,
   generalParams?: EHTGeneralParams,
-  cellTypeParams?: EHTCellTypeParams
+  cellTypeParams?: EHTCellTypeParams,
+  constants?: Record<string, number>
 ): Record<string, CellEventState> {
   const result: Record<string, CellEventState> = {};
 
@@ -171,7 +178,7 @@ export function inheritEventStates(
       };
     } else {
       // One-time or new event without parent state: sample fresh
-      const prob = evaluateProbabilityFormula(event.probability, generalParams, cellTypeParams);
+      const prob = evaluateProbabilityFormula(event.probability, generalParams, cellTypeParams, constants);
       const shouldTrigger = rng.random() <= prob;
 
       let triggerTime: number;
@@ -257,7 +264,7 @@ export function createCell(
 
     // Initialize v1.1.0+ event states if available (using effective events)
     const event_states = useV2Events
-      ? initializeEventStates(effectiveEvents, rng, params.general, cellType)
+      ? initializeEventStates(effectiveEvents, rng, params.general, cellType, params.constants)
       : undefined;
 
     return {
@@ -329,7 +336,7 @@ export function createCell(
       k_apical_junction: cellType.k_apical_junction,
       // v1.1.0 event system - inherit periodic participation, re-sample one-time
       event_states: useV2Events
-        ? inheritEventStates(parent.event_states!, effectiveEvents, rng, params.general, cellType)
+        ? inheritEventStates(parent.event_states!, effectiveEvents, rng, params.general, cellType, params.constants)
         : copyEventStates(parent.event_states),
       has_reached_G2: false,
       has_reached_mitosis: false,

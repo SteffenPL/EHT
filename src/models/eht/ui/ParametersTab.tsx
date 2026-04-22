@@ -1,15 +1,16 @@
 /**
  * EHT Parameters Tab - General model parameters.
  */
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { ModelUITabProps } from '@/core/registry';
 import type { EHTParams } from '../params/types';
 import { NumberInput, IntegerInput, BoolInput } from '@/components/params/inputs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getParameterDescription } from '../params/descriptions';
+import { FormulaEditorDialog, type FormulaContext } from '@/components/params/FormulaEditorDialog';
 
-/** Input that shows either a NumberInput or formula text input with f(x) toggle */
+/** Input that shows either a NumberInput or read-only formula preview with f(x) toggle */
 function FormulaNumberInput({
   fieldName,
   numericValue,
@@ -22,6 +23,9 @@ function FormulaNumberInput({
   min,
   max,
   description,
+  tEnd,
+  constants,
+  context,
 }: {
   fieldName: string;
   numericValue: number;
@@ -34,9 +38,13 @@ function FormulaNumberInput({
   min?: number;
   max?: number;
   description?: string;
+  tEnd: number;
+  constants: Record<string, number>;
+  context: FormulaContext;
 }) {
   const formula = formulas[fieldName];
   const isFormula = formula !== undefined && formula !== '';
+  const [editorOpen, setEditorOpen] = useState(false);
 
   if (isFormula) {
     return (
@@ -47,21 +55,34 @@ function FormulaNumberInput({
             <Input
               type="text"
               value={formula}
-              onChange={(e) => onFormulaChange(fieldName, e.target.value)}
-              disabled={disabled}
-              className="h-8 text-xs font-mono"
-              placeholder="math.js formula"
+              readOnly
+              className="h-8 text-xs font-mono bg-muted cursor-pointer"
+              title={formula}
+              onClick={() => !disabled && setEditorOpen(true)}
             />
             <button
-              onClick={() => onFormulaClear(fieldName)}
+              onClick={() => setEditorOpen(true)}
               disabled={disabled}
               className="text-xs px-1.5 py-1 rounded border bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              title="Switch to constant value"
+              title="Edit formula"
             >
               f(x)
             </button>
           </div>
         </div>
+        <FormulaEditorDialog
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          fieldName={fieldName}
+          label={label}
+          formula={formula}
+          currentNumericValue={numericValue}
+          tEnd={tEnd}
+          constants={constants}
+          context={context}
+          onSave={(f) => onFormulaChange(fieldName, f)}
+          onClear={() => onFormulaClear(fieldName)}
+        />
       </div>
     );
   }
@@ -80,13 +101,26 @@ function FormulaNumberInput({
         />
       </div>
       <button
-        onClick={() => onFormulaChange(fieldName, String(numericValue))}
+        onClick={() => setEditorOpen(true)}
         disabled={disabled}
         className="text-xs px-1.5 py-1 rounded border hover:bg-muted mt-5 disabled:opacity-50"
         title="Switch to formula"
       >
         f(x)
       </button>
+      <FormulaEditorDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        fieldName={fieldName}
+        label={label}
+        formula=""
+        currentNumericValue={numericValue}
+        tEnd={tEnd}
+        constants={constants}
+        context={context}
+        onSave={(f) => onFormulaChange(fieldName, f)}
+        onClear={() => onFormulaClear(fieldName)}
+      />
     </div>
   );
 }
@@ -114,6 +148,12 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
     newParams.general.formulas = rest;
     onChange(newParams);
   }, [params, onChange]);
+
+  const formulaProps = {
+    tEnd: g.t_end,
+    constants: params.constants ?? {},
+    context: 'general' as FormulaContext,
+  };
 
   return (
     <div className="space-y-6">
@@ -145,6 +185,7 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
             min={1}
             label="Perimeter"
             description={desc('perimeter')}
+            {...formulaProps}
           />
           <FormulaNumberInput
             fieldName="aspect_ratio"
@@ -156,6 +197,7 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
             disabled={disabled}
             label="Aspect (0=line, b/a)"
             description={desc('aspect_ratio')}
+            {...formulaProps}
           />
         </div>
       </div>

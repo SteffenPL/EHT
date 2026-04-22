@@ -11,6 +11,7 @@ import { CellCyclePhase } from '../params/types';
 import { evaluate } from 'mathjs';
 import { computeEllipseFromPerimeter, ramanujanPerimeter } from '../params/geometry';
 import { createCell, type CreateCellInput } from './cell';
+import { formulaFunctions } from './formula-functions';
 
 /**
  * Scan formula maps on params and generate synthetic events.
@@ -40,7 +41,7 @@ export function generateFormulaEvents(params: EHTParams): void {
 
     // Evaluate at t=0 so init uses the formula's initial value
     try {
-      const t0Value = evaluate(formula, { old_value: initValue, init_value: initValue, t: 0, dt: 0 });
+      const t0Value = evaluate(formula, { old_value: initValue, init_value: initValue, t: 0, dt: 0, ...params.constants, ...formulaFunctions });
       if (typeof t0Value === 'number' && isFinite(t0Value)) {
         (params.general as unknown as Record<string, unknown>)[fieldName] = t0Value;
       }
@@ -76,7 +77,7 @@ export function generateFormulaEvents(params: EHTParams): void {
 
       // Evaluate at t=0 so init uses the formula's initial value
       try {
-        const t0Value = evaluate(formula, { old_value: initValue, init_value: initValue, t: 0, dt: 0 });
+        const t0Value = evaluate(formula, { old_value: initValue, init_value: initValue, t: 0, dt: 0, ...params.constants, ...formulaFunctions });
         if (typeof t0Value === 'number' && isFinite(t0Value)) {
           (cellType as unknown as Record<string, unknown>)[fieldName] = t0Value;
         }

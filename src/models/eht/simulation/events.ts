@@ -9,6 +9,7 @@ import { SeededRandom } from '@/core/math/random';
 import { evaluate } from 'mathjs';
 import type { EHTSimulationState, ApicalLink, BasalLink, CellState, CellEventState } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, ParameterChangeEvent, SpecialEvent, SpecialEventName } from '../params/types';
+import { formulaFunctions } from './formula-functions';
 import { createCell, getCellType, getEffectiveEvents, inheritEventStates, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
 import { divideSingleCell } from './division';
 
@@ -294,29 +295,30 @@ function evaluateFormula(
   generalParams?: import('../params/types').EHTGeneralParams,
   cellTypeParams?: EHTCellTypeParams,
   initValue?: number,
-  cellContext?: { alpha: number; r: number; delta: number }
+  cellContext?: { alpha: number; r: number; delta: number },
+  constants?: Record<string, number>
 ): number {
   try {
-    const scope: Record<string, number> = {
+    const scope: Record<string, unknown> = {
       old_value: oldValue,
       t,
       dt,
-      period: period || 1, // Avoid division by zero
+      period: period || 1,
       age: t - birthTime,
+      ...formulaFunctions,
+      ...(constants ?? {}),
     };
 
     if (initValue !== undefined) {
       scope.init_value = initValue;
     }
 
-    // Expose cell spatial context
     if (cellContext) {
       scope.alpha = cellContext.alpha;
       scope.r = cellContext.r;
       scope.delta = cellContext.delta;
     }
 
-    // Expose general params in formula scope
     if (generalParams) {
       scope.p_div_out = generalParams.p_div_out;
       scope.mu = generalParams.mu;
@@ -325,7 +327,6 @@ function evaluateFormula(
       scope.t_end = generalParams.t_end;
     }
 
-    // Expose cell type params in formula scope
     if (cellTypeParams) {
       scope.R_hard_div = cellTypeParams.R_hard_div;
       scope.stiffness_apical_apical_div = cellTypeParams.stiffness_apical_apical_div;
@@ -498,7 +499,8 @@ function processParameterChangeEvent(
   t: number,
   dt: number,
   generalParams?: import('../params/types').EHTGeneralParams,
-  cellTypeParams?: EHTCellTypeParams
+  cellTypeParams?: EHTCellTypeParams,
+  constants?: Record<string, number>
 ): void {
   const oldValue = getCellParameter(cell, event.target_parameter);
   if (oldValue === undefined) {
@@ -518,7 +520,7 @@ function processParameterChangeEvent(
   const cellContext = { alpha, r, delta };
 
   const effectivePeriod = resolveEffectivePeriod(event.period, dt);
-  const newValue = evaluateFormula(event.formula, oldValue, t, dt, effectivePeriod, cell.birth_time, generalParams, cellTypeParams, event.init_value, cellContext);
+  const newValue = evaluateFormula(event.formula, oldValue, t, dt, effectivePeriod, cell.birth_time, generalParams, cellTypeParams, event.init_value, cellContext, constants);
   setCellParameter(cell, event.target_parameter, newValue);
 
   // Update event state
@@ -591,7 +593,7 @@ export function processV2Events(
 
       if (shouldEventFire(eventState, eventDef, cell, t, dt)) {
         if (eventDef.type === 'parameter_change') {
-          processParameterChangeEvent(eventDef, eventState, cell, state, t, dt, params.general, cellType);
+          processParameterChangeEvent(eventDef, eventState, cell, state, t, dt, params.general, cellType, params.constants);
         } else if (eventDef.type === 'special') {
           // Deferred events: collect indices and process after main loop
           if (eventDef.special_name === 'lose_apical_interface') {
@@ -695,8 +697,8 @@ function processCellCycleReset(
   // Inherit periodic event participation, re-sample one-time events
   const effectiveEvents = getEffectiveEvents(params.general, cellType);
   newCell.event_states = cell.event_states
-    ? inheritEventStates(cell.event_states, effectiveEvents, rng, params.general, cellType)
-    : initializeEventStates(effectiveEvents, rng, params.general, cellType);
+    ? inheritEventStates(cell.event_states, effectiveEvents, rng, params.general, cellType, params.constants)
+    : initializeEventStates(effectiveEvents, rng, params.general, cellType, params.constants);
   newCell.has_reached_G2 = false;
   newCell.has_reached_mitosis = false;
 

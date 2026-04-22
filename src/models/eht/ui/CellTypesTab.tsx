@@ -21,6 +21,7 @@ import { Plus, Trash2, Copy, ClipboardPaste } from 'lucide-react';
 import type { RGBColor } from '@/components/params/inputs/ColorInput';
 import { HelpPopover } from '@/components/ui/help-popover';
 import { getParameterDescription } from '../params/descriptions';
+import { FormulaEditorDialog } from '@/components/params/FormulaEditorDialog';
 // Section definitions for copy/paste
 type SectionKey = 'initial' | 'geometry' | 'appearance' | 'stiffness' | 'strain' | 'division' | 'cellTypeProps' | 'running';
 
@@ -86,7 +87,7 @@ function NumberCell({ value, onChange, disabled, min, max }: NumberCellProps) {
   );
 }
 
-/** Table cell that shows either a number input or formula text input */
+/** Table cell that shows either a number input or read-only formula preview with f(x) popup */
 function FormulaCell({
   fieldName,
   numericValue,
@@ -97,6 +98,9 @@ function FormulaCell({
   disabled,
   min,
   max,
+  label,
+  tEnd,
+  constants,
 }: {
   fieldName: string;
   numericValue: number;
@@ -107,9 +111,13 @@ function FormulaCell({
   disabled?: boolean;
   min?: number;
   max?: number;
+  label: string;
+  tEnd: number;
+  constants: Record<string, number>;
 }) {
   const formula = formulas[fieldName];
   const isFormula = formula !== undefined && formula !== '';
+  const [editorOpen, setEditorOpen] = useState(false);
 
   return (
     <td className="py-1 px-1">
@@ -118,10 +126,10 @@ function FormulaCell({
           <input
             type="text"
             value={formula}
-            onChange={(e) => onFormulaChange(fieldName, e.target.value)}
-            disabled={disabled}
-            className="h-6 text-xs w-20 font-mono border rounded px-1"
-            placeholder="formula"
+            readOnly
+            className="h-6 text-xs w-20 font-mono border rounded px-1 bg-muted cursor-pointer"
+            title={formula}
+            onClick={() => !disabled && setEditorOpen(true)}
           />
         ) : (
           <NumericTextInput
@@ -134,17 +142,27 @@ function FormulaCell({
           />
         )}
         <button
-          onClick={() => isFormula
-            ? onFormulaClear(fieldName)
-            : onFormulaChange(fieldName, String(numericValue))
-          }
+          onClick={() => setEditorOpen(true)}
           disabled={disabled}
           className={`text-[9px] px-0.5 rounded border leading-none h-5 disabled:opacity-50 ${isFormula ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
-          title={isFormula ? 'Switch to constant' : 'Switch to formula'}
+          title="Edit formula"
         >
           f(x)
         </button>
       </div>
+      <FormulaEditorDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        fieldName={fieldName}
+        label={label}
+        formula={isFormula ? formula : ''}
+        currentNumericValue={numericValue}
+        tEnd={tEnd}
+        constants={constants}
+        context="cell_type"
+        onSave={(f) => onFormulaChange(fieldName, f)}
+        onClear={() => onFormulaClear(fieldName)}
+      />
     </td>
   );
 }
@@ -617,6 +635,9 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 onNumericChange={(v) => updateCellType(key, 'R_soft', v)}
                 disabled={disabled}
                 min={0}
+                label="R Soft"
+                tEnd={params.general.t_end}
+                constants={params.constants ?? {}}
               />
             ))}
           </CellTypeRow>
@@ -692,6 +713,9 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 onNumericChange={(v) => updateCellType(key, 'stiffness_nuclei_apical', v)}
                 disabled={disabled}
                 min={0}
+                label="Stiff Nuclei-Apical"
+                tEnd={params.general.t_end}
+                constants={params.constants ?? {}}
               />
             ))}
           </CellTypeRow>
@@ -707,6 +731,9 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 onNumericChange={(v) => updateCellType(key, 'stiffness_nuclei_basal', v)}
                 disabled={disabled}
                 min={0}
+                label="Stiff Nuclei-Basal"
+                tEnd={params.general.t_end}
+                constants={params.constants ?? {}}
               />
             ))}
           </CellTypeRow>
@@ -722,6 +749,9 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 onNumericChange={(v) => updateCellType(key, 'stiffness_repulsion', v)}
                 disabled={disabled}
                 min={0}
+                label="Stiff Repulsion"
+                tEnd={params.general.t_end}
+                constants={params.constants ?? {}}
               />
             ))}
           </CellTypeRow>
@@ -737,6 +767,9 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 onNumericChange={(v) => updateCellType(key, 'stiffness_straightness', v)}
                 disabled={disabled}
                 min={0}
+                label="Stiff Straightness"
+                tEnd={params.general.t_end}
+                constants={params.constants ?? {}}
               />
             ))}
           </CellTypeRow>

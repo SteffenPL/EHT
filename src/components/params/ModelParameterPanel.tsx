@@ -26,11 +26,13 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
   // Get model-specific UI components
   const WarningBanner = currentModel.ui?.WarningBanner;
   const ParametersTab = currentModel.ui?.ParametersTab;
+  const ConstantsTab = currentModel.ui?.ConstantsTab;
   const CellTypesTab = currentModel.ui?.CellTypesTab;
   const CellEventsTab = currentModel.ui?.CellEventsTab;
   const SimulationTab = currentModel.ui?.SimulationTab;
 
   // Determine which tabs to show based on what the model provides
+  const hasConstants = !!ConstantsTab;
   const hasCellTypes = !!CellTypesTab;
   const hasCellEvents = !!CellEventsTab;
   const hasSimulation = !!SimulationTab;
@@ -47,6 +49,7 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
       <Tabs defaultValue="parameters" className="flex-1 flex flex-col min-h-0">
         <TabsList className="w-full justify-start shrink-0">
           <TabsTrigger value="parameters">Parameters</TabsTrigger>
+          {hasConstants && <TabsTrigger value="constants">Constants</TabsTrigger>}
           {hasCellTypes && <TabsTrigger value="celltypes">Cell Types</TabsTrigger>}
           {hasCellEvents && <TabsTrigger value="cellevents">Cell Events</TabsTrigger>}
           {hasSimulation && <TabsTrigger value="simulation">Simulation</TabsTrigger>}
@@ -65,6 +68,16 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
             </div>
           </ScrollArea>
         </TabsContent>
+
+        {hasConstants && (
+          <TabsContent value="constants" className="flex-1 overflow-hidden mt-0">
+            <ScrollArea className="h-full">
+              <div className="p-4 space-y-3">
+                <ConstantsTab params={params} onChange={onChange} disabled={disabled} />
+              </div>
+            </ScrollArea>
+          </TabsContent>
+        )}
 
         {hasCellTypes && (
           <TabsContent value="celltypes" className="flex-1 mt-0 overflow-auto">

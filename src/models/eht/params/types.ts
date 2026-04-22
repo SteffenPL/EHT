@@ -190,6 +190,7 @@ export interface EHTParams extends BaseSimulationParams {
   general: EHTGeneralParams;
   cell_prop: EHTCellPropertyParams;
   cell_types: EHTCellTypesMap;
+  constants: Record<string, number>;
 }
 
 /** Deep partial type for EHT params input */
@@ -202,6 +203,7 @@ export type PartialEHTParams = {
     emt?: Partial<EHTCellTypeParams>;
     [key: string]: Partial<EHTCellTypeParams> | undefined;
   };
+  constants?: Record<string, number>;
 };
 
 // Legacy type aliases for backwards compatibility

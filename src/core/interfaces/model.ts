@@ -49,6 +49,8 @@ export interface ModelUI<Params = unknown> {
     WarningBanner?: ComponentType<ModelWarningProps<Params>>;
     /** Parameters tab - general model parameters (T_end, N_init, etc.) */
     ParametersTab?: ComponentType<ModelUITabProps<Params>>;
+    /** Constants tab - named values referenceable in formulas */
+    ConstantsTab?: ComponentType<ModelUITabProps<Params>>;
     /** Cell Types tab - table with rows per parameter, columns per cell type */
     CellTypesTab?: ComponentType<ModelUITabProps<Params>>;
     /** Cell Events tab - event definitions per cell type */

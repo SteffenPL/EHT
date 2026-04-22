@@ -374,4 +374,5 @@ export const EHT_STATISTICS = generateEHTStatistics({
   general: {} as any,
   cell_prop: {} as any,
   cell_types: { control: {} as any },
+  constants: {},
 });

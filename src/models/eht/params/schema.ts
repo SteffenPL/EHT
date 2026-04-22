@@ -187,6 +187,7 @@ export const ehtParamsSchema = z.object({
   general: ehtGeneralParamsSchema,
   cell_prop: ehtCellPropertyParamsSchema,
   cell_types: ehtCellTypesMapSchema,
+  constants: z.record(z.string(), z.number()).default({}),
 });
 
 /** Partial schemas for input validation (allows missing fields) */
@@ -199,6 +200,7 @@ export const partialEhtParamsSchema = z.object({
   general: partialEhtGeneralParamsSchema.optional(),
   cell_prop: partialEhtCellPropertyParamsSchema.optional(),
   cell_types: z.record(z.string(), partialEhtCellTypeSchema).optional(),
+  constants: z.record(z.string(), z.number()).optional(),
 });
 
 /** Type inference from schemas */

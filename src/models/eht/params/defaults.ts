@@ -259,6 +259,7 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     control: DEFAULT_CONTROL_CELL,
     emt: DEFAULT_EMT_CELL,
   },
+  constants: {},
 };
 
 /**
@@ -289,6 +290,11 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
   // Merge general params
   if (partial.general) {
     base.general = { ...base.general, ...partial.general };
+  }
+
+  // Merge constants
+  if (partial.constants) {
+    base.constants = { ...base.constants, ...partial.constants };
   }
 
   // Merge metadata
