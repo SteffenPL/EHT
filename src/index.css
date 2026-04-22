@@ -31,57 +31,59 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ─── Light Theme: "Paper" ─── */
 :root {
-  --background: 210 20% 97%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 210 25% 98%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 210 25% 98%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 25% 92%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 16% 90%;
-  --muted-foreground: 215.4 16.3% 40%;
-  --accent: 210 28% 96%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --play: 142 76% 36%;
+  --background: 40 25% 97%;
+  --foreground: 30 10% 12%;
+  --card: 40 30% 99%;
+  --card-foreground: 30 10% 12%;
+  --popover: 40 30% 99%;
+  --popover-foreground: 30 10% 12%;
+  --primary: 30 12% 18%;
+  --primary-foreground: 40 30% 97%;
+  --secondary: 35 16% 93%;
+  --secondary-foreground: 30 12% 18%;
+  --muted: 35 12% 91%;
+  --muted-foreground: 25 8% 45%;
+  --accent: 36 28% 95%;
+  --accent-foreground: 30 12% 18%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 40 30% 98%;
+  --play: 152 56% 38%;
   --play-foreground: 0 0% 100%;
-  --warn: 32 94% 50%;
-  --warn-foreground: 222.2 47.4% 11.2%;
-  --border: 214.3 20% 88%;
-  --input: 214.3 20% 88%;
-  --ring: 222.2 84% 4.9%;
+  --warn: 36 90% 50%;
+  --warn-foreground: 30 12% 18%;
+  --border: 35 16% 87%;
+  --input: 35 16% 87%;
+  --ring: 30 12% 18%;
   --radius: 0.5rem;
 }
 
+/* ─── Dark Theme: Lifted Slate-Blue ─── */
 .dark {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 210 40% 98%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
+  --background: 222 47% 11%;
+  --foreground: 210 40% 96%;
+  --card: 222 40% 14%;
+  --card-foreground: 210 40% 96%;
+  --popover: 222 40% 15%;
+  --popover-foreground: 210 40% 96%;
+  --primary: 210 40% 96%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 217 30% 20%;
+  --secondary-foreground: 210 36% 94%;
+  --muted: 217 28% 20%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 217 30% 20%;
+  --accent-foreground: 210 40% 96%;
+  --destructive: 0 62% 35%;
+  --destructive-foreground: 210 40% 96%;
   --play: 142 70% 44%;
-  --play-foreground: 210 40% 98%;
-  --warn: 38 92% 60%;
-  --warn-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 212.7 26.8% 83.9%;
+  --play-foreground: 210 40% 96%;
+  --warn: 38 92% 58%;
+  --warn-foreground: 210 40% 96%;
+  --border: 217 25% 23%;
+  --input: 217 25% 23%;
+  --ring: 213 27% 84%;
 }
 
 * {
@@ -91,5 +93,16 @@
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Source Sans 3', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code, .font-mono, [class*="font-mono"] {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+}
+
+/* Smooth transitions for theme toggling */
+body, .bg-card, .bg-background, .bg-muted {
+  transition: background-color 0.2s ease, color 0.2s ease;
 }

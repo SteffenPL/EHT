@@ -47,12 +47,12 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
       )}
 
       <Tabs defaultValue="parameters" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="w-full justify-start shrink-0">
-          <TabsTrigger value="parameters">Parameters</TabsTrigger>
-          {hasConstants && <TabsTrigger value="constants">Constants</TabsTrigger>}
-          {hasCellTypes && <TabsTrigger value="celltypes">Cell Types</TabsTrigger>}
-          {hasCellEvents && <TabsTrigger value="cellevents">Cell Events</TabsTrigger>}
-          {hasSimulation && <TabsTrigger value="simulation">Simulation</TabsTrigger>}
+        <TabsList className="w-full justify-start shrink-0 h-9">
+          <TabsTrigger value="parameters" className="text-xs">Parameters</TabsTrigger>
+          {hasConstants && <TabsTrigger value="constants" className="text-xs">Constants</TabsTrigger>}
+          {hasCellTypes && <TabsTrigger value="celltypes" className="text-xs">Cell Types</TabsTrigger>}
+          {hasCellEvents && <TabsTrigger value="cellevents" className="text-xs">Events</TabsTrigger>}
+          {hasSimulation && <TabsTrigger value="simulation" className="text-xs">Simulation</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="parameters" className="flex-1 overflow-hidden mt-0">

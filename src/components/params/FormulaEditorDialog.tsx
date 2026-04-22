@@ -101,7 +101,7 @@ function GraphPreview({
 
   if (error || !data) {
     return (
-      <div className="w-full h-[180px] border rounded bg-muted/30 flex items-center justify-center">
+      <div className="w-full h-[200px] border rounded bg-muted/30 flex items-center justify-center">
         <span className="text-sm text-muted-foreground">
           {error ? 'Invalid formula' : 'Enter a formula to see preview'}
         </span>
@@ -110,7 +110,7 @@ function GraphPreview({
   }
 
   return (
-    <div className="w-full h-[180px] border rounded bg-background">
+    <div className="w-full h-[200px] border rounded bg-background">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 15, bottom: 5, left: 5 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -349,7 +349,7 @@ export function FormulaEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Formula Editor: {label}</DialogTitle>
           <DialogDescription>
@@ -382,14 +382,16 @@ export function FormulaEditorDialog({
             )}
           </div>
 
-          {/* Presets + Variables side by side */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Presets + Variables side by side — presets get more room for form fields */}
+          <div className="grid grid-cols-[1fr_auto] gap-4">
             <PresetPanel onInsert={insertAtCursor} />
-            <VariablesPanel
-              context={context}
-              constants={constants}
-              onInsert={insertAtCursor}
-            />
+            <div className="w-48">
+              <VariablesPanel
+                context={context}
+                constants={constants}
+                onInsert={insertAtCursor}
+              />
+            </div>
           </div>
         </div>
 

@@ -141,66 +141,62 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
         <CardTitle className="text-base">Parameters &amp; Ranges</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* File Operations - moved to top */}
-        <div className="flex flex-col gap-2">
-          <div className="flex gap-2 items-center">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".toml"
-              onChange={handleLoadConfig}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled}
-              className="flex-1"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Load TOML
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSaveConfig}
-              disabled={disabled}
-              className="flex-1"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Save TOML
-            </Button>
-          </div>
-          <div className="flex gap-2 items-center">
-            <input
-              ref={xlsxInputRef}
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleImportXLSX}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => xlsxInputRef.current?.click()}
-              disabled={disabled || isImporting}
-              className="flex-1"
-            >
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              {isImporting ? 'Importing...' : 'Import Legacy XLSX'}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCopyShareLink}
-              disabled={disabled}
-              className="flex-1"
-            >
-              <Link2 className="h-4 w-4 mr-2" />
-              {linkCopied ? 'Copied!' : 'Share Link'}
-            </Button>
-          </div>
+        {/* File Operations - compact toolbar */}
+        <div className="flex gap-1.5 items-center flex-wrap">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".toml"
+            onChange={handleLoadConfig}
+            className="hidden"
+          />
+          <input
+            ref={xlsxInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            onChange={handleImportXLSX}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+            className="h-7 text-xs gap-1.5"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Load
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSaveConfig}
+            disabled={disabled}
+            className="h-7 text-xs gap-1.5"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Save
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => xlsxInputRef.current?.click()}
+            disabled={disabled || isImporting}
+            className="h-7 text-xs gap-1.5"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            {isImporting ? 'Importing...' : 'XLSX'}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopyShareLink}
+            disabled={disabled}
+            className="h-7 text-xs gap-1.5"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            {linkCopied ? 'Copied!' : 'Share'}
+          </Button>
         </div>
 
         <Separator />
@@ -252,7 +248,7 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
 
         <Separator />
 
-        <div className="h-[500px] border rounded-md overflow-hidden relative">
+        <div className="h-[min(500px,calc(100vh-320px))] min-h-[300px] border rounded-md overflow-hidden relative">
           <ModelParameterPanel
             params={config.params}
             onChange={handleParamsChange}
