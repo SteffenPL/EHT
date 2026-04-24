@@ -114,6 +114,7 @@ cli/                   # Headless CLI interface
 - [src/core/registry/registry.ts](src/core/registry/registry.ts) - Singleton model registry with version management
 - [src/core/simulation/engine.ts](src/core/simulation/engine.ts) - Model-agnostic simulation loop
 - [src/core/batch/runner.ts](src/core/batch/runner.ts) - Batch simulation with worker pool support
+- [src/core/batch/exportRunner.ts](src/core/batch/exportRunner.ts) - Batch export with screenshots, videos, and data packaging
 - [src/models/eht/index.ts](src/models/eht/index.ts) - EHT model definition and registration
 - [src/models/eht/simulation/step.ts](src/models/eht/simulation/step.ts) - EHT timestep (forces, constraints, events)
 - [src/core/math/basal-geometry.ts](src/core/math/basal-geometry.ts) - Basal curve geometry (line/circle/ellipse) with projection, arc length, normals
@@ -122,6 +123,16 @@ cli/                   # Headless CLI interface
 ### Batch Simulations
 
 Batch runs use Web Workers for parallel execution. The worker pool ([src/core/batch/workerPool.ts](src/core/batch/workerPool.ts)) distributes parameter configs across workers. Each worker imports the model registry ([src/models/index.worker.ts](src/models/index.worker.ts)) and runs simulations independently.
+
+### Batch Export
+
+The batch export system ([src/core/batch/exportRunner.ts](src/core/batch/exportRunner.ts)) produces ZIP archives with configurable content. Configuration is done via the `ExportConfigDialog` ([src/components/batch/ExportConfigDialog.tsx](src/components/batch/ExportConfigDialog.tsx)) which controls:
+
+- **Screenshots**: interval (hours), include initial/terminal, resolution, optional subset limit (first N param configs × K seeds)
+- **Videos**: format (MP4/WebM/AV1 via WebCodecs API), frame rate, resolution, optional subset limit
+- **Data**: CSV snapshots, per-run TOML parameter files, statistics CSV (always all runs)
+
+Video encoding uses [src/core/export/videoEncoder.ts](src/core/export/videoEncoder.ts) with codec negotiation (H.264 → VP9 → VP8 fallback). ZIP packaging uses JSZip via [src/core/export/zipBuilder.ts](src/core/export/zipBuilder.ts). The export runner re-simulates each run sequentially, rendering via `OffscreenRenderer` for screenshots/video frames. The `BatchExportDialogConfig` type in [src/core/batch/types.ts](src/core/batch/types.ts) defines the full export configuration shape.
 
 ### Documentation Pages
 
