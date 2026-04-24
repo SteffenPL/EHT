@@ -10,6 +10,7 @@ export type {
   BatchData,
   BatchProgress,
   StatisticsResult,
+  BatchExportDialogConfig,
 } from './types';
 
 export {

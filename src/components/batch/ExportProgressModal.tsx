@@ -48,6 +48,9 @@ export function ExportProgressModal({
           <p className="text-xs text-muted-foreground">
             Run {progress.currentRun} of {progress.totalRuns}
           </p>
+          {progress.message && (
+            <p className="text-xs text-muted-foreground">{progress.message}</p>
+          )}
         </div>
 
         {/* Progress Bar */}

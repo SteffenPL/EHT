@@ -10,7 +10,7 @@ import { Progress } from '../ui/progress';
 import { Separator } from '../ui/separator';
 import { ResultsTable } from './ResultsTable';
 import { BatchPlot } from './BatchPlot';
-import { ExtendedExportPanel } from './ExtendedExportPanel';
+import { ExportConfigDialog } from './ExportConfigDialog';
 import { ExportProgressModal } from './ExportProgressModal';
 import { aggregateByTime, aggregateByXAxisWithCI, aggregateForHistogram } from './plotUtils';
 import type { SimulationConfig } from '@/core/params';
@@ -18,6 +18,7 @@ import type {
   BatchData,
   BatchProgress,
   BatchSnapshot,
+  BatchExportDialogConfig,
 } from '@/core/batch';
 import {
   runBatch,
@@ -29,10 +30,10 @@ import {
   downloadCSV,
   readFileAsText,
   getTimeSamples,
+  generateParameterConfigs,
   WorkerPool,
 } from '@/core/batch';
 import { runBatchExport, type BatchExportProgress } from '@/core/batch/exportRunner';
-import type { ExtendedExportConfig } from './ExtendedExportPanel';
 import { setNestedValue, encodeParamsToUrl } from '@/core/params';
 import { useModel } from '@/contexts/ModelContext';
 
@@ -77,12 +78,8 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   // File input refs
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Extended export state
-  const [extendedExportConfig, setExtendedExportConfig] = useState<ExtendedExportConfig>({
-    exportMovie: true,
-    resolution: { width: 1920, height: 1920 },
-    frameRate: 30,
-  });
+  // Export dialog state
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportProgress, setExportProgress] = useState<BatchExportProgress | null>(null);
   const exportAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -169,10 +166,10 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   };
 
   // Extended export with screenshots and movies
-  const handleExtendedExport = useCallback(async () => {
+  const handleExportWithConfig = useCallback(async (exportConfig: BatchExportDialogConfig) => {
     if (!config.params) return;
+    setExportDialogOpen(false);
 
-    // Create abort controller
     const controller = new AbortController();
     exportAbortControllerRef.current = controller;
 
@@ -186,11 +183,9 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
             sampling_mode: 'grid',
           },
           baseParams: config.params,
-          exportMovie: extendedExportConfig.exportMovie,
-          resolution: extendedExportConfig.resolution,
-          frameRate: extendedExportConfig.frameRate,
-          isDark: false, // TODO: Could get from theme context if needed
-          renderOptions: {}, // TODO: Could get from model render options if needed
+          exportConfig,
+          isDark: false,
+          renderOptions: {},
         },
         {
           onProgress: (progress) => {
@@ -200,7 +195,6 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
         controller.signal
       );
 
-      // Download ZIP
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
       const filename = `batch_export_${timestamp}.zip`;
       const link = document.createElement('a');
@@ -221,7 +215,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
     } finally {
       exportAbortControllerRef.current = null;
     }
-  }, [config, extendedExportConfig]);
+  }, [config]);
 
   // Cancel extended export
   const handleCancelExport = useCallback(() => {
@@ -632,11 +626,29 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
       </Card>
 
       {/* Extended Export */}
-      <ExtendedExportPanel
-        config={extendedExportConfig}
-        onChange={setExtendedExportConfig}
-        onExport={handleExtendedExport}
-        disabled={isRunning || !!exportProgress || config.parameterRanges.length === 0}
+      <Card>
+        <CardContent className="pt-4">
+          <Button
+            onClick={() => setExportDialogOpen(true)}
+            disabled={isRunning || !!exportProgress}
+            className="gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Export as ZIP...
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Export screenshots, videos, CSV data, and parameter files as a ZIP archive.
+          </p>
+        </CardContent>
+      </Card>
+
+      <ExportConfigDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        onExport={handleExportWithConfig}
+        totalParamConfigs={generateParameterConfigs(config.parameterRanges, 'grid').length}
+        totalSeeds={config.seedsPerConfig}
+        disabled={isRunning || !!exportProgress}
       />
 
       {/* Compute Statistics */}

@@ -59,6 +59,32 @@ export interface StatisticsResult {
   rows: (string | number)[][]; // Data rows
 }
 
+/** Configuration for the enhanced batch export dialog */
+export interface BatchExportDialogConfig {
+  screenshots: {
+    enabled: boolean;
+    intervalHours: number;
+    includeInitial: boolean;
+    includeTerminal: boolean;
+    resolution: number;
+    maxParamConfigs: number | null; // null = all
+    maxSeeds: number | null;
+  };
+  videos: {
+    enabled: boolean;
+    resolution: number;
+    frameRate: number;
+    format: 'mp4' | 'webm' | 'mp4-av1';
+    maxParamConfigs: number | null;
+    maxSeeds: number | null;
+  };
+  data: {
+    csvSnapshots: boolean;
+    tomlParams: boolean;
+    statisticsCsv: boolean;
+  };
+}
+
 /** Get time sample points from config */
 export function getTimeSamples(config: TimeSampleConfig): number[] {
   const samples: number[] = [];
