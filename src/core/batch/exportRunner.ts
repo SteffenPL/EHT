@@ -9,6 +9,7 @@ import { batchSnapshotsToCSV, statisticsToCSV } from './serialization';
 import type { BaseSimulationParams } from '../registry';
 import type { BatchConfig, BatchExportDialogConfig, BatchSnapshot } from './types';
 import { generateParameterConfigs, getTimeSamples } from './types';
+import { parseExportTimeSpec, resolveExportCountLimit } from './exportConfig';
 
 export interface BatchExportRunnerConfig {
   batchConfig: BatchConfig;
@@ -51,11 +52,39 @@ export async function runBatchExport(
 
   const needsScreenshots = exportConfig.screenshots.enabled;
   const needsVideos = exportConfig.videos.enabled;
+  const needsCsvSnapshots = exportConfig.data.csvSnapshots;
+  const needsStatistics = exportConfig.data.statisticsCsv;
 
-  const screenshotMaxConfigs = exportConfig.screenshots.maxParamConfigs ?? paramConfigs.length;
-  const screenshotMaxSeeds = exportConfig.screenshots.maxSeeds ?? totalSeeds;
-  const videoMaxConfigs = exportConfig.videos.maxParamConfigs ?? paramConfigs.length;
-  const videoMaxSeeds = exportConfig.videos.maxSeeds ?? totalSeeds;
+  const screenshotMaxSamples = resolveExportCountLimit(
+    exportConfig.screenshots.maxSamples,
+    paramConfigs.length,
+    'Screenshot max samples'
+  );
+  const screenshotSeedsPerSample = resolveExportCountLimit(
+    exportConfig.screenshots.seedsPerSample,
+    totalSeeds,
+    'Screenshot seeds per sample'
+  );
+  const videoMaxSamples = resolveExportCountLimit(
+    exportConfig.videos.maxSamples,
+    paramConfigs.length,
+    'Video max samples'
+  );
+  const videoSeedsPerSample = resolveExportCountLimit(
+    exportConfig.videos.seedsPerSample,
+    totalSeeds,
+    'Video seeds per sample'
+  );
+  const statisticsMaxSamples = resolveExportCountLimit(
+    exportConfig.data.statisticsMaxSamples,
+    paramConfigs.length,
+    'Statistics max samples'
+  );
+  const statisticsSeedsPerSample = resolveExportCountLimit(
+    exportConfig.data.statisticsSeedsPerSample,
+    totalSeeds,
+    'Statistics seeds per sample'
+  );
 
   const totalRuns = paramConfigs.length * totalSeeds;
 
@@ -73,28 +102,11 @@ export async function runBatchExport(
     message: 'Preparing export...',
   });
 
-  const allSnapshots: BatchSnapshot[] = [];
-  let runIndex = 0;
+  const csvSnapshots: BatchSnapshot[] = [];
+  const statisticsSnapshots: BatchSnapshot[] = [];
 
-  // Determine the max resolution needed for rendering
-  const renderResolution = Math.max(
-    needsScreenshots ? exportConfig.screenshots.resolution : 0,
-    needsVideos ? exportConfig.videos.resolution : 0
-  );
-
-  // Create offscreen renderer if we need screenshots or videos
+  // Create the renderer lazily per run because parameter samples can change viewport bounds.
   let renderer: OffscreenRenderer | null = null;
-  if ((needsScreenshots || needsVideos) && renderResolution > 0) {
-    renderer = new OffscreenRenderer({
-      width: renderResolution,
-      height: renderResolution,
-      isDark: config.isDark ?? false,
-    });
-    await renderer.init(model, config.baseParams);
-    if (config.renderOptions) {
-      renderer.setRenderOptions(config.renderOptions);
-    }
-  }
 
   for (let configIndex = 0; configIndex < paramConfigs.length; configIndex++) {
     const paramOverrides = paramConfigs[configIndex];
@@ -105,21 +117,26 @@ export async function runBatchExport(
         throw new Error('Export cancelled by user');
       }
 
-      runIndex++;
-      const seed = seedIndex + 1;
+      const runIndex = configIndex * totalSeeds + seedIndex;
+      const runNumber = runIndex + 1;
+      const seed = config.baseParams.general.random_seed + runIndex;
 
-      const doScreenshots = needsScreenshots && configIndex < screenshotMaxConfigs && seedIndex < screenshotMaxSeeds;
-      const doVideo = needsVideos && configIndex < videoMaxConfigs && seedIndex < videoMaxSeeds;
+      const doScreenshots = needsScreenshots && configIndex < screenshotMaxSamples && seedIndex < screenshotSeedsPerSample;
+      const doVideo = needsVideos && configIndex < videoMaxSamples && seedIndex < videoSeedsPerSample;
+      const doStatistics = needsStatistics && configIndex < statisticsMaxSamples && seedIndex < statisticsSeedsPerSample;
       const doRender = doScreenshots || doVideo;
+      const runRenderResolution = doVideo
+        ? exportConfig.videos.resolution
+        : (doScreenshots ? exportConfig.screenshots.resolution : 0);
 
       callbacks.onProgress?.({
         phase: 'simulating',
-        currentRun: runIndex,
+        currentRun: runNumber,
         totalRuns,
         runProgress: 0,
-        overallPercent: ((runIndex - 1) / totalRuns) * 100,
+        overallPercent: (runIndex / totalRuns) * 100,
         currentConfig: paramOverrides,
-        message: `Run ${runIndex}/${totalRuns}${doRender ? ' (with rendering)' : ''}`,
+        message: `Run ${runNumber}/${totalRuns}${doRender ? ' (with media)' : ''}`,
       });
 
       const params = structuredClone(config.baseParams);
@@ -128,20 +145,20 @@ export async function runBatchExport(
       }
       params.general.random_seed = seed;
 
-      const runDir = `run_${runIndex.toString().padStart(3, '0')}`;
+      const runDir = `run_${runNumber.toString().padStart(3, '0')}`;
 
       if (exportConfig.data.tomlParams) {
         const paramsToml = stringifyToml(params as any);
         zipBuilder.addFile(`${runDir}/params.toml`, paramsToml);
       }
 
-      // Re-init renderer with this run's params for correct viewport
-      if (doRender && renderer) {
-        renderer.destroy();
+      if (doRender && runRenderResolution > 0) {
+        renderer?.destroy();
         renderer = new OffscreenRenderer({
-          width: renderResolution,
-          height: renderResolution,
+          width: runRenderResolution,
+          height: runRenderResolution,
           isDark: config.isDark ?? false,
+          preferHtmlCanvas: doVideo,
         });
         await renderer.init(model, params);
         if (config.renderOptions) {
@@ -150,27 +167,21 @@ export async function runBatchExport(
       }
 
       const engine = new SimulationEngine({ model, params });
+      const endTime = (params as any).general.t_end ?? 100;
 
-      // Build screenshot time set
-      const screenshotTimes = new Set<number>();
-      if (doScreenshots) {
-        const endTime = (params as any).general.t_end ?? 100;
-        if (exportConfig.screenshots.includeInitial) {
-          screenshotTimes.add(0);
-        }
-        const interval = exportConfig.screenshots.intervalHours;
-        if (interval > 0) {
-          for (let t = interval; t < endTime; t += interval) {
-            screenshotTimes.add(t);
-          }
-        }
-        if (exportConfig.screenshots.includeTerminal) {
-          screenshotTimes.add(endTime);
-        }
-      }
+      const screenshotTimes = doScreenshots
+        ? parseExportTimeSpec(exportConfig.screenshots.timeSpec, endTime)
+        : [];
+      const csvTimes = needsCsvSnapshots
+        ? getTimeSamples(config.batchConfig.time_samples).filter(time => time <= endTime)
+        : [];
+      const statisticsTimes = doStatistics
+        ? parseExportTimeSpec(exportConfig.data.statisticsTimeSpec, endTime)
+        : [];
 
       // Video encoder
       let videoEncoder: IVideoEncoder | null = null;
+      let lastVideoTimestampMs = -Infinity;
       if (doVideo) {
         videoEncoder = createVideoEncoder(exportConfig.videos.format as VideoFormat, {
           width: exportConfig.videos.resolution,
@@ -182,41 +193,38 @@ export async function runBatchExport(
 
       // Capture initial state
       const state0 = engine.getState();
-      const t0 = (state0 as any).t ?? 0;
+      const t0 = getStateTime(state0);
+      let nextCsvIndex = 0;
+      let nextStatisticsIndex = 0;
+      let nextScreenshotIndex = 0;
+
+      while (nextCsvIndex < csvTimes.length && isDue(t0, csvTimes[nextCsvIndex])) {
+        csvSnapshots.push(createBatchSnapshot(model, state0, runNumber, seed, csvTimes[nextCsvIndex], paramOverrides));
+        nextCsvIndex++;
+      }
+
+      while (nextStatisticsIndex < statisticsTimes.length && isDue(t0, statisticsTimes[nextStatisticsIndex])) {
+        statisticsSnapshots.push(createBatchSnapshot(model, state0, runNumber, seed, statisticsTimes[nextStatisticsIndex], paramOverrides));
+        nextStatisticsIndex++;
+      }
 
       if (doRender && renderer) {
         renderer.render(state0);
 
-        if (doScreenshots && screenshotTimes.has(0)) {
+        while (nextScreenshotIndex < screenshotTimes.length && isDue(t0, screenshotTimes[nextScreenshotIndex])) {
           const screenshot = await renderer.getScreenshot();
-          zipBuilder.addFile(`${runDir}/screenshots/t_0000.0h.png`, screenshot);
-          screenshotTimes.delete(0);
+          zipBuilder.addFile(`${runDir}/screenshots/${formatScreenshotFilename(screenshotTimes[nextScreenshotIndex])}`, screenshot);
+          nextScreenshotIndex++;
         }
 
         if (videoEncoder) {
           const canvas = renderer.getCanvas();
-          if (canvas instanceof HTMLCanvasElement) {
-            await videoEncoder.addFrame(canvas, 0);
-          }
+          await videoEncoder.addFrame(canvas, 0);
+          lastVideoTimestampMs = 0;
         }
       }
 
-      // Collect snapshots for CSV
-      const timeSamples = getTimeSamples(config.batchConfig.time_samples);
-      let nextSnapshotIndex = 0;
-      if (timeSamples.length > 0 && timeSamples[0] <= t0) {
-        allSnapshots.push({
-          run_index: runIndex,
-          seed,
-          time_h: t0,
-          sampled_params: paramOverrides,
-          data: model.getSnapshot(state0),
-        });
-        nextSnapshotIndex = 1;
-      }
-
       // Simulation loop
-      const endTime = (params as any).general.t_end ?? 100;
       let frameCount = 1;
       const frameDt = 1000 / (exportConfig.videos.frameRate || 30);
       let yieldCounter = 0;
@@ -229,47 +237,44 @@ export async function runBatchExport(
 
         engine.step();
         const state = engine.getState();
-        const t = (state as any).t ?? 0;
+        const t = getStateTime(state);
 
-        // Collect batch snapshots
-        while (nextSnapshotIndex < timeSamples.length && t >= timeSamples[nextSnapshotIndex]) {
-          allSnapshots.push({
-            run_index: runIndex,
-            seed,
-            time_h: timeSamples[nextSnapshotIndex],
-            sampled_params: paramOverrides,
-            data: model.getSnapshot(state),
-          });
-          nextSnapshotIndex++;
+        while (nextCsvIndex < csvTimes.length && isDue(t, csvTimes[nextCsvIndex])) {
+          csvSnapshots.push(createBatchSnapshot(model, state, runNumber, seed, csvTimes[nextCsvIndex], paramOverrides));
+          nextCsvIndex++;
+        }
+
+        while (nextStatisticsIndex < statisticsTimes.length && isDue(t, statisticsTimes[nextStatisticsIndex])) {
+          statisticsSnapshots.push(createBatchSnapshot(model, state, runNumber, seed, statisticsTimes[nextStatisticsIndex], paramOverrides));
+          nextStatisticsIndex++;
         }
 
         if (doRender && renderer) {
-          // Render for screenshots/video at needed times
-          const needsRenderNow = doVideo || (doScreenshots && hasNearbyTime(t, screenshotTimes, endTime));
+          const screenshotDue = nextScreenshotIndex < screenshotTimes.length && isDue(t, screenshotTimes[nextScreenshotIndex]);
+          const tMs = t * 1000;
+          const videoDue = !!videoEncoder && tMs + 1e-9 >= frameCount * frameDt;
+          const needsRenderNow = screenshotDue || videoDue;
 
           if (needsRenderNow) {
             renderer.render(state);
 
             // Screenshots
-            if (doScreenshots) {
-              for (const st of screenshotTimes) {
-                if (t >= st) {
-                  const screenshot = await renderer.getScreenshot();
-                  zipBuilder.addFile(
-                    `${runDir}/screenshots/t_${st.toFixed(1).padStart(7, '0')}h.png`,
-                    screenshot
-                  );
-                  screenshotTimes.delete(st);
-                }
-              }
+            while (nextScreenshotIndex < screenshotTimes.length && isDue(t, screenshotTimes[nextScreenshotIndex])) {
+              const screenshotTime = screenshotTimes[nextScreenshotIndex];
+              const screenshot = await renderer.getScreenshot();
+              zipBuilder.addFile(
+                `${runDir}/screenshots/${formatScreenshotFilename(screenshotTime)}`,
+                screenshot
+              );
+              nextScreenshotIndex++;
             }
 
             // Video frames
-            if (videoEncoder && t * 1000 >= frameCount * frameDt) {
+            while (videoEncoder && tMs + 1e-9 >= frameCount * frameDt) {
               const canvas = renderer.getCanvas();
-              if (canvas instanceof HTMLCanvasElement) {
-                await videoEncoder.addFrame(canvas, t * 1000);
-              }
+              const timestampMs = frameCount * frameDt;
+              await videoEncoder.addFrame(canvas, timestampMs);
+              lastVideoTimestampMs = timestampMs;
               frameCount++;
             }
           }
@@ -281,27 +286,51 @@ export async function runBatchExport(
           const progress = Math.min((t / endTime) * 100, 100);
           callbacks.onProgress?.({
             phase: 'simulating',
-            currentRun: runIndex,
+            currentRun: runNumber,
             totalRuns,
             runProgress: progress,
-            overallPercent: ((runIndex - 1 + progress / 100) / totalRuns) * 100,
+            overallPercent: ((runIndex + progress / 100) / totalRuns) * 100,
             currentConfig: paramOverrides,
-            message: `Run ${runIndex}/${totalRuns} — t=${t.toFixed(1)}h`,
+            message: `Run ${runNumber}/${totalRuns} - t=${t.toFixed(1)}h`,
           });
           await yieldToUI();
         }
       }
 
-      // Capture terminal screenshot if not yet captured
-      if (doScreenshots && screenshotTimes.size > 0 && renderer) {
-        const state = engine.getState();
+      const finalState = engine.getState();
+      const finalTime = getStateTime(finalState);
+
+      while (nextCsvIndex < csvTimes.length && isDue(finalTime, csvTimes[nextCsvIndex])) {
+        csvSnapshots.push(createBatchSnapshot(model, finalState, runNumber, seed, csvTimes[nextCsvIndex], paramOverrides));
+        nextCsvIndex++;
+      }
+
+      while (nextStatisticsIndex < statisticsTimes.length && isDue(finalTime, statisticsTimes[nextStatisticsIndex])) {
+        statisticsSnapshots.push(createBatchSnapshot(model, finalState, runNumber, seed, statisticsTimes[nextStatisticsIndex], paramOverrides));
+        nextStatisticsIndex++;
+      }
+
+      // Capture remaining terminal media if the final step landed beyond a requested time.
+      if (doRender && renderer && (
+        nextScreenshotIndex < screenshotTimes.length ||
+        (videoEncoder && lastVideoTimestampMs < endTime * 1000 - 1e-9)
+      )) {
+        const state = finalState;
         renderer.render(state);
-        for (const st of screenshotTimes) {
+
+        while (nextScreenshotIndex < screenshotTimes.length) {
+          const screenshotTime = screenshotTimes[nextScreenshotIndex];
           const screenshot = await renderer.getScreenshot();
           zipBuilder.addFile(
-            `${runDir}/screenshots/t_${st.toFixed(1).padStart(7, '0')}h.png`,
+            `${runDir}/screenshots/${formatScreenshotFilename(screenshotTime)}`,
             screenshot
           );
+          nextScreenshotIndex++;
+        }
+
+        if (videoEncoder && lastVideoTimestampMs < endTime * 1000 - 1e-9) {
+          await videoEncoder.addFrame(renderer.getCanvas(), endTime * 1000);
+          lastVideoTimestampMs = endTime * 1000;
         }
       }
 
@@ -309,30 +338,16 @@ export async function runBatchExport(
       if (videoEncoder) {
         callbacks.onProgress?.({
           phase: 'encoding',
-          currentRun: runIndex,
+          currentRun: runNumber,
           totalRuns,
           runProgress: 100,
-          overallPercent: ((runIndex - 0.5) / totalRuns) * 100,
-          message: `Encoding video for run ${runIndex}...`,
+          overallPercent: ((runIndex + 0.5) / totalRuns) * 100,
+          message: `Encoding video for run ${runNumber}...`,
         });
 
         const ext = exportConfig.videos.format === 'webm' ? 'webm' : 'mp4';
         const movieBlob = await videoEncoder.finish();
         zipBuilder.addFile(`${runDir}/movie.${ext}`, movieBlob);
-      }
-
-      // Collect terminal snapshot if not yet
-      if (nextSnapshotIndex < timeSamples.length) {
-        const state = engine.getState();
-        for (let i = nextSnapshotIndex; i < timeSamples.length; i++) {
-          allSnapshots.push({
-            run_index: runIndex,
-            seed,
-            time_h: timeSamples[i],
-            sampled_params: paramOverrides,
-            data: model.getSnapshot(state),
-          });
-        }
       }
     }
   }
@@ -341,14 +356,14 @@ export async function runBatchExport(
   renderer?.destroy();
 
   // Add CSV data
-  if (exportConfig.data.csvSnapshots && allSnapshots.length > 0) {
-    const csv = batchSnapshotsToCSV(allSnapshots);
+  if (exportConfig.data.csvSnapshots && csvSnapshots.length > 0) {
+    const csv = batchSnapshotsToCSV(csvSnapshots);
     zipBuilder.addFile('batch_snapshots.csv', csv);
   }
 
   // Add statistics CSV
-  if (exportConfig.data.statisticsCsv && allSnapshots.length > 0) {
-    const statsData = computeAllStatistics(model, config.baseParams, allSnapshots);
+  if (exportConfig.data.statisticsCsv && statisticsSnapshots.length > 0) {
+    const statsData = computeAllStatistics(model, config.baseParams, statisticsSnapshots);
     if (statsData) {
       const csv = statisticsToCSV(statsData.columns, statsData.rows);
       zipBuilder.addFile('statistics.csv', csv);
@@ -368,11 +383,34 @@ export async function runBatchExport(
   return await zipBuilder.generate();
 }
 
-function hasNearbyTime(t: number, times: Set<number>, _endTime: number): boolean {
-  for (const st of times) {
-    if (t >= st) return true;
-  }
-  return false;
+function isDue(currentTime: number, targetTime: number): boolean {
+  return currentTime + 1e-9 >= targetTime;
+}
+
+function getStateTime(state: unknown): number {
+  const value = (state as { t?: unknown }).t;
+  return typeof value === 'number' ? value : 0;
+}
+
+function createBatchSnapshot(
+  model: { getSnapshot(state: unknown): Record<string, any>[] },
+  state: unknown,
+  runIndex: number,
+  seed: number,
+  time: number,
+  sampledParams: Record<string, number>
+): BatchSnapshot {
+  return {
+    run_index: runIndex,
+    seed,
+    time_h: time,
+    sampled_params: sampledParams,
+    data: model.getSnapshot(state),
+  };
+}
+
+function formatScreenshotFilename(time: number): string {
+  return `t_${time.toFixed(1).padStart(7, '0')}h.png`;
 }
 
 function yieldToUI(): Promise<void> {
@@ -399,6 +437,7 @@ function computeAllStatistics(
   for (const [path, value] of Object.entries(snapshots[0].sampled_params)) {
     setNestedValue(firstParams, path, value);
   }
+  firstParams.general.random_seed = snapshots[0].seed;
   const firstState = model.loadSnapshot(snapshots[0].data, firstParams);
   const firstStats = model.computeStats(firstState, firstParams);
   const statNames = Object.keys(firstStats).sort();
@@ -411,6 +450,7 @@ function computeAllStatistics(
     for (const [path, value] of Object.entries(snapshot.sampled_params)) {
       setNestedValue(snapshotParams, path, value);
     }
+    snapshotParams.general.random_seed = snapshot.seed;
 
     const state = model.loadSnapshot(snapshot.data, snapshotParams);
     const stats = model.computeStats(state, snapshotParams);

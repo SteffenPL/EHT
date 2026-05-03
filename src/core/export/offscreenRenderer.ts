@@ -6,6 +6,7 @@ export interface OffscreenRendererConfig {
   width: number;
   height: number;
   isDark: boolean;
+  preferHtmlCanvas?: boolean;
 }
 
 /**
@@ -37,8 +38,9 @@ export class OffscreenRenderer<
       throw new Error('Renderer already initialized');
     }
 
-    // Try to use OffscreenCanvas if available
-    if (typeof OffscreenCanvas !== 'undefined') {
+    // Try to use OffscreenCanvas if available, unless callers need a main-thread
+    // HTML canvas for APIs such as WebCodecs video frame capture.
+    if (!this.config.preferHtmlCanvas && typeof OffscreenCanvas !== 'undefined') {
       this.canvas = new OffscreenCanvas(this.config.width, this.config.height);
       this.isOffscreen = true;
     } else {

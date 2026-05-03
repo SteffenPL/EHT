@@ -19,6 +19,12 @@ export {
 } from './types';
 
 export {
+  formatTimeSampleConfig,
+  parseExportTimeSpec,
+  resolveExportCountLimit,
+} from './exportConfig';
+
+export {
   runBatch,
   computeTotalRuns,
 } from './runner';

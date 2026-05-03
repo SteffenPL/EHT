@@ -63,25 +63,28 @@ export interface StatisticsResult {
 export interface BatchExportDialogConfig {
   screenshots: {
     enabled: boolean;
-    intervalHours: number;
-    includeInitial: boolean;
-    includeTerminal: boolean;
+    /** Comma-separated times and/or start:step:end ranges. Empty range end means t_end. */
+    timeSpec: string;
     resolution: number;
-    maxParamConfigs: number | null; // null = all
-    maxSeeds: number | null;
+    maxSamples: number | null; // null = all parameter samples
+    seedsPerSample: number | null; // null = all seeds for each sample
   };
   videos: {
     enabled: boolean;
     resolution: number;
     frameRate: number;
     format: 'mp4' | 'webm' | 'mp4-av1';
-    maxParamConfigs: number | null;
-    maxSeeds: number | null;
+    maxSamples: number | null;
+    seedsPerSample: number | null;
   };
   data: {
     csvSnapshots: boolean;
     tomlParams: boolean;
     statisticsCsv: boolean;
+    /** Time controls for exported statistics. Defaults to the batch time samples. */
+    statisticsTimeSpec: string;
+    statisticsMaxSamples: number | null;
+    statisticsSeedsPerSample: number | null;
   };
 }
 

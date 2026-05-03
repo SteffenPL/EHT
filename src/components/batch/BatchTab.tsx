@@ -31,6 +31,7 @@ import {
   readFileAsText,
   getTimeSamples,
   generateParameterConfigs,
+  formatTimeSampleConfig,
   WorkerPool,
 } from '@/core/batch';
 import { runBatchExport, type BatchExportProgress } from '@/core/batch/exportRunner';
@@ -87,6 +88,8 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const totalRuns = computeTotalRuns(config.parameterRanges, config.seedsPerConfig);
   const timeSamples = getTimeSamples(config.timeSamples);
   const totalSnapshots = totalRuns * timeSamples.length;
+  const exportTEnd = getParamEndTime(config.params, config.timeSamples.end);
+  const defaultStatisticsTimeSpec = formatTimeSampleConfig(config.timeSamples);
 
   // Run batch
   const handleRunBatch = useCallback(async () => {
@@ -648,6 +651,8 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
         onExport={handleExportWithConfig}
         totalParamConfigs={generateParameterConfigs(config.parameterRanges, 'grid').length}
         totalSeeds={config.seedsPerConfig}
+        tEnd={exportTEnd}
+        defaultStatisticsTimeSpec={defaultStatisticsTimeSpec}
         disabled={isRunning || !!exportProgress}
       />
 
@@ -865,4 +870,9 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
       )}
     </div>
   );
+}
+
+function getParamEndTime(params: SimulationConfig['params'], fallback: number): number {
+  const value = (params as { general?: { t_end?: unknown } }).general?.t_end;
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }

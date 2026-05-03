@@ -21,7 +21,7 @@ export interface VideoEncoderOptions {
  */
 export interface IVideoEncoder {
   init(): Promise<void>;
-  addFrame(canvas: HTMLCanvasElement, timestamp: number): Promise<void>;
+  addFrame(canvas: HTMLCanvasElement | OffscreenCanvas, timestamp: number): Promise<void>;
   finish(): Promise<Blob>;
   getFrameCount(): number;
 }
@@ -272,7 +272,7 @@ export class MP4VideoEncoder implements IVideoEncoder {
    * @param canvas The canvas to capture
    * @param timestamp Timestamp in milliseconds
    */
-  async addFrame(canvas: HTMLCanvasElement, timestamp: number): Promise<void> {
+  async addFrame(canvas: HTMLCanvasElement | OffscreenCanvas, timestamp: number): Promise<void> {
     if (!this.encoder || !this.muxer) {
       throw new Error('Encoder not initialized. Call init() first.');
     }
@@ -524,7 +524,7 @@ export class WebMVideoEncoder implements IVideoEncoder {
    * @param canvas The canvas to capture
    * @param timestamp Timestamp in milliseconds
    */
-  async addFrame(canvas: HTMLCanvasElement, timestamp: number): Promise<void> {
+  async addFrame(canvas: HTMLCanvasElement | OffscreenCanvas, timestamp: number): Promise<void> {
     if (!this.encoder || !this.muxer) {
       throw new Error('Encoder not initialized. Call init() first.');
     }
@@ -789,7 +789,7 @@ export class MP4AV1VideoEncoder implements IVideoEncoder {
    * @param canvas The canvas to capture
    * @param timestamp Timestamp in milliseconds
    */
-  async addFrame(canvas: HTMLCanvasElement, timestamp: number): Promise<void> {
+  async addFrame(canvas: HTMLCanvasElement | OffscreenCanvas, timestamp: number): Promise<void> {
     if (!this.encoder || !this.muxer) {
       throw new Error('Encoder not initialized. Call init() first.');
     }
