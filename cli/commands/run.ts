@@ -14,7 +14,7 @@ import type { BatchSnapshot } from '../../src/core/batch/types';
 import { parseArgs, generateTimeSamples } from '../utils/args';
 import { snapshotsToCSV, writeOutput, formatProgress } from '../utils/output';
 
-import { EHTModel } from '../../src/models/eht';
+import { EHTHeadlessModel as EHTModel } from '../../src/models/eht/headless';
 import { DEFAULT_EHT_PARAMS } from '../../src/models/eht/params/defaults';
 import type { EHTParams } from '../../src/models/eht/params/types';
 

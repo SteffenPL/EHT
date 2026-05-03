@@ -13,7 +13,7 @@ import type { BatchSnapshot } from '../../src/core/batch/types';
 import { parseArgs } from '../utils/args';
 import { snapshotsToCSV, writeOutput, formatProgress } from '../utils/output';
 
-import { EHTModel } from '../../src/models/eht';
+import { EHTHeadlessModel as EHTModel } from '../../src/models/eht/headless';
 import { computeEHTStatistics } from '../../src/models/eht/statistics';
 import type { EHTParams } from '../../src/models/eht/params/types';
 

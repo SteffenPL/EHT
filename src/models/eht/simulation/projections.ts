@@ -44,30 +44,53 @@ function getBasalGeometry(state: EHTSimulationState) {
 /**
  * Project a point onto the apical line strip.
  * The apical line strip is formed by the segments defined by apical links.
- * Only apical points that are part of a link belong to the apical strip.
+ * If no links are present, fall back to the ordered apical points from cells.
  * Returns the closest point on any segment of the line strip.
  */
 export function projectOntoApicalStrip(point: Vector2, state: EHTSimulationState): Vector2 {
   const { cells, ap_links } = state;
 
-  if (ap_links.length === 0) {
-    return point;
+  const segments: [Vector2, Vector2][] = [];
+
+  if (ap_links.length > 0) {
+    for (const link of ap_links) {
+      segments.push([
+        Vector2.from(cells[link.l].A),
+        Vector2.from(cells[link.r].A),
+      ]);
+    }
+  } else {
+    const geometry = getBasalGeometry(state);
+    const apicalPoints = cells
+      .filter((cell) => cell.has_A)
+      .map((cell, index) => ({
+        index,
+        arcLength: geometry.getArcLength(Vector2.from(cell.B)),
+        point: Vector2.from(cell.A),
+      }))
+      .sort((a, b) => a.arcLength - b.arcLength || a.index - b.index)
+      .map(({ point }) => point);
+
+    if (apicalPoints.length === 0) {
+      return point;
+    }
+
+    if (apicalPoints.length === 1) {
+      return apicalPoints[0];
+    }
+
+    for (let i = 0; i < apicalPoints.length - 1; i++) {
+      segments.push([apicalPoints[i], apicalPoints[i + 1]]);
+    }
   }
 
-  // Initialize with the first link's segment
-  const firstLink = ap_links[0];
-  const A_l = Vector2.from(cells[firstLink.l].A);
-  const A_r = Vector2.from(cells[firstLink.r].A);
-  let closestPoint = projectOntoSegment(point, A_l, A_r);
+  // Initialize with the first strip segment
+  let closestPoint = projectOntoSegment(point, segments[0][0], segments[0][1]);
   let minDistSq = point.distSq(closestPoint);
 
-  // Check all segments defined by apical links
-  for (let i = 1; i < ap_links.length; i++) {
-    const link = ap_links[i];
-    const A_left = Vector2.from(cells[link.l].A);
-    const A_right = Vector2.from(cells[link.r].A);
-
-    const proj = projectOntoSegment(point, A_left, A_right);
+  // Check remaining strip segments
+  for (let i = 1; i < segments.length; i++) {
+    const proj = projectOntoSegment(point, segments[i][0], segments[i][1]);
     const distSq = point.distSq(proj);
 
     if (distSq < minDistSq) {

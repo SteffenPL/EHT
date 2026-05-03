@@ -2,7 +2,7 @@
  * CLI command for listing available statistics.
  */
 
-import { EHTModel } from '../../src/models/eht';
+import { EHTHeadlessModel as EHTModel } from '../../src/models/eht/headless';
 import { listStatistics } from '../../src/core/batch/statistics';
 
 /**
