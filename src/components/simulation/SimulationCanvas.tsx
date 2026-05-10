@@ -40,6 +40,8 @@ export interface SimulationCanvasProps {
   params: BaseSimulationParams;
   /** Minimum height in pixels. Default: 350 */
   minHeight?: number;
+  /** Maximum height in pixels. Default: Infinity (no cap) */
+  maxHeight?: number;
   /** Aspect ratio (width/height). Default: 1 for square */
   aspectRatio?: number;
   className?: string;
@@ -52,6 +54,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   state,
   params,
   minHeight = 350,
+  maxHeight = Infinity,
   aspectRatio = 1,
   className,
   style,
@@ -155,16 +158,19 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   const updateSize = useCallback(() => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      const newWidth = Math.floor(rect.width);
-      // Enforce aspect ratio: height = width / aspectRatio
-      const targetHeight = Math.floor(newWidth / aspectRatio);
-      const newHeight = Math.max(minHeight, targetHeight);
+      const containerWidth = Math.floor(rect.width);
+      const targetHeight = Math.floor(containerWidth / aspectRatio);
+      const newHeight = Math.min(maxHeight, Math.max(minHeight, targetHeight));
+      // If height was capped, shrink width to maintain aspect ratio
+      const newWidth = newHeight < targetHeight
+        ? Math.floor(newHeight * aspectRatio)
+        : containerWidth;
 
       if (newWidth > 0 && newHeight > 0) {
         setSize({ width: newWidth, height: newHeight });
       }
     }
-  }, [minHeight, aspectRatio]);
+  }, [minHeight, maxHeight, aspectRatio]);
 
   // Observe container size changes
   useEffect(() => {
@@ -299,6 +305,8 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
       style={{
         width: '100%',
         minHeight: `${minHeight}px`,
+        display: 'flex',
+        justifyContent: 'center',
         ...style,
       }}
     >
@@ -308,8 +316,8 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
         height={size.height}
         style={{
           display: 'block',
-          width: '100%',
-          height: '100%',
+          width: `${size.width}px`,
+          height: `${size.height}px`,
         }}
       />
     </div>

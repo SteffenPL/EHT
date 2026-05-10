@@ -56,7 +56,7 @@ function AppContent() {
 
   return (
     <AppLayout>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4">
         <section>
           <SingleSimulationTab />
         </section>

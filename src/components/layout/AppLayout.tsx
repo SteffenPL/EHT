@@ -14,7 +14,7 @@ function AppLayoutInner({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <Header isDark={isDark} onToggleTheme={toggleTheme} />
-      <main className="flex-1 container mx-auto px-4 py-3">
+      <main className="flex-1 max-w-[1800px] mx-auto px-6 py-3 w-full">
         {children}
       </main>
     </div>

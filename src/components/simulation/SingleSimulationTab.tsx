@@ -201,6 +201,7 @@ function SingleSimulationTabInner() {
           state={state}
           params={currentParams}
           minHeight={350}
+          maxHeight={600}
           renderOptions={renderOptions}
         />
       </Card>
