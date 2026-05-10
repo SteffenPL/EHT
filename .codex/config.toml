@@ -1,0 +1,22 @@
+# Project-local MCP overrides.
+# Keep Chrome DevTools available here, but disable other globally configured MCPs.
+
+[mcp_servers.computer-use]
+command = "/Users/SteffenPlunder/.codex/plugins/cache/openai-bundled/computer-use/1.0.758/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient"
+args = ["mcp"]
+cwd = "/Users/SteffenPlunder/.codex/plugins/cache/openai-bundled/computer-use/1.0.758/."
+enabled = false
+
+[mcp_servers.fiji-mcp]
+command = "uv"
+args = ["run", "--directory", "/Users/SteffenPlunder/Documents/Workspace/demo/fiji-mcp", "fiji-mcp"]
+enabled = false
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["@playwright/mcp@latest"]
+enabled = false
+
+[mcp_servers.chrome-devtools]
+command = "npx"
+args = ["-y", "chrome-devtools-mcp@latest"]

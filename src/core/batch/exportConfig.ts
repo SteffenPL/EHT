@@ -68,6 +68,42 @@ export function resolveExportCountLimit(
   return Math.min(value, total);
 }
 
+export function resolveExportFrameRange(
+  start: number,
+  end: number | null,
+  maxFrame: number | null,
+  label: string
+): { start: number; end: number | null } {
+  if (!Number.isInteger(start) || start < 0) {
+    throw new Error(`${label} start must be a non-negative integer.`);
+  }
+
+  if (end !== null && (!Number.isInteger(end) || end < 0)) {
+    throw new Error(`${label} end must be a non-negative integer.`);
+  }
+
+  if (end !== null && end < start) {
+    throw new Error(`${label} end must be greater than or equal to start.`);
+  }
+
+  if (maxFrame !== null) {
+    if (!Number.isInteger(maxFrame) || maxFrame < 0) {
+      throw new Error(`${label} maximum frame must be a non-negative integer.`);
+    }
+
+    if (start > maxFrame) {
+      throw new Error(`${label} start must be no greater than ${maxFrame}.`);
+    }
+
+    return {
+      start,
+      end: end === null ? maxFrame : Math.min(end, maxFrame),
+    };
+  }
+
+  return { start, end };
+}
+
 function addRangeTimes(token: string, tEnd: number, times: number[]): void {
   const parts = token.split(':').map(part => part.trim());
   if (parts.length !== 2 && parts.length !== 3) {

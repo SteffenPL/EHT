@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formatTimeSampleConfig, parseExportTimeSpec, resolveExportCountLimit } from './exportConfig';
+import {
+  formatTimeSampleConfig,
+  parseExportTimeSpec,
+  resolveExportCountLimit,
+  resolveExportFrameRange,
+} from './exportConfig';
 
 describe('parseExportTimeSpec', () => {
   it('parses comma-separated times and ranges with t_end as the default end', () => {
@@ -46,5 +51,21 @@ describe('resolveExportCountLimit', () => {
   it('rejects invalid explicit limits', () => {
     expect(() => resolveExportCountLimit(0, 8, 'samples')).toThrow(/at least 1/);
     expect(() => resolveExportCountLimit(1.5, 8, 'samples')).toThrow(/at least 1/);
+  });
+});
+
+describe('resolveExportFrameRange', () => {
+  it('resolves an open-ended frame range to the maximum frame', () => {
+    expect(resolveExportFrameRange(0, null, 480, 'Video frames')).toEqual({ start: 0, end: 480 });
+  });
+
+  it('caps explicit frame ends to the maximum frame', () => {
+    expect(resolveExportFrameRange(10, 500, 120, 'Video frames')).toEqual({ start: 10, end: 120 });
+  });
+
+  it('rejects invalid frame ranges', () => {
+    expect(() => resolveExportFrameRange(-1, null, 120, 'Video frames')).toThrow(/non-negative integer/);
+    expect(() => resolveExportFrameRange(10, 9, 120, 'Video frames')).toThrow(/greater than or equal/);
+    expect(() => resolveExportFrameRange(121, null, 120, 'Video frames')).toThrow(/no greater than 120/);
   });
 });

@@ -76,6 +76,7 @@ export class OffscreenRenderer<
       throw new Error('Renderer not initialized. Call init() first.');
     }
     this.renderer.render(state);
+    this.renderer.flush();
   }
 
   /**

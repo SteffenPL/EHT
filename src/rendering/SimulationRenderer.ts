@@ -213,6 +213,13 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
   }
 
   /**
+   * Flush the current scene graph to the drawing buffer.
+   */
+  flush(): void {
+    this.app.render();
+  }
+
+  /**
    * Draw scale bar in the bottom-right corner (in screen space).
    */
   private drawScaleBar(): void {

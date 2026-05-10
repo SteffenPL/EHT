@@ -73,6 +73,9 @@ export interface BatchExportDialogConfig {
     enabled: boolean;
     resolution: number;
     frameRate: number;
+    /** Inclusive simulation frame range. null end = through the final simulation frame. */
+    frameStart: number;
+    frameEnd: number | null;
     format: 'mp4' | 'webm' | 'mp4-av1';
     maxSamples: number | null;
     seedsPerSample: number | null;

@@ -9,7 +9,7 @@ import { batchSnapshotsToCSV, statisticsToCSV } from './serialization';
 import type { BaseSimulationParams } from '../registry';
 import type { BatchConfig, BatchExportDialogConfig, BatchSnapshot } from './types';
 import { generateParameterConfigs, getTimeSamples } from './types';
-import { parseExportTimeSpec, resolveExportCountLimit } from './exportConfig';
+import { parseExportTimeSpec, resolveExportCountLimit, resolveExportFrameRange } from './exportConfig';
 
 export interface BatchExportRunnerConfig {
   batchConfig: BatchConfig;
@@ -181,8 +181,16 @@ export async function runBatchExport(
 
       // Video encoder
       let videoEncoder: IVideoEncoder | null = null;
-      let lastVideoTimestampMs = -Infinity;
+      let videoFrameRange: { start: number; end: number | null } | null = null;
+      let encodedVideoFrameCount = 0;
+      const frameDt = 1000 / (exportConfig.videos.frameRate || 30);
       if (doVideo) {
+        videoFrameRange = resolveExportFrameRange(
+          exportConfig.videos.frameStart,
+          exportConfig.videos.frameEnd,
+          estimateFinalFrame(endTime, params),
+          'Video frames'
+        );
         videoEncoder = createVideoEncoder(exportConfig.videos.format as VideoFormat, {
           width: exportConfig.videos.resolution,
           height: exportConfig.videos.resolution,
@@ -217,16 +225,14 @@ export async function runBatchExport(
           nextScreenshotIndex++;
         }
 
-        if (videoEncoder) {
+        if (videoEncoder && shouldCaptureVideoFrame(getStateFrameIndex(state0, 0), videoFrameRange)) {
           const canvas = renderer.getCanvas();
-          await videoEncoder.addFrame(canvas, 0);
-          lastVideoTimestampMs = 0;
+          await videoEncoder.addFrame(canvas, encodedVideoFrameCount * frameDt);
+          encodedVideoFrameCount++;
         }
       }
 
       // Simulation loop
-      let frameCount = 1;
-      const frameDt = 1000 / (exportConfig.videos.frameRate || 30);
       let yieldCounter = 0;
 
       while (!engine.isComplete()) {
@@ -251,8 +257,7 @@ export async function runBatchExport(
 
         if (doRender && renderer) {
           const screenshotDue = nextScreenshotIndex < screenshotTimes.length && isDue(t, screenshotTimes[nextScreenshotIndex]);
-          const tMs = t * 1000;
-          const videoDue = !!videoEncoder && tMs + 1e-9 >= frameCount * frameDt;
+          const videoDue = !!videoEncoder && shouldCaptureVideoFrame(getStateFrameIndex(state, yieldCounter + 1), videoFrameRange);
           const needsRenderNow = screenshotDue || videoDue;
 
           if (needsRenderNow) {
@@ -270,12 +275,11 @@ export async function runBatchExport(
             }
 
             // Video frames
-            while (videoEncoder && tMs + 1e-9 >= frameCount * frameDt) {
+            if (videoEncoder && videoDue) {
               const canvas = renderer.getCanvas();
-              const timestampMs = frameCount * frameDt;
+              const timestampMs = encodedVideoFrameCount * frameDt;
               await videoEncoder.addFrame(canvas, timestampMs);
-              lastVideoTimestampMs = timestampMs;
-              frameCount++;
+              encodedVideoFrameCount++;
             }
           }
         }
@@ -311,10 +315,7 @@ export async function runBatchExport(
       }
 
       // Capture remaining terminal media if the final step landed beyond a requested time.
-      if (doRender && renderer && (
-        nextScreenshotIndex < screenshotTimes.length ||
-        (videoEncoder && lastVideoTimestampMs < endTime * 1000 - 1e-9)
-      )) {
+      if (doRender && renderer && nextScreenshotIndex < screenshotTimes.length) {
         const state = finalState;
         renderer.render(state);
 
@@ -327,15 +328,16 @@ export async function runBatchExport(
           );
           nextScreenshotIndex++;
         }
-
-        if (videoEncoder && lastVideoTimestampMs < endTime * 1000 - 1e-9) {
-          await videoEncoder.addFrame(renderer.getCanvas(), endTime * 1000);
-          lastVideoTimestampMs = endTime * 1000;
-        }
       }
 
       // Finalize video
       if (videoEncoder) {
+        if (videoEncoder.getFrameCount() === 0) {
+          throw new Error(
+            `Video frame range ${formatFrameRange(videoFrameRange)} did not overlap run ${runNumber} frames 0-${getStateFrameIndex(finalState, 0)}.`
+          );
+        }
+
         callbacks.onProgress?.({
           phase: 'encoding',
           currentRun: runNumber,
@@ -390,6 +392,39 @@ function isDue(currentTime: number, targetTime: number): boolean {
 function getStateTime(state: unknown): number {
   const value = (state as { t?: unknown }).t;
   return typeof value === 'number' ? value : 0;
+}
+
+function getStateFrameIndex(state: unknown, fallback: number): number {
+  const value = (state as { step_count?: unknown }).step_count;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : fallback;
+}
+
+function estimateFinalFrame(endTime: number, params: BaseSimulationParams): number | null {
+  const dt = (params as { general?: { dt?: unknown } }).general?.dt;
+  if (
+    typeof dt !== 'number' ||
+    !Number.isFinite(dt) ||
+    dt <= 0 ||
+    !Number.isFinite(endTime) ||
+    endTime < 0
+  ) {
+    return null;
+  }
+
+  return Math.ceil(endTime / dt);
+}
+
+function shouldCaptureVideoFrame(
+  frameIndex: number,
+  frameRange: { start: number; end: number | null } | null
+): boolean {
+  if (!frameRange) return false;
+  return frameIndex >= frameRange.start && (frameRange.end === null || frameIndex <= frameRange.end);
+}
+
+function formatFrameRange(frameRange: { start: number; end: number | null } | null): string {
+  if (!frameRange) return 'unknown';
+  return `${frameRange.start}-${frameRange.end ?? 'end'}`;
 }
 
 function createBatchSnapshot(

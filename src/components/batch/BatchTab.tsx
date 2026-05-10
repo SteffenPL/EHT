@@ -89,6 +89,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const timeSamples = getTimeSamples(config.timeSamples);
   const totalSnapshots = totalRuns * timeSamples.length;
   const exportTEnd = getParamEndTime(config.params, config.timeSamples.end);
+  const exportDt = getParamTimeStep(config.params);
   const defaultStatisticsTimeSpec = formatTimeSampleConfig(config.timeSamples);
 
   // Run batch
@@ -652,6 +653,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
         totalParamConfigs={generateParameterConfigs(config.parameterRanges, 'grid').length}
         totalSeeds={config.seedsPerConfig}
         tEnd={exportTEnd}
+        dt={exportDt}
         defaultStatisticsTimeSpec={defaultStatisticsTimeSpec}
         disabled={isRunning || !!exportProgress}
       />
@@ -875,4 +877,9 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
 function getParamEndTime(params: SimulationConfig['params'], fallback: number): number {
   const value = (params as { general?: { t_end?: unknown } }).general?.t_end;
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function getParamTimeStep(params: SimulationConfig['params']): number {
+  const value = (params as { general?: { dt?: unknown } }).general?.dt;
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 1;
 }

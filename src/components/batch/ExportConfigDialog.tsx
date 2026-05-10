@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '../ui/dialog';
 import type { BatchExportDialogConfig } from '@/core/batch/types';
-import { parseExportTimeSpec } from '@/core/batch/exportConfig';
+import { parseExportTimeSpec, resolveExportFrameRange } from '@/core/batch/exportConfig';
 
 export interface ExportConfigDialogProps {
   open: boolean;
@@ -22,6 +22,7 @@ export interface ExportConfigDialogProps {
   totalParamConfigs: number;
   totalSeeds: number;
   tEnd: number;
+  dt: number;
   defaultStatisticsTimeSpec: string;
   disabled?: boolean;
 }
@@ -37,6 +38,7 @@ export function ExportConfigDialog({
   totalParamConfigs,
   totalSeeds,
   tEnd,
+  dt,
   defaultStatisticsTimeSpec,
   disabled = false,
 }: ExportConfigDialogProps) {
@@ -52,6 +54,8 @@ export function ExportConfigDialog({
       enabled: false,
       resolution: 1920,
       frameRate: 30,
+      frameStart: 0,
+      frameEnd: null,
       format: 'mp4',
       maxSamples: totalParamConfigs > 5 ? 5 : null,
       seedsPerSample: totalSeeds > 3 ? 3 : null,
@@ -99,6 +103,8 @@ export function ExportConfigDialog({
     const errors: string[] = [];
     let screenshotTimeCount = 0;
     let statisticsTimeCount = 0;
+    let videoFrameCount = 0;
+    const estimatedFinalFrame = estimateFinalFrame(tEnd, dt);
 
     if (
       !config.screenshots.enabled &&
@@ -122,9 +128,23 @@ export function ExportConfigDialog({
       }
     }
 
-    if (config.videos.enabled && videoLimitEnabled) {
-      validateLimit(config.videos.maxSamples, totalParamConfigs, 'Video max samples', errors);
-      validateLimit(config.videos.seedsPerSample, totalSeeds, 'Video seeds per sample', errors);
+    if (config.videos.enabled) {
+      try {
+        const frameRange = resolveExportFrameRange(
+          config.videos.frameStart,
+          config.videos.frameEnd,
+          estimatedFinalFrame,
+          'Video frames'
+        );
+        videoFrameCount = frameRange.end === null ? 0 : frameRange.end - frameRange.start + 1;
+      } catch (error) {
+        errors.push(`Video frames: ${(error as Error).message}`);
+      }
+
+      if (videoLimitEnabled) {
+        validateLimit(config.videos.maxSamples, totalParamConfigs, 'Video max samples', errors);
+        validateLimit(config.videos.seedsPerSample, totalSeeds, 'Video seeds per sample', errors);
+      }
     }
 
     if (config.data.statisticsCsv) {
@@ -139,7 +159,7 @@ export function ExportConfigDialog({
       }
     }
 
-    return { errors, screenshotTimeCount, statisticsTimeCount };
+    return { errors, screenshotTimeCount, statisticsTimeCount, videoFrameCount };
   }, [
     config,
     screenshotLimitEnabled,
@@ -148,6 +168,7 @@ export function ExportConfigDialog({
     totalParamConfigs,
     totalSeeds,
     tEnd,
+    dt,
   ]);
 
   const screenshotRuns = getRunCount(
@@ -301,6 +322,28 @@ export function ExportConfigDialog({
                   onChange={(value) => updateVideos({ frameRate: value })}
                 />
 
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Label className="w-32">Frame range</Label>
+                  <input
+                    type="number"
+                    value={config.videos.frameStart}
+                    onChange={(event) => updateVideos({ frameStart: parseFrameInput(event.target.value) })}
+                    className="w-24 h-8 px-2 rounded-md border border-input bg-background text-sm"
+                    min={0}
+                    step={1}
+                  />
+                  <span className="text-muted-foreground">to</span>
+                  <input
+                    type="number"
+                    value={config.videos.frameEnd ?? ''}
+                    onChange={(event) => updateVideos({ frameEnd: parseOptionalFrameInput(event.target.value) })}
+                    placeholder="end"
+                    className="w-24 h-8 px-2 rounded-md border border-input bg-background text-sm"
+                    min={0}
+                    step={1}
+                  />
+                </div>
+
                 <div className="flex items-center gap-2">
                   <Label htmlFor="video-format" className="w-32">Format</Label>
                   <select
@@ -334,7 +377,7 @@ export function ExportConfigDialog({
                 )}
 
                 <p className="text-xs text-muted-foreground">
-                  {videoRuns} movie{videoRuns !== 1 ? 's' : ''}.
+                  {videoRuns} movie{videoRuns !== 1 ? 's' : ''}, {validation.videoFrameCount} frame{validation.videoFrameCount !== 1 ? 's' : ''}/movie.
                 </p>
               </div>
             )}
@@ -531,6 +574,16 @@ function parseIntegerInput(value: string): number {
   return Math.max(1, parseInt(value, 10) || 1);
 }
 
+function parseFrameInput(value: string): number {
+  return Math.max(0, parseInt(value, 10) || 0);
+}
+
+function parseOptionalFrameInput(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return Math.max(0, parseInt(trimmed, 10) || 0);
+}
+
 function validateLimit(
   value: number | null,
   total: number,
@@ -553,4 +606,11 @@ function getRunCount(
   const sampleCount = limitEnabled ? Math.min(maxSamples ?? totalSamples, totalSamples) : totalSamples;
   const seedCount = limitEnabled ? Math.min(seedsPerSample ?? totalSeeds, totalSeeds) : totalSeeds;
   return sampleCount * seedCount;
+}
+
+function estimateFinalFrame(tEnd: number, dt: number): number | null {
+  if (!Number.isFinite(tEnd) || !Number.isFinite(dt) || tEnd < 0 || dt <= 0) {
+    return null;
+  }
+  return Math.ceil(tEnd / dt);
 }
