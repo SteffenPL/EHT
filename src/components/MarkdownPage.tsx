@@ -1,14 +1,26 @@
 import ReactMarkdown from 'react-markdown';
+import type { ReactNode } from 'react';
+import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { cn } from '@/lib/utils';
 
-export function MarkdownPage({ content }: { content: string }) {
+export function MarkdownPage({
+  content,
+  children,
+  className,
+}: {
+  content: string;
+  children?: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="max-w-3xl mx-auto p-8 prose-container">
-      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+    <div className={cn('max-w-3xl mx-auto p-8 prose-container', className)}>
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
         {content}
       </ReactMarkdown>
+      {children}
       <style>{`
         .prose-container { line-height: 1.6; }
         .prose-container h1 { font-size: 2rem; font-weight: 700; margin: 0 0 1.5rem; border-bottom: 2px solid hsl(var(--border)); padding-bottom: 0.5rem; }
@@ -23,6 +35,9 @@ export function MarkdownPage({ content }: { content: string }) {
         .prose-container code { background: hsl(var(--muted)); padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 0.875em; }
         .prose-container pre { background: hsl(var(--muted)); padding: 0.75rem; border-radius: 0.375rem; overflow-x: auto; margin: 0.75rem 0; }
         .prose-container pre code { background: none; padding: 0; }
+        .prose-container table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+        .prose-container th { text-align: left; padding: 0.5rem; border-bottom: 2px solid hsl(var(--border)); color: hsl(var(--muted-foreground)); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+        .prose-container td { padding: 0.5rem; border-bottom: 1px solid hsl(var(--border)); vertical-align: top; }
         .prose-container .katex-display { text-align: center; margin: 1rem 0; }
       `}</style>
     </div>

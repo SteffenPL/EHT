@@ -4,11 +4,10 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
-import { evaluate, matrix } from 'mathjs';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 import { getCellType } from './cell';
-import { formulaFunctions } from './formula-functions';
+import { evaluateExternalForceAtPosition } from './external-force-formula';
 
 /** Force accumulator for a cell */
 export interface CellForces {
@@ -203,48 +202,12 @@ export function calcApicalJunctionForces(
   }
 }
 
-/** Regex to detect vector variables T or N in formula */
-const VECTOR_VAR_REGEX = /\bT\b|\bN\b/;
-
 /** Cache of formulas that failed to evaluate — only warn once per formula */
 const failedFormulas = new Map<string, string>();
 
 /** Get the parsing error for a given external_force formula, or undefined if valid. */
 export function getExternalForceError(formula: string): string | undefined {
   return failedFormulas.get(formula);
-}
-
-/**
- * Build the scope for external force formula evaluation.
- * Kept as a named function for easy extension with additional variables.
- */
-function buildExternalForceScope(
-  x: number,
-  y: number,
-  alpha: number,
-  r: number,
-  t: number,
-  delta: number,
-  nGeom: Vector2,
-  constants?: Record<string, number>
-): Record<string, unknown> {
-  const N = matrix([nGeom.x, nGeom.y]);
-  const T = matrix([-nGeom.y, nGeom.x]);
-  return { x, y, alpha, r, t, T, N, delta, ...formulaFunctions, ...(constants ?? {}) };
-}
-
-/**
- * Convert a math.js evaluation result to a Vector2 force.
- * Handles matrix results (extract [x,y]) and unexpected types (return zero).
- */
-function resultToVector2(result: unknown): Vector2 {
-  if (result != null && typeof result === 'object' && 'toArray' in result) {
-    const arr = (result as { toArray: () => number[] }).toArray() as number[];
-    if (arr.length >= 2 && typeof arr[0] === 'number' && typeof arr[1] === 'number') {
-      return new Vector2(arr[0], arr[1]);
-    }
-  }
-  return Vector2.zero();
 }
 
 /**
@@ -258,7 +221,6 @@ export function calcExternalForces(
   forces: CellForces[]
 ): void {
   const cells = state.cells;
-  const center = state.basalGeometry.center;
 
   for (let i = 0; i < cells.length; i++) {
     const ci = cells[i];
@@ -268,32 +230,6 @@ export function calcExternalForces(
     // Skip if no external force
     if (!formula || formula === '0') continue;
 
-    // Compute position relative to geometry center
-    const x = ci.pos.x - center.x;
-    const y = ci.pos.y - center.y;
-
-    // Polar coordinates: alpha=0 at bottom, +pi/2 at right, ±pi at top
-    const alpha = Math.atan2(x, -y);
-    const r = Math.sqrt(x * x + y * y);
-
-    // Signed distance from basal curve: delta = <N, X - a>
-    // where N = outward normal (into tissue), a = projection of X onto geometry
-    // delta > 0 above basal line, delta = 0 on it, delta < 0 below
-    const posVec = new Vector2(ci.pos.x, ci.pos.y);
-    const a = state.basalGeometry.projectPoint(posVec);
-    const nGeom = state.basalGeometry.getNormal(a);
-    const dx = ci.pos.x - a.x;
-    const dy = ci.pos.y - a.y;
-    const delta = nGeom.x * dx + nGeom.y * dy;
-
-    // Build scope
-    const scope = buildExternalForceScope(x, y, alpha, r, state.t, delta, nGeom, params.constants);
-
-    // Determine effective formula: auto-wrap scalars
-    const effectiveFormula = VECTOR_VAR_REGEX.test(formula)
-      ? formula
-      : `-(${formula}) * sign(alpha) * T`;
-
     // Skip formulas already known to be invalid — use NaN force
     if (failedFormulas.has(formula)) {
       forces[i].f = new Vector2(NaN, NaN);
@@ -301,8 +237,13 @@ export function calcExternalForces(
     }
 
     try {
-      const result = evaluate(effectiveFormula, scope);
-      const force = resultToVector2(result);
+      const { force } = evaluateExternalForceAtPosition({
+        formula,
+        position: Vector2.from(ci.pos),
+        basalGeometry: state.basalGeometry,
+        t: state.t,
+        constants: params.constants,
+      });
       forces[i].f = forces[i].f.add(force);
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);

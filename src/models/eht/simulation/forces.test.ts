@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { calcExternalForces, zeroForces, CellForces } from './forces';
+import { evaluateExternalForceAtPosition } from './external-force-formula';
 import { createDefaultEHTParams } from '../params/defaults';
-import { StraightLineGeometry, CircularGeometry } from '@/core/math/basal-geometry';
+import { StraightLineGeometry, CircularGeometry, EllipticalGeometry } from '@/core/math/basal-geometry';
+import { Vector2 } from '@/core/math/vector2';
 import type { EHTSimulationState, CellState } from '../types';
 import { CellPhase } from '../types';
 
@@ -192,5 +194,30 @@ describe('calcExternalForces', () => {
     // At alpha=0: N=(0,1), t=3, so force = 3*(0,1) = (0,3)
     expect(forces[0].f.x).toBeCloseTo(0, 5);
     expect(forces[0].f.y).toBeCloseTo(3, 5);
+  });
+
+  it('matches the shared evaluator on elliptical geometry', () => {
+    const params = createDefaultEHTParams();
+    params.cell_types.control.external_force = '5 * T + 3 * N + t * matrix([0.25, -0.5])';
+
+    const cell = makeCell(12, -8, 'control');
+    const state = makeState([cell]);
+    state.basalGeometry = new EllipticalGeometry(1 / 70, 1 / 42, 360);
+    state.geometry = { curvature_1: 1 / 70, curvature_2: 1 / 42 };
+    state.t = 2;
+    const forces: CellForces[] = [zeroForces()];
+
+    const expected = evaluateExternalForceAtPosition({
+      formula: params.cell_types.control.external_force,
+      position: Vector2.from(cell.pos),
+      basalGeometry: state.basalGeometry,
+      t: state.t,
+      constants: params.constants,
+    }).force;
+
+    calcExternalForces(state, params, forces);
+
+    expect(forces[0].f.x).toBeCloseTo(expected.x, 5);
+    expect(forces[0].f.y).toBeCloseTo(expected.y, 5);
   });
 });

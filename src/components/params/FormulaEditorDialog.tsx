@@ -11,32 +11,16 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { createBasalGeometry } from '@/core/math/basal-geometry';
+import { Vector2 } from '@/core/math/vector2';
 import { FORMULA_PRESETS, type FormulaPreset } from '@/models/eht/params/formula-presets';
+import { computeEllipseFromPerimeter } from '@/models/eht/params/geometry';
 import { formulaFunctions } from '@/models/eht/simulation/formula-functions';
+import { evaluateExternalForceAtPosition } from '@/models/eht/simulation/external-force-formula';
+import { FormulaSpatialExplainer } from './FormulaSpatialExplainer';
+import { variablesForContext } from './formulaVariables';
 
 export type FormulaContext = 'general' | 'cell_type' | 'external_force';
-
-interface VariableInfo {
-  name: string;
-  description: string;
-}
-
-const BASE_VARIABLES: VariableInfo[] = [
-  { name: 't', description: 'current time' },
-  { name: 'dt', description: 'time step' },
-  { name: 'old_value', description: 'previous value' },
-  { name: 'init_value', description: 'value at t=0' },
-];
-
-const EXTERNAL_FORCE_VARIABLES: VariableInfo[] = [
-  { name: 'x', description: 'x position' },
-  { name: 'y', description: 'y position' },
-  { name: 'alpha', description: 'polar angle' },
-  { name: 'r', description: 'distance from center' },
-  { name: 'delta', description: 'signed distance from basal' },
-  { name: 'N', description: 'normal vector' },
-  { name: 'T', description: 'tangent vector' },
-];
 
 interface FormulaEditorDialogProps {
   open: boolean;
@@ -48,6 +32,8 @@ interface FormulaEditorDialogProps {
   tEnd: number;
   constants: Record<string, number>;
   context: FormulaContext;
+  initialPerimeter?: number;
+  initialAspectRatio?: number;
   onSave: (formula: string) => void;
   onClear: () => void;
 }
@@ -83,6 +69,18 @@ function GraphPreview({
         const scope: Record<string, unknown> = {
           t, dt: tEnd / nSamples,
           old_value: numericValue, init_value: numericValue,
+          age: t,
+          alpha: 0,
+          r: 1,
+          delta: 0,
+          p_div_out: 1,
+          mu: 0.2,
+          h_init: 5,
+          w_init: 80,
+          t_end: tEnd,
+          R_hard_div: numericValue,
+          stiffness_apical_apical_div: numericValue,
+          INM: 0,
           ...constants, ...formulaFunctions,
         };
         const result = evaluate(debouncedFormula, scope);
@@ -231,25 +229,30 @@ function VariablesPanel({
   constants: Record<string, number>;
   onInsert: (text: string) => void;
 }) {
-  const variables = context === 'external_force'
-    ? [...BASE_VARIABLES, ...EXTERNAL_FORCE_VARIABLES]
-    : BASE_VARIABLES;
-
+  const variables = variablesForContext(context);
   const constantEntries = Object.entries(constants);
 
   return (
     <div className="space-y-1">
       <Label className="text-xs font-medium text-muted-foreground">Variables</Label>
-      <div className="space-y-0.5">
+      <div className="space-y-1">
         {variables.map(v => (
           <button
             key={v.name}
             type="button"
-            className="w-full text-left px-2 py-0.5 text-xs hover:bg-muted rounded flex justify-between gap-2"
-            onClick={() => onInsert(v.name)}
+            className="w-full rounded border bg-background px-2 py-1.5 text-left text-xs hover:bg-muted"
+            onClick={() => onInsert(v.insertText ?? v.name)}
           >
-            <code className="font-mono">{v.name}</code>
-            <span className="text-muted-foreground truncate">{v.description}</span>
+            <span className="flex items-center justify-between gap-2">
+              <code className="font-mono">{v.name}</code>
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                {v.kind}
+              </span>
+            </span>
+            <span className="mt-1 block text-muted-foreground">{v.description}</span>
+            {v.definition && (
+              <span className="mt-1 block font-mono text-[10px] text-muted-foreground">{v.definition}</span>
+            )}
           </button>
         ))}
       </div>
@@ -301,7 +304,7 @@ function VariablesPanel({
 export function FormulaEditorDialog({
   open, onOpenChange, fieldName: _fieldName, label,
   formula: initialFormula, currentNumericValue, tEnd,
-  constants, context, onSave, onClear,
+  constants, context, initialPerimeter, initialAspectRatio, onSave, onClear,
 }: FormulaEditorDialogProps) {
   const [formula, setFormula] = useState(initialFormula);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -333,38 +336,72 @@ export function FormulaEditorDialog({
   const formulaError = useMemo(() => {
     if (!formula.trim()) return null;
     try {
+      if (context === 'external_force') {
+        const { curvature_1, curvature_2 } = computeEllipseFromPerimeter(
+          initialPerimeter ?? 105,
+          initialAspectRatio ?? 1
+        );
+        evaluateExternalForceAtPosition({
+          formula,
+          position: new Vector2(18, -22),
+          basalGeometry: createBasalGeometry(curvature_1, curvature_2, 360),
+          t: 0,
+          constants,
+        });
+        return null;
+      }
+
       const scope: Record<string, unknown> = {
         t: 0, dt: 0.1,
         old_value: currentNumericValue, init_value: currentNumericValue,
+        age: 0,
+        p_div_out: 1,
+        mu: 0.2,
+        h_init: 5,
+        w_init: 80,
+        t_end: tEnd,
+        R_hard_div: currentNumericValue,
+        stiffness_apical_apical_div: currentNumericValue,
+        INM: 0,
         ...constants, ...formulaFunctions,
-        // Provide dummy vector values for external force context
-        x: 0, y: 0, alpha: 0, r: 1, delta: 0,
       };
       evaluate(formula, scope);
       return null;
     } catch (e) {
       return e instanceof Error ? e.message : String(e);
     }
-  }, [formula, currentNumericValue, constants]);
+  }, [formula, context, currentNumericValue, constants, tEnd, initialPerimeter, initialAspectRatio]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${context === 'external_force' ? 'max-w-5xl' : 'max-w-3xl'} max-h-[90vh] overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle>Formula Editor: {label}</DialogTitle>
           <DialogDescription>
-            Edit the formula for this parameter. Use presets or type math.js expressions.
+            {context === 'external_force'
+              ? 'Edit an external force formula. Scalars are converted into tangential flow; vector formulas can use T and N directly.'
+              : 'Edit the formula for this parameter. Use presets or type math.js expressions.'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           {/* Graph preview */}
-          <GraphPreview
-            formula={formula}
-            tEnd={tEnd}
-            numericValue={currentNumericValue}
-            constants={constants}
-          />
+          {context === 'external_force' ? (
+            <FormulaSpatialExplainer
+              compact
+              formula={formula}
+              constants={constants}
+              initialPerimeter={initialPerimeter}
+              initialAspectRatio={initialAspectRatio}
+            />
+          ) : (
+            <GraphPreview
+              formula={formula}
+              tEnd={tEnd}
+              numericValue={currentNumericValue}
+              constants={constants}
+            />
+          )}
 
           {/* Formula input */}
           <div>

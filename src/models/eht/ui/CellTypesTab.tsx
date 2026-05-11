@@ -167,6 +167,74 @@ function FormulaCell({
   );
 }
 
+function ExternalForceCell({
+  value,
+  onChange,
+  disabled,
+  label,
+  tEnd,
+  constants,
+  initialPerimeter,
+  initialAspectRatio,
+  error,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+  label: string;
+  tEnd: number;
+  constants: Record<string, number>;
+  initialPerimeter: number;
+  initialAspectRatio: number;
+  error?: string;
+}) {
+  const [editorOpen, setEditorOpen] = useState(false);
+
+  return (
+    <td className="py-1 px-1">
+      <div className="flex items-center gap-0.5">
+        <Input
+          type="text"
+          value={value}
+          readOnly
+          title={value}
+          onClick={() => !disabled && setEditorOpen(true)}
+          disabled={disabled}
+          className={`h-6 w-24 cursor-pointer bg-muted px-1 text-xs font-mono ${error ? 'border-destructive' : ''}`}
+        />
+        <button
+          onClick={() => setEditorOpen(true)}
+          disabled={disabled}
+          className={`h-5 rounded border px-0.5 text-[9px] leading-none disabled:opacity-50 ${value && value !== '0' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+          title="Edit external force formula"
+        >
+          f(x)
+        </button>
+      </div>
+      {error && (
+        <div className="mt-0.5 truncate text-[10px] text-destructive" title={error}>
+          {error}
+        </div>
+      )}
+      <FormulaEditorDialog
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        fieldName="external_force"
+        label={label}
+        formula={value || '0'}
+        currentNumericValue={0}
+        tEnd={tEnd}
+        constants={constants}
+        context="external_force"
+        initialPerimeter={initialPerimeter}
+        initialAspectRatio={initialAspectRatio}
+        onSave={(formula) => onChange(formula.trim() || '0')}
+        onClear={() => onChange('0')}
+      />
+    </td>
+  );
+}
+
 function StringCell({ value, onChange, disabled }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
@@ -778,20 +846,18 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               const formula = getCellType(key).external_force;
               const error = getExternalForceError(formula);
               return (
-                <td key={key} className="py-1 px-1">
-                  <Input
-                    type="text"
-                    value={formula}
-                    onChange={(e) => updateCellType(key, 'external_force', e.target.value)}
-                    disabled={disabled}
-                    className={`h-6 text-xs font-mono ${error ? 'border-destructive' : ''}`}
-                  />
-                  {error && (
-                    <div className="text-[10px] text-destructive mt-0.5 truncate" title={error}>
-                      {error}
-                    </div>
-                  )}
-                </td>
+                <ExternalForceCell
+                  key={key}
+                  value={formula}
+                  onChange={(value) => updateCellType(key, 'external_force', value)}
+                  disabled={disabled}
+                  label={`External Force (${key})`}
+                  tEnd={params.general.t_end}
+                  constants={params.constants ?? {}}
+                  initialPerimeter={params.general.perimeter}
+                  initialAspectRatio={params.general.aspect_ratio}
+                  error={error}
+                />
               );
             })}
           </CellTypeRow>

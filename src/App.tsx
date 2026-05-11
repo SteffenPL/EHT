@@ -5,6 +5,7 @@ import { SingleSimulationTab } from './components/simulation';
 import { BatchTab } from './components/batch';
 import { ParameterConfigView } from './components/params';
 import { MarkdownPage } from './components/MarkdownPage';
+import { EHTFormulaDocsPage } from './components/docs/EHTFormulaDocsPage';
 import { DEFAULT_TIME_SAMPLES, decodeParamsFromUrl, clearUrlParams } from './core/params';
 import type { SimulationConfig } from './core/params';
 import { ModelProvider, useModel, MessagesProvider } from './contexts';
@@ -16,6 +17,7 @@ import './models';
 import docsIndex from './docs/index.md?raw';
 import ehtModel from './docs/EHT/model.md?raw';
 import ehtStatistics from './docs/EHT/statistics.md?raw';
+import ehtFormulas from './docs/EHT/formulas.md?raw';
 
 function AppContent() {
   const { currentParams, setParams, setModel } = useModel();
@@ -81,6 +83,7 @@ function App() {
             <Route path="/docs" element={<MarkdownPage content={docsIndex} />} />
             <Route path="/docs/eht/model" element={<MarkdownPage content={ehtModel} />} />
             <Route path="/docs/eht/statistics" element={<MarkdownPage content={ehtStatistics} />} />
+            <Route path="/docs/eht/formulas" element={<EHTFormulaDocsPage content={ehtFormulas} />} />
           </Routes>
         </MessagesProvider>
       </ModelProvider>
