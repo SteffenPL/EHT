@@ -1,0 +1,1104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EHT Formula Editor Variable Ideas</title>
+  <style>
+    :root {
+      --bg: #f7f4ed;
+      --ink: #18212b;
+      --muted: #65717e;
+      --line: #d8d0c3;
+      --panel: #fffdf8;
+      --panel-2: #f0f6f5;
+      --blue: #2368a2;
+      --teal: #0e7c75;
+      --green: #4b7f35;
+      --red: #a44a3f;
+      --gold: #b7791f;
+      --violet: #6b5ca5;
+      --shadow: 0 18px 45px rgba(32, 28, 22, 0.12);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 36px 24px 56px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: end;
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 4.2rem);
+      line-height: 0.95;
+      letter-spacing: 0;
+      max-width: 850px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.35rem;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+      color: #24313d;
+      background: rgba(35, 104, 162, 0.08);
+      border: 1px solid rgba(35, 104, 162, 0.14);
+      border-radius: 5px;
+      padding: 1px 4px;
+    }
+
+    .meta {
+      width: 280px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      font-size: 0.88rem;
+    }
+
+    .meta strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 6px;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 20px 0 28px;
+    }
+
+    .nav button, .sample button {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .nav button.active, .sample button.active {
+      color: white;
+      background: var(--blue);
+      border-color: var(--blue);
+    }
+
+    .section {
+      display: none;
+      animation: fade 160ms ease-out;
+    }
+
+    .section.active { display: block; }
+
+    @keyframes fade {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid.sidebar { grid-template-columns: minmax(0, 1fr) 350px; }
+
+    .band {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .band.alt { background: var(--panel-2); }
+
+    .mini {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.58);
+    }
+
+    .eyebrow {
+      color: var(--teal);
+      font-size: 0.76rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      border: 1px solid transparent;
+    }
+
+    .status.good { color: var(--green); background: rgba(75, 127, 53, 0.11); border-color: rgba(75, 127, 53, 0.18); }
+    .status.warn { color: var(--gold); background: rgba(183, 121, 31, 0.12); border-color: rgba(183, 121, 31, 0.2); }
+    .status.risk { color: var(--red); background: rgba(164, 74, 63, 0.1); border-color: rgba(164, 74, 63, 0.18); }
+    .status.idea { color: var(--violet); background: rgba(107, 92, 165, 0.11); border-color: rgba(107, 92, 165, 0.18); }
+
+    .stack { display: grid; gap: 10px; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 13px;
+      min-height: 150px;
+      position: relative;
+    }
+
+    .step .num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: white;
+      background: var(--teal);
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .mock {
+      background: #fbfcfd;
+      border: 1px solid #cad3dc;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .mock-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #dbe2e8;
+      background: #eef3f7;
+      font-weight: 700;
+    }
+
+    .mock-body { padding: 12px; }
+
+    .input-line {
+      border: 1px solid #b8c4d0;
+      background: white;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.9rem;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .chart {
+      height: 126px;
+      border: 1px solid #cad3dc;
+      border-radius: 6px;
+      background:
+        linear-gradient(#e8eef4 1px, transparent 1px),
+        linear-gradient(90deg, #e8eef4 1px, transparent 1px);
+      background-size: 30px 30px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .chart svg { width: 100%; height: 100%; display: block; }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      border: 1px solid #c8d5df;
+      background: #fff;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      font-family: "SFMono-Regular", Consolas, monospace;
+    }
+
+    .variable-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .variable-table th, .variable-table td {
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      padding: 9px 7px;
+      vertical-align: top;
+    }
+
+    .variable-table th {
+      color: var(--muted);
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .diagram-wrap {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .diagram {
+      width: 100%;
+      aspect-ratio: 1.35 / 1;
+      display: block;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .legend span {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      flex: 0 0 auto;
+    }
+
+    .dot.blue { background: var(--blue); }
+    .dot.teal { background: var(--teal); }
+    .dot.gold { background: var(--gold); }
+    .dot.red { background: var(--red); }
+
+    .sample {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .control label {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 0.86rem;
+      margin-bottom: 6px;
+    }
+
+    .control output {
+      color: var(--blue);
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-weight: 700;
+    }
+
+    .control input[type="range"] {
+      width: 100%;
+      accent-color: var(--blue);
+    }
+
+    .small-note {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .readout {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .readout div {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      padding: 9px;
+    }
+
+    .readout b {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .priority {
+      display: grid;
+      gap: 12px;
+      counter-reset: pri;
+    }
+
+    .priority .item {
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: start;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .priority .item::before {
+      counter-increment: pri;
+      content: counter(pri);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .tag {
+      border-radius: 999px;
+      padding: 4px 9px;
+      background: rgba(14, 124, 117, 0.11);
+      color: var(--teal);
+      font-weight: 750;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+
+    .source-list {
+      display: grid;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    .source-list div {
+      border-left: 3px solid var(--line);
+      padding-left: 10px;
+    }
+
+    .callout {
+      border-left: 5px solid var(--blue);
+      background: rgba(35, 104, 162, 0.07);
+      padding: 12px 14px;
+      border-radius: 0 8px 8px 0;
+      color: #334150;
+    }
+
+    .formula-line {
+      display: block;
+      margin-top: 8px;
+      background: #172331;
+      color: #edf7ff;
+      border-radius: 7px;
+      padding: 10px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      overflow-x: auto;
+    }
+
+    .source-note {
+      margin-top: 16px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 920px) {
+      header, .grid.two, .grid.three, .grid.sidebar, .flow {
+        grid-template-columns: 1fr;
+      }
+      .meta { width: auto; }
+      .priority .item { grid-template-columns: 36px minmax(0, 1fr); }
+      .priority .item .tag { grid-column: 2; width: fit-content; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <div>
+        <div class="eyebrow">Formula editor and documentation concept</div>
+        <h1>Make formula variables visible, local, and visual</h1>
+      </div>
+      <aside class="meta">
+        <strong>Grounded in current repo state</strong>
+        Inspected formula editor, EHT parameter UI, external-force evaluation, parameter descriptions, and user-facing docs.
+      </aside>
+    </header>
+
+    <nav class="nav" aria-label="Sections">
+      <button class="active" data-tab="state">Current state</button>
+      <button data-tab="vectors">Variable explainer</button>
+      <button data-tab="ideas">Improvement ideas</button>
+      <button data-tab="plan">Implementation plan</button>
+    </nav>
+
+    <section id="state" class="section active">
+      <div class="grid sidebar">
+        <div class="band">
+          <h2>What already exists</h2>
+          <div class="flow">
+            <div class="step">
+              <div class="num">1</div>
+              <h3>Rich formula dialog</h3>
+              <p><code>FormulaEditorDialog</code> has a graph preview, math input, presets, variables, constants, and insert-at-cursor behavior.</p>
+            </div>
+            <div class="step">
+              <div class="num">2</div>
+              <h3>Named helpers</h3>
+              <p><code>step</code>, <code>ramp</code>, <code>triangle</code>, <code>pulse</code>, and <code>smoothstep</code> are shared in formula scopes.</p>
+            </div>
+            <div class="step">
+              <div class="num">3</div>
+              <h3>Constants</h3>
+              <p>A constants tab lets users define shared names such as <code>heartbeat</code>, then reuse them in formulas.</p>
+            </div>
+            <div class="step">
+              <div class="num">4</div>
+              <h3>External variables exist</h3>
+              <p>The dialog already has an <code>external_force</code> context with <code>x</code>, <code>y</code>, <code>alpha</code>, <code>r</code>, <code>delta</code>, <code>N</code>, and <code>T</code>.</p>
+            </div>
+          </div>
+        </div>
+
+        <aside class="band alt">
+          <h2>Key gaps</h2>
+          <div class="stack">
+            <div>
+              <span class="status risk">Point-of-use gap</span>
+              <p>The external-force row in <code>CellTypesTab.tsx</code> is still a raw text input. It does not open the rich formula editor.</p>
+            </div>
+            <div>
+              <span class="status warn">Preview mismatch</span>
+              <p>The current graph preview expects a finite number over time. Vector formulas such as <code>5 * N</code> need a vector-aware preview and validation scope.</p>
+            </div>
+            <div>
+              <span class="status warn">Variable mismatch</span>
+              <p>Runtime cell formulas can use variables like <code>age</code>, <code>alpha</code>, <code>r</code>, and <code>delta</code>, but the cell-type editor panel only lists the base time/value variables.</p>
+            </div>
+            <div>
+              <span class="status good">Documentation seed</span>
+              <p>The help popover has good external-force text, but the user-facing docs index only links model and statistics pages. Rich formula design docs live under <code>docs/superpowers</code>, not the app docs.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="grid two" style="margin-top:16px">
+        <div class="mock">
+          <div class="mock-title">
+            <span>Current dialog shape</span>
+            <span class="status good">Good base</span>
+          </div>
+          <div class="mock-body">
+            <div class="chart">
+              <svg viewBox="0 0 420 126" aria-hidden="true">
+                <path d="M 10 96 C 74 96, 70 22, 128 24 S 187 104, 244 98 S 302 24, 360 28 S 392 70, 410 64" fill="none" stroke="#2368a2" stroke-width="4"/>
+              </svg>
+            </div>
+            <div class="input-line">triangle(t, heartbeat, 0, 1)</div>
+            <div class="chips" style="margin-top:10px">
+              <span class="chip">t</span>
+              <span class="chip">dt</span>
+              <span class="chip">old_value</span>
+              <span class="chip">init_value</span>
+              <span class="chip">heartbeat</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mock">
+          <div class="mock-title">
+            <span>Needed external-force shape</span>
+            <span class="status idea">Spatial mode</span>
+          </div>
+          <div class="mock-body">
+            <div class="input-line">5 * T + 3 * N</div>
+            <div class="callout" style="margin-top:10px">
+              <strong>Returns a vector.</strong> Show direction arrows at sample cell positions instead of a scalar time chart.
+            </div>
+            <div class="chips" style="margin-top:10px">
+              <span class="chip">x</span>
+              <span class="chip">y</span>
+              <span class="chip">alpha</span>
+              <span class="chip">r</span>
+              <span class="chip">delta</span>
+              <span class="chip">N</span>
+              <span class="chip">T</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="source-note">Source notes: <code>src/components/params/FormulaEditorDialog.tsx</code>, <code>src/models/eht/ui/ParametersTab.tsx</code>, <code>src/models/eht/ui/CellTypesTab.tsx</code>, <code>src/models/eht/simulation/forces.ts</code>, <code>src/models/eht/params/descriptions.ts</code>, <code>src/docs/index.md</code>.</p>
+    </section>
+
+    <section id="vectors" class="section">
+      <div class="grid sidebar">
+        <div class="band">
+          <h2>Spatial variable explainer for external-force formulas</h2>
+          <p>The most helpful explanation is not another paragraph. It is a diagram tied to the exact variable table and examples the user can insert. This version lets the user reshape the explainer geometry and move the sample nucleus by the same polar-angle convention used in formulas.</p>
+          <div class="diagram-wrap" style="margin-top:14px">
+            <svg id="vectorDiagram" class="diagram" viewBox="0 0 600 440" role="img" aria-label="External force variable diagram">
+              <defs>
+                <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#2368a2"></path>
+                </marker>
+                <marker id="arrow-teal" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#0e7c75"></path>
+                </marker>
+                <marker id="arrow-gold" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#b7791f"></path>
+                </marker>
+                <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#a44a3f"></path>
+                </marker>
+                <marker id="arrow-violet" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L9,3 z" fill="#6b5ca5"></path>
+                </marker>
+              </defs>
+              <rect x="0" y="0" width="600" height="440" fill="#fffdf8"></rect>
+              <ellipse id="ellipseOutline" cx="300" cy="222" rx="150" ry="150" fill="rgba(14,124,117,0.04)" stroke="#a9b4bd" stroke-width="3"></ellipse>
+              <path id="basalCurve" d="" fill="none" stroke="#65717e" stroke-width="5" stroke-linecap="round"></path>
+              <line id="yAxis" x1="300" y1="72" x2="300" y2="372" stroke="#d8d0c3" stroke-width="2" stroke-dasharray="6 6"></line>
+              <line id="xAxis" x1="150" y1="222" x2="450" y2="222" stroke="#d8d0c3" stroke-width="2" stroke-dasharray="6 6"></line>
+              <line id="alphaRay" x1="300" y1="222" x2="300" y2="340" stroke="#6b5ca5" stroke-width="2" stroke-dasharray="4 5"></line>
+              <circle id="centerPoint" cx="300" cy="222" r="6" fill="#65717e"></circle>
+              <text x="312" y="217" fill="#65717e" font-size="16">C center</text>
+              <circle id="projPoint" cx="300" cy="340" r="6" fill="#b7791f"></circle>
+              <text id="projLabel" x="312" y="344" fill="#7b5415" font-size="16">a projection</text>
+              <circle id="cellPoint" cx="300" cy="310" r="9" fill="#2368a2"></circle>
+              <text id="cellLabel" x="312" y="301" fill="#1e507a" font-size="16">X cell nucleus</text>
+              <line id="rLine" x1="300" y1="222" x2="300" y2="310" stroke="#2368a2" stroke-width="3" marker-end="url(#arrow-blue)"></line>
+              <line id="deltaLine" x1="300" y1="340" x2="300" y2="310" stroke="#b7791f" stroke-width="3" stroke-dasharray="5 5" marker-end="url(#arrow-gold)"></line>
+              <line id="nLine" x1="300" y1="340" x2="300" y2="294" stroke="#0e7c75" stroke-width="4" marker-end="url(#arrow-teal)"></line>
+              <line id="tLine" x1="300" y1="340" x2="254" y2="340" stroke="#a44a3f" stroke-width="4" marker-end="url(#arrow-red)"></line>
+              <text id="nLabel" x="310" y="296" fill="#0e7c75" font-size="18" font-weight="700">N</text>
+              <text id="tLabel" x="250" y="334" fill="#a44a3f" font-size="18" font-weight="700">T</text>
+              <path id="alphaArc" d="" fill="none" stroke="#6b5ca5" stroke-width="3" marker-end="url(#arrow-violet)"></path>
+              <text id="alphaLabel" x="330" y="274" fill="#6b5ca5" font-size="16">alpha</text>
+              <text x="219" y="410" fill="#65717e" font-size="15">alpha = 0 at bottom; x,y are measured from C to X</text>
+            </svg>
+            <div class="legend">
+              <span><i class="dot blue"></i><code>x,y,r,alpha</code> use geometry center <code>C</code></span>
+              <span><i class="dot gold"></i><code>delta</code> uses projected basal point <code>a</code></span>
+              <span><i class="dot teal"></i><code>N</code> is basal normal into tissue</span>
+              <span><i class="dot red"></i><code>T=(-N_y,N_x)</code> is perpendicular to <code>N</code></span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="band alt">
+          <h2>Mapping controls</h2>
+          <div class="controls">
+            <div class="control">
+              <label for="perimeterSlider">Perimeter <output id="perimeterValue">360 um</output></label>
+              <input id="perimeterSlider" type="range" min="180" max="520" step="10" value="360">
+              <p class="small-note">Scales the explainer ellipse, like <code>general.perimeter</code>.</p>
+            </div>
+            <div class="control">
+              <label for="aspectSlider">Aspect ratio <output id="aspectValue">1.00</output></label>
+              <input id="aspectSlider" type="range" min="0.35" max="2.50" step="0.05" value="1.00">
+              <p class="small-note">Uses simulator semantics: <code>aspect_ratio = b/a</code>. Larger is taller; smaller is wider.</p>
+            </div>
+            <div class="control">
+              <label for="alphaSlider">Alpha <output id="alphaValue">45 deg</output></label>
+              <input id="alphaSlider" type="range" min="-180" max="180" step="1" value="45">
+              <p class="small-note">Moves the sample nucleus by <code>alpha = atan2(x, -y)</code>.</p>
+            </div>
+          </div>
+          <p id="sampleDescription">The slider places a sample nucleus X. The readouts show the formula variables that would be available at that position.</p>
+          <div class="readout">
+            <div><b>x, y</b><span id="xyReadout">0.0, -45.8</span></div>
+            <div><b>r</b><span id="rReadout">45.8</span></div>
+            <div><b>alpha</b><span id="alphaReadout">0.00 rad</span></div>
+            <div><b>axes</b><span id="axesReadout">a=57.3, b=57.3</span></div>
+            <div><b>N</b><span id="nReadout">(0.00, 1.00)</span></div>
+            <div><b>T</b><span id="tReadout">(-1.00, 0.00)</span></div>
+            <div><b>delta</b><span id="deltaReadout">11.5</span></div>
+            <div><b>sign(alpha)</b><span id="signReadout">0</span></div>
+          </div>
+          <div class="formula-line" id="effectiveFormula">Scalar 10 -> -(10) * sign(alpha) * T</div>
+        </aside>
+      </div>
+
+      <div class="band" style="margin-top:16px">
+        <h2>Variable table pattern</h2>
+        <table class="variable-table">
+          <thead>
+            <tr>
+              <th>Variable</th>
+              <th>Plain-language meaning</th>
+              <th>Precise definition to show on expand</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>x</code>, <code>y</code></td>
+              <td>Cell nucleus position relative to the geometry center.</td>
+              <td><code>x = X.x - C.x</code>, <code>y = X.y - C.y</code></td>
+              <td><code>abs(x) &lt; 10</code></td>
+            </tr>
+            <tr>
+              <td><code>alpha</code>, <code>r</code></td>
+              <td>Polar position around the tissue. Bottom is zero angle.</td>
+              <td><code>alpha = atan2(x, -y)</code>, <code>r = sqrt(x^2 + y^2)</code></td>
+              <td><code>10 * sin(alpha)</code></td>
+            </tr>
+            <tr>
+              <td><code>N</code></td>
+              <td>Unit normal from the basal curve into the tissue at the closest basal point.</td>
+              <td><code>N = basalGeometry.getNormal(a)</code>, where <code>a = projectPoint(X)</code></td>
+              <td><code>3 * N</code></td>
+            </tr>
+            <tr>
+              <td><code>T</code></td>
+              <td>Unit tangent perpendicular to the basal normal.</td>
+              <td><code>T = (-N_y, N_x)</code></td>
+              <td><code>5 * T + 2 * N</code></td>
+            </tr>
+            <tr>
+              <td><code>delta</code></td>
+              <td>Signed distance from the basal curve along the normal direction.</td>
+              <td><code>delta = dot(N, X - a)</code></td>
+              <td><code>delta * N</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="ideas" class="section">
+      <div class="grid three">
+        <div class="band">
+          <span class="status idea">Idea A</span>
+          <h2>Variable cards inside the editor</h2>
+          <p>Replace terse one-line variable descriptions with expandable cards. Each card gets name, type, units, scope, definition, caveat, example, and an Insert button.</p>
+          <div class="formula-line">N<br><span style="color:#a9d6cf">vector, external force only</span><br>Normal into tissue at projected basal point.</div>
+        </div>
+        <div class="band">
+          <span class="status idea">Idea B</span>
+          <h2>Spatial preview mode</h2>
+          <p>When context is <code>external_force</code>, swap the scalar chart for a mini geometry view. Let users test bottom, left, right, and maybe selected current cell positions.</p>
+          <div class="formula-line">5 * N -> arrow normal<br>10 -> auto-wrapped tangent arrow</div>
+        </div>
+        <div class="band">
+          <span class="status idea">Idea C</span>
+          <h2>Formula docs page</h2>
+          <p>Add <code>/docs/eht/formulas</code> with the same variable catalog, helper functions, constants, examples, and external-force diagrams.</p>
+          <div class="formula-line">src/docs/EHT/formulas.md<br>static import in src/App.tsx</div>
+        </div>
+      </div>
+
+      <div class="grid two" style="margin-top:16px">
+        <div class="band alt">
+          <h2>External force editor sketch</h2>
+          <div class="mock">
+            <div class="mock-title">
+              <span>Formula Editor: External Force</span>
+              <span class="status warn">Vector</span>
+            </div>
+            <div class="mock-body">
+              <div class="input-line">pulse(t, 2, 8, 0, 4) * N + 2 * T</div>
+              <div class="grid two" style="margin-top:10px">
+                <div class="mini">
+                  <h3>Effective behavior</h3>
+                  <p>Contains <code>N</code> or <code>T</code>, so the expression is used as a vector formula.</p>
+                </div>
+                <div class="mini">
+                  <h3>At sample point</h3>
+                  <p><code>force = [fx, fy]</code> with an arrow on the mini geometry preview.</p>
+                </div>
+              </div>
+              <div class="chips" style="margin-top:10px">
+                <span class="chip">Insert x</span>
+                <span class="chip">Insert alpha</span>
+                <span class="chip">Insert N</span>
+                <span class="chip">Insert T</span>
+                <span class="chip">Insert delta</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="band alt">
+          <h2>Shared source of truth</h2>
+          <p>Put variable metadata next to formula presets, then render it everywhere. This prevents UI help, docs, popovers, and runtime scopes from drifting apart.</p>
+          <div class="formula-line">FormulaVariable = {<br>  name, scope, kind, units,<br>  shortDescription, definition,<br>  example, insertText, caveat<br>}</div>
+          <div class="callout" style="margin-top:12px">
+            This would also let the editor warn: "This variable is available at runtime but not in the current preview sample."
+          </div>
+        </div>
+      </div>
+
+      <div class="band" style="margin-top:16px">
+        <h2>Example gallery to include in docs and editor</h2>
+        <div class="grid three">
+          <div class="mini">
+            <h3>Time pulse</h3>
+            <p>Turn a parameter on during a time window.</p>
+            <div class="formula-line">pulse(t, 2, 5, 0, 1)</div>
+          </div>
+          <div class="mini">
+            <h3>Convergent external flow</h3>
+            <p>Scalar formulas are auto-wrapped toward <code>alpha = 0</code>.</p>
+            <div class="formula-line">10</div>
+          </div>
+          <div class="mini">
+            <h3>Normal push</h3>
+            <p>Vector formulas are used directly.</p>
+            <div class="formula-line">delta * N</div>
+          </div>
+          <div class="mini">
+            <h3>Directional mix</h3>
+            <p>Combine tangent and normal components.</p>
+            <div class="formula-line">5 * T + 3 * N</div>
+          </div>
+          <div class="mini">
+            <h3>Geometry-specific</h3>
+            <p>Use position to localize the force.</p>
+            <div class="formula-line">abs(x) &lt; 20 ? 3 * N : 0 * N</div>
+          </div>
+          <div class="mini">
+            <h3>Reusable constant</h3>
+            <p>Name timing values once.</p>
+            <div class="formula-line">triangle(t, heartbeat, 0, 1)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="plan" class="section">
+      <div class="band">
+        <h2>Recommended next slices</h2>
+        <div class="priority">
+          <div class="item">
+            <div>
+              <h3>Create formula variable metadata</h3>
+              <p>Add a small catalog for base variables, cell formula variables, event variables, constants, helper functions, and external-force spatial variables.</p>
+            </div>
+            <span class="tag">Foundation</span>
+          </div>
+          <div class="item">
+            <div>
+              <h3>Upgrade the variable panel</h3>
+              <p>Render grouped, expandable variable cards in <code>FormulaEditorDialog</code>. Include definitions for <code>x</code>, <code>y</code>, <code>N</code>, <code>T</code>, and <code>delta</code>.</p>
+            </div>
+            <span class="tag">UX</span>
+          </div>
+          <div class="item">
+            <div>
+              <h3>Wire external force into the dialog</h3>
+              <p>Replace the raw <code>external_force</code> input row with an editor button and preview. Use vector-aware validation with dummy <code>N</code> and <code>T</code> matrices.</p>
+            </div>
+            <span class="tag">High value</span>
+          </div>
+          <div class="item">
+            <div>
+              <h3>Add spatial preview mode</h3>
+              <p>For external-force formulas, show sample arrows and the effective formula. For scalar formulas, explicitly show auto-wrapping as <code>-(scalar) * sign(alpha) * T</code>.</p>
+            </div>
+            <span class="tag">Clarity</span>
+          </div>
+          <div class="item">
+            <div>
+              <h3>Add user-facing formula docs</h3>
+              <p>Create <code>src/docs/EHT/formulas.md</code>, statically import it in <code>src/App.tsx</code>, and link it from <code>src/docs/index.md</code>.</p>
+            </div>
+            <span class="tag">Docs</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid two" style="margin-top:16px">
+        <div class="band alt">
+          <h2>Source context</h2>
+          <div class="source-list">
+            <div><code>FormulaEditorDialog.tsx</code>: rich scalar-oriented formula editor with variable insertion.</div>
+            <div><code>CellTypesTab.tsx</code>: cell formula fields use the dialog, but <code>external_force</code> is a raw text input.</div>
+            <div><code>forces.ts</code>: external-force scope defines <code>x</code>, <code>y</code>, <code>alpha</code>, <code>r</code>, <code>t</code>, <code>T</code>, <code>N</code>, <code>delta</code>, helpers, and constants.</div>
+            <div><code>descriptions.ts</code>: good but dense external-force help popover content.</div>
+            <div><code>src/docs/index.md</code>: no formula docs entry yet.</div>
+          </div>
+        </div>
+
+        <div class="band alt">
+          <h2>Terminology to settle</h2>
+          <p>The old external-force design notes describe <code>N</code> as polar/outward in places. The current implementation uses <code>basalGeometry.getNormal(projectPoint(X))</code>, described in code as pointing into tissue, then <code>T=(-N_y,N_x)</code>. The docs should teach the implementation, and the old spec can remain historical.</p>
+          <div class="callout" style="margin-top:12px">
+            Recommendation: use "basal normal into tissue" and "tangent perpendicular to basal normal" everywhere in user-facing copy.
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const tabs = document.querySelectorAll(".nav button");
+    const sections = document.querySelectorAll(".section");
+    function activateTab(tabId, updateHash = false) {
+      const targetButton = document.querySelector(`.nav button[data-tab="${tabId}"]`);
+      const targetSection = document.getElementById(tabId);
+      if (!targetButton || !targetSection) return;
+      tabs.forEach((b) => b.classList.remove("active"));
+      sections.forEach((s) => s.classList.remove("active"));
+      targetButton.classList.add("active");
+      targetSection.classList.add("active");
+      if (updateHash) window.history.replaceState(null, "", `#${tabId}`);
+    }
+    tabs.forEach((button) => {
+      button.addEventListener("click", () => {
+        activateTab(button.dataset.tab, true);
+      });
+    });
+    if (window.location.hash) {
+      activateTab(window.location.hash.slice(1));
+    }
+
+    function setLine(id, x1, y1, x2, y2) {
+      const el = document.getElementById(id);
+      el.setAttribute("x1", x1);
+      el.setAttribute("y1", y1);
+      el.setAttribute("x2", x2);
+      el.setAttribute("y2", y2);
+    }
+
+    const CX = 300;
+    const CY = 222;
+    const SVG_SCALE = 1.65;
+    const perimeterSlider = document.getElementById("perimeterSlider");
+    const aspectSlider = document.getElementById("aspectSlider");
+    const alphaSlider = document.getElementById("alphaSlider");
+
+    function ramanujanPerimeter(a, b) {
+      if (a === b) return 2 * Math.PI * a;
+      const sum = a + b;
+      const diff = a - b;
+      const h = (diff * diff) / (sum * sum);
+      return Math.PI * sum * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h)));
+    }
+
+    function computeAxes(perimeter, aspect) {
+      const normalizedPerimeter = ramanujanPerimeter(1, aspect);
+      const a = perimeter / normalizedPerimeter;
+      return { a, b: a * aspect };
+    }
+
+    function normalize(v) {
+      const mag = Math.hypot(v.x, v.y) || 1;
+      return { x: v.x / mag, y: v.y / mag };
+    }
+
+    function simToScreen(p) {
+      return { x: CX + p.x * SVG_SCALE, y: CY - p.y * SVG_SCALE };
+    }
+
+    function setPoint(id, p) {
+      const screen = simToScreen(p);
+      const el = document.getElementById(id);
+      el.setAttribute("cx", screen.x);
+      el.setAttribute("cy", screen.y);
+      return screen;
+    }
+
+    function setText(id, x, y) {
+      const el = document.getElementById(id);
+      el.setAttribute("x", x);
+      el.setAttribute("y", y);
+    }
+
+    function fmt(value, digits = 1) {
+      return Number(value).toFixed(digits).replace("-0.0", "0.0").replace("-0.00", "0.00");
+    }
+
+    function ellipsePath(a, b) {
+      const points = [];
+      for (let i = 0; i <= 360; i++) {
+        const theta = (i / 360) * Math.PI * 2;
+        points.push(simToScreen({ x: a * Math.cos(theta), y: b * Math.sin(theta) }));
+      }
+      return points.map((p, i) => `${i === 0 ? "M" : "L"}${fmt(p.x, 2)},${fmt(p.y, 2)}`).join(" ") + " Z";
+    }
+
+    function closestPointOnEllipse(point, a, b) {
+      let best = { x: a, y: 0 };
+      let bestDist = Infinity;
+      for (let i = 0; i < 720; i++) {
+        const theta = (i / 720) * Math.PI * 2;
+        const p = { x: a * Math.cos(theta), y: b * Math.sin(theta) };
+        const dx = point.x - p.x;
+        const dy = point.y - p.y;
+        const dist = dx * dx + dy * dy;
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = p;
+        }
+      }
+      return best;
+    }
+
+    function inwardNormalAt(point, a, b) {
+      return normalize({ x: -point.x / (a * a), y: -point.y / (b * b) });
+    }
+
+    function alphaArcPath(alpha) {
+      const radius = 48;
+      const start = { x: CX, y: CY + radius };
+      const end = { x: CX + Math.sin(alpha) * radius, y: CY + Math.cos(alpha) * radius };
+      const large = Math.abs(alpha) > Math.PI ? 1 : 0;
+      const sweep = alpha >= 0 ? 0 : 1;
+      return `M${fmt(start.x, 2)},${fmt(start.y, 2)} A${radius},${radius} 0 ${large} ${sweep} ${fmt(end.x, 2)},${fmt(end.y, 2)}`;
+    }
+
+    function updateExplainer() {
+      const perimeter = Number(perimeterSlider.value);
+      const aspect = Number(aspectSlider.value);
+      const alphaDeg = Number(alphaSlider.value);
+      const alpha = (alphaDeg * Math.PI) / 180;
+      const { a, b } = computeAxes(perimeter, aspect);
+
+      const sinA = Math.sin(alpha);
+      const cosA = Math.cos(alpha);
+      const boundaryRadius = 1 / Math.sqrt((sinA * sinA) / (a * a) + (cosA * cosA) / (b * b));
+      const nucleusRadius = boundaryRadius * 0.78;
+      const nucleus = { x: nucleusRadius * sinA, y: -nucleusRadius * cosA };
+      const projection = closestPointOnEllipse(nucleus, a, b);
+      const N = inwardNormalAt(projection, a, b);
+      const T = { x: -N.y, y: N.x };
+      const r = Math.hypot(nucleus.x, nucleus.y);
+      const measuredAlpha = Math.atan2(nucleus.x, -nucleus.y);
+      const delta = N.x * (nucleus.x - projection.x) + N.y * (nucleus.y - projection.y);
+      const signAlpha = Math.abs(measuredAlpha) < 1e-6 ? 0 : Math.sign(measuredAlpha);
+
+      const outline = document.getElementById("ellipseOutline");
+      outline.setAttribute("rx", a * SVG_SCALE);
+      outline.setAttribute("ry", b * SVG_SCALE);
+      document.getElementById("basalCurve").setAttribute("d", ellipsePath(a, b));
+      setLine("xAxis", CX - a * SVG_SCALE - 18, CY, CX + a * SVG_SCALE + 18, CY);
+      setLine("yAxis", CX, CY - b * SVG_SCALE - 18, CX, CY + b * SVG_SCALE + 18);
+
+      const boundary = { x: boundaryRadius * sinA, y: -boundaryRadius * cosA };
+      const nucleusScreen = setPoint("cellPoint", nucleus);
+      const projectionScreen = setPoint("projPoint", projection);
+      const boundaryScreen = simToScreen(boundary);
+      setLine("alphaRay", CX, CY, boundaryScreen.x, boundaryScreen.y);
+      setLine("rLine", CX, CY, nucleusScreen.x, nucleusScreen.y);
+      setLine("deltaLine", projectionScreen.x, projectionScreen.y, nucleusScreen.x, nucleusScreen.y);
+
+      const arrowUnits = 30;
+      const nEnd = simToScreen({ x: projection.x + N.x * arrowUnits, y: projection.y + N.y * arrowUnits });
+      const tEnd = simToScreen({ x: projection.x + T.x * arrowUnits, y: projection.y + T.y * arrowUnits });
+      setLine("nLine", projectionScreen.x, projectionScreen.y, nEnd.x, nEnd.y);
+      setLine("tLine", projectionScreen.x, projectionScreen.y, tEnd.x, tEnd.y);
+
+      const cellLabelX = measuredAlpha >= 0 ? nucleusScreen.x + 24 : nucleusScreen.x - 132;
+      const cellLabelY = nucleusScreen.y - 14;
+      const projLabelX = measuredAlpha >= 0 ? projectionScreen.x + 18 : projectionScreen.x - 132;
+      const projLabelY = projectionScreen.y + 24;
+      setText("cellLabel", cellLabelX, cellLabelY);
+      setText("projLabel", projLabelX, projLabelY);
+      setText("nLabel", nEnd.x + 6, nEnd.y - 4);
+      setText("tLabel", tEnd.x + 6, tEnd.y - 4);
+      document.getElementById("alphaArc").setAttribute("d", alphaArcPath(measuredAlpha));
+      const alphaLabelX = measuredAlpha >= 0 ? CX + 58 : CX - 100;
+      const alphaLabelY = CY + 82;
+      setText("alphaLabel", alphaLabelX, alphaLabelY);
+
+      document.getElementById("perimeterValue").textContent = `${fmt(perimeter, 0)} um`;
+      document.getElementById("aspectValue").textContent = fmt(aspect, 2);
+      document.getElementById("alphaValue").textContent = `${fmt(alphaDeg, 0)} deg`;
+      document.getElementById("xyReadout").textContent = `${fmt(nucleus.x, 1)}, ${fmt(nucleus.y, 1)}`;
+      document.getElementById("rReadout").textContent = fmt(r, 1);
+      document.getElementById("alphaReadout").textContent = `${fmt(measuredAlpha, 2)} rad`;
+      document.getElementById("axesReadout").textContent = `a=${fmt(a, 1)}, b=${fmt(b, 1)}`;
+      document.getElementById("nReadout").textContent = `(${fmt(N.x, 2)}, ${fmt(N.y, 2)})`;
+      document.getElementById("tReadout").textContent = `(${fmt(T.x, 2)}, ${fmt(T.y, 2)})`;
+      document.getElementById("deltaReadout").textContent = fmt(delta, 1);
+      document.getElementById("signReadout").textContent = String(signAlpha);
+      document.getElementById("effectiveFormula").textContent = signAlpha === 0
+        ? "Scalar 10 -> zero at alpha = 0 because sign(0) = 0"
+        : `Scalar 10 -> -(10) * sign(alpha) * T = ${fmt(-10 * signAlpha, 0)} * T`;
+    }
+
+    [perimeterSlider, aspectSlider, alphaSlider].forEach((slider) => {
+      slider.addEventListener("input", updateExplainer);
+    });
+    updateExplainer();
+  </script>
+</body>
+</html>
