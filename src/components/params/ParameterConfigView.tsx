@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import { ModelParameterPanel } from './ModelParameterPanel';
+import { ParameterRangeList } from '../batch/ParameterRangeList';
 import { TimeSampleConfig } from '../batch/TimeSampleConfig';
 import type { SimulationConfig } from '@/core/params';
 import type { BaseSimulationParams } from '@/core/registry';
@@ -183,36 +184,44 @@ function ParameterConfigBody({
         <ModelParameterPanel
           params={config.params}
           onChange={onParamsChange}
-          parameterRanges={config.parameterRanges}
-          onParameterRangesChange={onRangesChange}
+          batchSetupContent={
+            <>
+              <ParameterRangeList
+                ranges={config.parameterRanges}
+                onChange={onRangesChange}
+                baseParams={config.params}
+                disabled={disabled}
+              />
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Batch Sampling</Label>
+                <TimeSampleConfig
+                  config={config.timeSamples}
+                  onChange={onTimeSamplesChange}
+                  disabled={disabled}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="seeds" className="text-xs text-muted-foreground">
+                    Seeds per configuration
+                  </Label>
+                  <Input
+                    id="seeds"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={config.seedsPerConfig}
+                    onChange={(e) => onSeedsChange(e.target.value)}
+                    disabled={disabled}
+                    className="h-8 w-32"
+                  />
+                </div>
+              </div>
+            </>
+          }
           disabled={disabled}
         />
-      </div>
-
-      <Separator />
-
-      <div className="space-y-3">
-        <Label className="text-sm font-medium">Batch Sampling</Label>
-        <TimeSampleConfig
-          config={config.timeSamples}
-          onChange={onTimeSamplesChange}
-          disabled={disabled}
-        />
-        <div className="space-y-1">
-          <Label htmlFor="seeds" className="text-xs text-muted-foreground">
-            Seeds per configuration
-          </Label>
-          <Input
-            id="seeds"
-            type="number"
-            min={1}
-            step={1}
-            value={config.seedsPerConfig}
-            onChange={(e) => onSeedsChange(e.target.value)}
-            disabled={disabled}
-            className="h-8 w-32"
-          />
-        </div>
       </div>
     </div>
   );

@@ -5,9 +5,8 @@
  */
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useModel } from '@/contexts';
-import { ParameterRangeList } from '@/components/batch/ParameterRangeList';
-import type { ParameterRange } from '@/core/batch';
 import type { BaseSimulationParams } from '@/core/registry';
+import type { ReactNode } from 'react';
 
 export interface ParameterTabProps<P = any> {
   params: P;
@@ -18,16 +17,14 @@ export interface ParameterTabProps<P = any> {
 export interface ModelParameterPanelProps {
   params: BaseSimulationParams;
   onChange: (params: BaseSimulationParams) => void;
-  parameterRanges?: ParameterRange[];
-  onParameterRangesChange?: (ranges: ParameterRange[]) => void;
+  batchSetupContent?: ReactNode;
   disabled?: boolean;
 }
 
 export function ModelParameterPanel({
   params,
   onChange,
-  parameterRanges,
-  onParameterRangesChange,
+  batchSetupContent,
   disabled,
 }: ModelParameterPanelProps) {
   const { currentModel } = useModel();
@@ -45,7 +42,7 @@ export function ModelParameterPanel({
   const hasCellTypes = !!CellTypesTab;
   const hasCellEvents = !!CellEventsTab;
   const hasSimulation = !!SimulationTab;
-  const hasParameterRanges = !!parameterRanges && !!onParameterRangesChange;
+  const hasBatchSetup = !!batchSetupContent;
 
   return (
     <div className="flex flex-col">
@@ -63,7 +60,7 @@ export function ModelParameterPanel({
           {hasCellTypes && <TabsTrigger value="celltypes" className="text-xs">Cell Types</TabsTrigger>}
           {hasCellEvents && <TabsTrigger value="cellevents" className="text-xs">Events</TabsTrigger>}
           {hasSimulation && <TabsTrigger value="simulation" className="text-xs">Simulation</TabsTrigger>}
-          {hasParameterRanges && <TabsTrigger value="ranges" className="text-xs">Parameter Ranges</TabsTrigger>}
+          {hasBatchSetup && <TabsTrigger value="batch" className="text-xs">Batch Setup</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="parameters" className="mt-0">
@@ -110,16 +107,9 @@ export function ModelParameterPanel({
           </TabsContent>
         )}
 
-        {hasParameterRanges && (
-          <TabsContent value="ranges" className="mt-0">
-            <div className="p-4">
-              <ParameterRangeList
-                ranges={parameterRanges}
-                onChange={onParameterRangesChange}
-                baseParams={params}
-                disabled={disabled}
-              />
-            </div>
+        {hasBatchSetup && (
+          <TabsContent value="batch" className="mt-0">
+            <div className="p-4 space-y-4">{batchSetupContent}</div>
           </TabsContent>
         )}
       </Tabs>

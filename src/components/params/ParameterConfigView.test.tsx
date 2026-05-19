@@ -75,19 +75,21 @@ describe('ParameterConfigView', () => {
     expect(screen.queryByRole('button', { name: 'Collapse' })).not.toBeInTheDocument();
   });
 
-  it('places parameter ranges in the model parameter tab row', () => {
+  it('places batch setup in the model parameter tab row', () => {
     renderParameterConfig();
 
-    const rangesTab = screen.getByRole('tab', { name: 'Parameter Ranges' });
-    expect(rangesTab).toBeInTheDocument();
+    const batchTab = screen.getByRole('tab', { name: 'Batch Setup' });
+    expect(batchTab).toBeInTheDocument();
 
-    fireEvent.pointerDown(rangesTab);
-    fireEvent.mouseDown(rangesTab);
-    fireEvent.click(rangesTab);
+    fireEvent.pointerDown(batchTab);
+    fireEvent.mouseDown(batchTab);
+    fireEvent.click(batchTab);
 
     const modelFrame = screen.getByTestId('model-parameter-panel-frame');
     expect(within(modelFrame).getByText('No parameter ranges defined. Add parameters to sweep.')).toBeInTheDocument();
     expect(within(modelFrame).getByRole('combobox', { name: 'Add parameter range' })).toBeInTheDocument();
+    expect(within(modelFrame).getByText('Batch Sampling')).toBeInTheDocument();
+    expect(within(modelFrame).getByLabelText('Seeds per configuration')).toBeInTheDocument();
   });
 
   it('opens a maximized modal that renders the same editor controls', () => {
@@ -99,7 +101,11 @@ describe('ParameterConfigView', () => {
     expect(dialog).toBeInTheDocument();
     expect(screen.getByTestId('parameter-workspace-modal-scroll')).toHaveClass('overflow-y-auto');
     expect(within(dialog).getByRole('button', { name: 'Load' })).toBeInTheDocument();
-    expect(within(dialog).getByRole('tab', { name: 'Parameter Ranges' })).toBeInTheDocument();
+    const batchTab = within(dialog).getByRole('tab', { name: 'Batch Setup' });
+    expect(batchTab).toBeInTheDocument();
+    fireEvent.pointerDown(batchTab);
+    fireEvent.mouseDown(batchTab);
+    fireEvent.click(batchTab);
     expect(within(dialog).getByText('Batch Sampling')).toBeInTheDocument();
   });
 });
