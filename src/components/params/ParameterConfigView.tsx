@@ -3,7 +3,7 @@
  * Handles unified load/save to TOML so all values stay together.
  */
 import { useRef, useState } from 'react';
-import { ChevronsDownUp, ChevronsUpDown, Download, FileSpreadsheet, Link2, Maximize2, Upload } from 'lucide-react';
+import { Download, FileSpreadsheet, Link2, Maximize2, Upload } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { Button } from '../ui/button';
@@ -232,7 +232,6 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
   const xlsxInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [isExtended, setIsExtended] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
   const presetOptions = PARAM_PRESETS;
 
@@ -368,26 +367,9 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
       <CardContent className="p-0">
         <div
           data-testid="parameter-workspace-scroll"
-          className={`overflow-y-auto overflow-x-hidden px-6 pb-4 pt-0 ${isExtended ? 'h-[min(78vh,900px)] min-h-[520px]' : 'h-[min(560px,calc(100vh-280px))] min-h-[320px]'}`}
+          className="h-[min(78vh,900px)] min-h-[520px] overflow-y-auto overflow-x-hidden px-6 pb-4 pt-0"
         >
           {!isMaximized && body}
-        </div>
-
-        <div className="border-t px-6 py-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsExtended((value) => !value)}
-            className="h-8 w-full gap-1.5 text-xs"
-            aria-expanded={isExtended}
-          >
-            {isExtended ? (
-              <ChevronsDownUp className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronsUpDown className="h-3.5 w-3.5" />
-            )}
-            {isExtended ? 'Collapse' : 'Extend'}
-          </Button>
         </div>
       </CardContent>
 

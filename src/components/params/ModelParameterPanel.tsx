@@ -46,7 +46,7 @@ export function ModelParameterPanel({ params, onChange, disabled }: ModelParamet
       )}
 
       <Tabs defaultValue="parameters" className="flex flex-col">
-        <TabsList className="w-full justify-start shrink-0 h-9 overflow-x-auto">
+        <TabsList className="w-max justify-start shrink-0 h-9">
           <TabsTrigger value="parameters" className="text-xs">Parameters</TabsTrigger>
           {hasConstants && <TabsTrigger value="constants" className="text-xs">Constants</TabsTrigger>}
           {hasCellTypes && <TabsTrigger value="celltypes" className="text-xs">Cell Types</TabsTrigger>}

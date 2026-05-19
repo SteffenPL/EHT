@@ -65,25 +65,14 @@ describe('ParameterConfigView', () => {
     expect(cellTypesScroll.className).not.toContain('max-h');
   });
 
-  it('toggles extended inline sizing without opening the modal', () => {
+  it('uses the expanded inline workspace sizing without a separate extend control', () => {
     renderParameterConfig();
 
     const workspace = screen.getByTestId('parameter-workspace-scroll');
-    const extendButton = screen.getByRole('button', { name: 'Extend' });
 
-    expect(extendButton).toHaveAttribute('aria-expanded', 'false');
-    expect(workspace.className).toContain('h-[min(560px,calc(100vh-280px))]');
-
-    fireEvent.click(extendButton);
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Collapse' })).toHaveAttribute('aria-expanded', 'true');
     expect(workspace.className).toContain('h-[min(78vh,900px)]');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Collapse' }));
-
-    expect(screen.getByRole('button', { name: 'Extend' })).toHaveAttribute('aria-expanded', 'false');
-    expect(workspace.className).toContain('h-[min(560px,calc(100vh-280px))]');
+    expect(screen.queryByRole('button', { name: 'Extend' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Collapse' })).not.toBeInTheDocument();
   });
 
   it('opens a maximized modal that renders the same editor controls', () => {
