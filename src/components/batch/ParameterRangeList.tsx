@@ -71,7 +71,7 @@ export function ParameterRangeList({ ranges, onChange, baseParams, disabled }: P
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">Parameter Ranges</Label>
         <Select onValueChange={handleAdd} disabled={disabled || availableParams.length === 0}>
-          <SelectTrigger className="w-[200px] h-8">
+          <SelectTrigger className="w-[200px] h-8" aria-label="Add parameter range">
             <Plus className="h-4 w-4 mr-1" />
             <SelectValue placeholder="Add parameter" />
           </SelectTrigger>

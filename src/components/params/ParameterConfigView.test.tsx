@@ -75,6 +75,21 @@ describe('ParameterConfigView', () => {
     expect(screen.queryByRole('button', { name: 'Collapse' })).not.toBeInTheDocument();
   });
 
+  it('places parameter ranges in the model parameter tab row', () => {
+    renderParameterConfig();
+
+    const rangesTab = screen.getByRole('tab', { name: 'Parameter Ranges' });
+    expect(rangesTab).toBeInTheDocument();
+
+    fireEvent.pointerDown(rangesTab);
+    fireEvent.mouseDown(rangesTab);
+    fireEvent.click(rangesTab);
+
+    const modelFrame = screen.getByTestId('model-parameter-panel-frame');
+    expect(within(modelFrame).getByText('No parameter ranges defined. Add parameters to sweep.')).toBeInTheDocument();
+    expect(within(modelFrame).getByRole('combobox', { name: 'Add parameter range' })).toBeInTheDocument();
+  });
+
   it('opens a maximized modal that renders the same editor controls', () => {
     renderParameterConfig();
 
@@ -84,7 +99,7 @@ describe('ParameterConfigView', () => {
     expect(dialog).toBeInTheDocument();
     expect(screen.getByTestId('parameter-workspace-modal-scroll')).toHaveClass('overflow-y-auto');
     expect(within(dialog).getByRole('button', { name: 'Load' })).toBeInTheDocument();
-    expect(within(dialog).getByText('Parameter Ranges')).toBeInTheDocument();
+    expect(within(dialog).getByRole('tab', { name: 'Parameter Ranges' })).toBeInTheDocument();
     expect(within(dialog).getByText('Batch Sampling')).toBeInTheDocument();
   });
 });

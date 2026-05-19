@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from '../ui/select';
 import { ModelParameterPanel } from './ModelParameterPanel';
-import { ParameterRangeList } from '../batch/ParameterRangeList';
 import { TimeSampleConfig } from '../batch/TimeSampleConfig';
 import type { SimulationConfig } from '@/core/params';
 import type { BaseSimulationParams } from '@/core/registry';
@@ -184,18 +183,11 @@ function ParameterConfigBody({
         <ModelParameterPanel
           params={config.params}
           onChange={onParamsChange}
+          parameterRanges={config.parameterRanges}
+          onParameterRangesChange={onRangesChange}
           disabled={disabled}
         />
       </div>
-
-      <Separator />
-
-      <ParameterRangeList
-        ranges={config.parameterRanges}
-        onChange={onRangesChange}
-        baseParams={config.params}
-        disabled={disabled}
-      />
 
       <Separator />
 
