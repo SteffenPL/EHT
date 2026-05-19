@@ -30,7 +30,7 @@ export const FORMULA_PRESETS: FormulaPreset[] = [
   },
   {
     name: 'Ramp',
-    signature: 'ramp(t, start=0, end=10, from=0, to=1)',
+    signature: 'ramp(t, start=0, stop=10, from=0, to=1)',
     description: 'Linear transition between two values over a time range',
     params: [
       { label: 'Start time', defaultValue: 0 },
@@ -38,7 +38,7 @@ export const FORMULA_PRESETS: FormulaPreset[] = [
       { label: 'Start value', defaultValue: 0 },
       { label: 'End value', defaultValue: 1 },
     ],
-    generate: (v) => `ramp(t, start=${v[0]}, end=${v[1]}, from=${v[2]}, to=${v[3]})`,
+    generate: (v) => `ramp(t, start=${v[0]}, stop=${v[1]}, from=${v[2]}, to=${v[3]})`,
   },
   {
     name: 'Triangle Wave',
@@ -53,7 +53,7 @@ export const FORMULA_PRESETS: FormulaPreset[] = [
   },
   {
     name: 'Pulse',
-    signature: 'pulse(t, start=2, end=5, off=0, on=1)',
+    signature: 'pulse(t, start=2, stop=5, off=0, on=1)',
     description: 'Value is "on" between start and end time, "off" otherwise',
     params: [
       { label: 'Start time', defaultValue: 2 },
@@ -61,11 +61,11 @@ export const FORMULA_PRESETS: FormulaPreset[] = [
       { label: 'Off value', defaultValue: 0 },
       { label: 'On value', defaultValue: 1 },
     ],
-    generate: (v) => `pulse(t, start=${v[0]}, end=${v[1]}, off=${v[2]}, on=${v[3]})`,
+    generate: (v) => `pulse(t, start=${v[0]}, stop=${v[1]}, off=${v[2]}, on=${v[3]})`,
   },
   {
     name: 'Smooth Step',
-    signature: 'smoothstep(t, start=0, end=10, from=0, to=1)',
+    signature: 'smoothstep(t, start=0, stop=10, from=0, to=1)',
     description: 'Smooth (Hermite) transition between two values over a time range',
     params: [
       { label: 'Start time', defaultValue: 0 },
@@ -73,6 +73,6 @@ export const FORMULA_PRESETS: FormulaPreset[] = [
       { label: 'Start value', defaultValue: 0 },
       { label: 'End value', defaultValue: 1 },
     ],
-    generate: (v) => `smoothstep(t, start=${v[0]}, end=${v[1]}, from=${v[2]}, to=${v[3]})`,
+    generate: (v) => `smoothstep(t, start=${v[0]}, stop=${v[1]}, from=${v[2]}, to=${v[3]})`,
   },
 ];

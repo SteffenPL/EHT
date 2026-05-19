@@ -18,10 +18,10 @@ Use formulas when a value should change over simulation time or depend on a cell
 | Function | Meaning | Example |
 |---|---|---|
 | `step(t, switch=5, before=0, after=1)` | Jump from one value to another | `step(t, switch=5, before=0, after=1)` |
-| `ramp(t, start=0, end=10, from=1, to=2)` | Linear transition | `ramp(t, start=0, end=10, from=1, to=2)` |
+| `ramp(t, start=0, stop=10, from=1, to=2)` | Linear transition | `ramp(t, start=0, stop=10, from=1, to=2)` |
 | `triangle(t, period=10, min=1, max=2)` | Periodic triangle wave | `triangle(t, period=10, min=1, max=2)` |
-| `pulse(t, start=2, end=5, off=0, on=1)` | On during a time window | `pulse(t, start=2, end=5, off=0, on=1)` |
-| `smoothstep(t, start=0, end=10, from=1, to=2)` | Smooth transition | `smoothstep(t, start=0, end=10, from=1, to=2)` |
+| `pulse(t, start=2, stop=5, off=0, on=1)` | On during a time window | `pulse(t, start=2, stop=5, off=0, on=1)` |
+| `smoothstep(t, start=0, stop=10, from=1, to=2)` | Smooth transition | `smoothstep(t, start=0, stop=10, from=1, to=2)` |
 
 ## Cell Spatial Variables
 
