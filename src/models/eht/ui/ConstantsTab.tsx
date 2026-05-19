@@ -65,7 +65,7 @@ export function EHTConstantsTab({ params, onChange, disabled }: ModelUITabProps<
       <div className="text-sm text-muted-foreground">
         Define named values that can be used in any formula. Example: set{' '}
         <code className="bg-muted px-1 rounded">heartbeat = 0.5</code>, then use{' '}
-        <code className="bg-muted px-1 rounded">triangle(t, heartbeat, 0, 1)</code>{' '}
+        <code className="bg-muted px-1 rounded">triangle(t, period=heartbeat, min=0, max=1)</code>{' '}
         in a formula.
       </div>
 

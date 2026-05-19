@@ -1,6 +1,7 @@
 /**
  * Named helper functions available in all formula evaluation scopes.
- * Registered into math.js scope so users can write e.g. triangle(t, 0.5, 0, 1).
+ * Registered into math.js scope so users can write e.g.
+ * triangle(t, period=10, min=1, max=2).
  */
 
 function step(t: number, t_switch: number, v_before: number, v_after: number): number {

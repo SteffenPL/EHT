@@ -6,7 +6,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { evaluate } from 'mathjs';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -183,6 +183,9 @@ function PresetPanel({
           {expanded === preset.name && (
             <div className="px-2 pb-2 space-y-1.5">
               <p className="text-xs text-muted-foreground">{preset.description}</p>
+              <code className="block rounded bg-muted px-2 py-1 font-mono text-[11px] text-muted-foreground">
+                {preset.signature}
+              </code>
               {preset.params.map((param, idx) => {
                 const values = getValues(preset);
                 return (
@@ -210,7 +213,7 @@ function PresetPanel({
                 className="h-7 text-xs w-full"
                 onClick={() => onInsert(preset.generate(getValues(preset)))}
               >
-                Insert at cursor
+                Insert explicit formula
               </Button>
             </div>
           )}
@@ -276,27 +279,32 @@ function VariablesPanel({
           </div>
         </>
       )}
+    </div>
+  );
+}
 
-      {FORMULA_PRESETS.length > 0 && (
-        <>
-          <div className="border-t my-1" />
-          <Label className="text-xs font-medium text-muted-foreground">Functions</Label>
-          <div className="space-y-0.5">
-            {FORMULA_PRESETS.map(p => (
-              <button
-                key={p.name}
-                type="button"
-                className="w-full text-left px-2 py-0.5 text-xs hover:bg-muted rounded"
-                onClick={() => onInsert(p.generate(p.params.map(pp => pp.defaultValue)))}
-              >
-                <code className="font-mono text-muted-foreground">
-                  {p.name.toLowerCase().replace(/ /g, '')}(...)
-                </code>
-              </button>
-            ))}
-          </div>
-        </>
-      )}
+function FunctionsPanel({
+  onInsert,
+}: {
+  onInsert: (text: string) => void;
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-xs font-medium text-muted-foreground">Functions</Label>
+      <div className="space-y-0.5">
+        {FORMULA_PRESETS.map(p => (
+          <button
+            key={p.name}
+            type="button"
+            className="w-full text-left px-2 py-1 text-xs hover:bg-muted rounded"
+            onClick={() => onInsert(p.generate(p.params.map(pp => pp.defaultValue)))}
+          >
+            <code className="font-mono text-muted-foreground">
+              {p.signature}
+            </code>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -374,84 +382,96 @@ export function FormulaEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`${context === 'external_force' ? 'max-w-5xl' : 'max-w-3xl'} max-h-[90vh] overflow-y-auto`}>
-        <DialogHeader>
-          <DialogTitle>Formula Editor: {label}</DialogTitle>
-          <DialogDescription>
-            {context === 'external_force'
-              ? 'Edit an external force formula. Scalars are converted into tangential flow; vector formulas can use T and N directly.'
-              : 'Edit the formula for this parameter. Use presets or type math.js expressions.'}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="w-[min(1180px,calc(100vw-2rem))] max-w-none max-h-[92vh] gap-0 overflow-hidden p-0">
+        <div className="flex max-h-[92vh] min-h-0 flex-col">
+          <div className="flex flex-col gap-3 border-b bg-background px-4 py-3 pr-14 sm:flex-row sm:items-start sm:justify-between">
+            <DialogHeader className="min-w-0">
+              <DialogTitle>Formula Editor: {label}</DialogTitle>
+              <DialogDescription>
+                {context === 'external_force'
+                  ? 'Edit an external force formula. Scalars are converted into tangential flow; vector formulas can use T and N directly.'
+                  : 'Edit the formula for this parameter. Use presets or type math.js expressions.'}
+              </DialogDescription>
+            </DialogHeader>
 
-        <div className="space-y-3">
-          {/* Graph preview */}
-          {context === 'external_force' ? (
-            <FormulaSpatialExplainer
-              compact
-              formula={formula}
-              constants={constants}
-              initialPerimeter={initialPerimeter}
-              initialAspectRatio={initialAspectRatio}
-            />
-          ) : (
-            <GraphPreview
-              formula={formula}
-              tEnd={tEnd}
-              numericValue={currentNumericValue}
-              constants={constants}
-            />
-          )}
-
-          {/* Formula input */}
-          <div>
-            <Input
-              ref={inputRef}
-              type="text"
-              value={formula}
-              onChange={(e) => setFormula(e.target.value)}
-              placeholder="Enter math.js formula..."
-              className="font-mono text-sm h-9"
-              autoFocus
-            />
-            {formulaError && (
-              <p className="text-xs text-destructive mt-1">{formulaError}</p>
-            )}
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => { onClear(); onOpenChange(false); }}
+              >
+                Clear formula
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => { onSave(formula); onOpenChange(false); }}
+                disabled={!!formulaError}
+              >
+                OK
+              </Button>
+            </div>
           </div>
 
-          {/* Presets + Variables side by side — presets get more room for form fields */}
-          <div className="grid grid-cols-[1fr_auto] gap-4">
-            <PresetPanel onInsert={insertAtCursor} />
-            <div className="w-48">
-              <VariablesPanel
-                context={context}
-                constants={constants}
-                onInsert={insertAtCursor}
-              />
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <div className="space-y-4">
+              <div>
+                <Label className="mb-1.5 block text-xs font-medium text-muted-foreground">Formula</Label>
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  value={formula}
+                  onChange={(e) => setFormula(e.target.value)}
+                  placeholder="Enter formula, for example triangle(t, period=10, min=1, max=2)"
+                  className="h-10 font-mono text-sm"
+                  autoFocus
+                />
+                {formulaError && (
+                  <p className="mt-1 text-xs text-destructive">{formulaError}</p>
+                )}
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+                <main className="min-w-0 space-y-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-medium text-muted-foreground">
+                      {context === 'external_force' ? 'Spatial preview' : 'Graph preview'}
+                    </Label>
+                    {context === 'external_force' ? (
+                      <FormulaSpatialExplainer
+                        compact
+                        formula={formula}
+                        constants={constants}
+                        initialPerimeter={initialPerimeter}
+                        initialAspectRatio={initialAspectRatio}
+                      />
+                    ) : (
+                      <GraphPreview
+                        formula={formula}
+                        tEnd={tEnd}
+                        numericValue={currentNumericValue}
+                        constants={constants}
+                      />
+                    )}
+                  </div>
+
+                  <VariablesPanel
+                    context={context}
+                    constants={constants}
+                    onInsert={insertAtCursor}
+                  />
+                </main>
+
+                <aside className="min-w-0 space-y-4">
+                  <PresetPanel onInsert={insertAtCursor} />
+                  <FunctionsPanel onInsert={insertAtCursor} />
+                </aside>
+              </div>
             </div>
           </div>
         </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => { onClear(); onOpenChange(false); }}
-          >
-            Clear Formula
-          </Button>
-          <div className="flex-1" />
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => { onSave(formula); onOpenChange(false); }}
-            disabled={!!formulaError}
-          >
-            OK
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
