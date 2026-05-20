@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export function MarkdownPage({
@@ -17,6 +18,15 @@ export function MarkdownPage({
 }) {
   return (
     <div className={cn('max-w-3xl mx-auto p-8 prose-container', className)}>
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          ← Simulator
+        </Link>
+        <span className="text-muted-foreground">/</span>
+        <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+          Docs
+        </Link>
+      </div>
       <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
         {content}
       </ReactMarkdown>

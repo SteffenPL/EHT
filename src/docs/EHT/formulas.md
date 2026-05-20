@@ -4,44 +4,49 @@ The EHT simulator supports math.js formulas for time-dependent parameters, cell-
 
 Use formulas when a value should change over simulation time or depend on a cell's spatial context. Use constants when several formulas should share one named value.
 
+Unless otherwise noted, variable values are in:
+- **Hours (`h`)** for simulation-time arguments.
+- **Same units as the target field** for parameter modifiers (`old_value`, `init_value`, most formula outputs).
+- **Simulation coordinates** for spatial terms (`x`, `y`, `delta`, `r`, `N`, `T`).
+
 ## Common Variables
 
-| Variable | Meaning | Example |
-|---|---|---|
-| `t` | Current simulation time in hours | `sin(t)` |
-| `dt` | Current timestep size | `old_value + 0.01 * dt` |
-| `old_value` | Value before the formula is applied | `old_value * 0.5` |
-| `init_value` | Initial value captured when the formula was created | `init_value + 0.2 * sin(t)` |
+| Variable | Units | Meaning | Example |
+|---|---|---|---|
+| `t` | h | Current simulation time | `sin(t)` |
+| `dt` | h | Current timestep size | `old_value + 0.01 * dt` |
+| `old_value` | same as target | Value before the formula is applied | `old_value * 0.5` |
+| `init_value` | same as target | Initial value captured when the formula was created | `init_value + 0.2 * sin(t)` |
 
 ## Helper Functions
 
-| Function | Meaning | Example |
-|---|---|---|
-| `step(t, switch=5, before=0, after=1)` | Jump from one value to another | `step(t, switch=5, before=0, after=1)` |
-| `ramp(t, start=0, stop=10, from=1, to=2)` | Linear transition | `ramp(t, start=0, stop=10, from=1, to=2)` |
-| `triangle(t, period=10, min=1, max=2)` | Periodic triangle wave | `triangle(t, period=10, min=1, max=2)` |
-| `pulse(t, start=2, stop=5, off=0, on=1)` | On during a time window | `pulse(t, start=2, stop=5, off=0, on=1)` |
-| `smoothstep(t, start=0, stop=10, from=1, to=2)` | Smooth transition | `smoothstep(t, start=0, stop=10, from=1, to=2)` |
+| Function | Units | Meaning | Example |
+|---|---|---|---|
+| `step(t, switch=5, before=0, after=1)` | h for `switch`; before/after in target units | Jump from one value to another | `step(t, switch=5, before=0, after=1)` |
+| `ramp(t, start=0, stop=10, from=1, to=2)` | h for `start/stop`; output in target units | Linear transition | `ramp(t, start=0, stop=10, from=1, to=2)` |
+| `triangle(t, period=10, min=1, max=2)` | h for `period`; output in target units | Periodic triangle wave | `triangle(t, period=10, min=1, max=2)` |
+| `pulse(t, start=2, stop=5, off=0, on=1)` | h for start/stop; off/on in target units | On during a time window | `pulse(t, start=2, stop=5, off=0, on=1)` |
+| `smoothstep(t, start=0, stop=10, from=1, to=2)` | h for `start/stop`; output in target units | Smooth transition | `smoothstep(t, start=0, stop=10, from=1, to=2)` |
 
 ## Cell Spatial Variables
 
 Cell-type formulas and external-force formulas can use spatial variables:
 
-| Variable | Meaning |
-|---|---|
-| `alpha` | Polar angle of the nucleus around the geometry center. Bottom is `0`, right is `+pi/2`, left is `-pi/2`. |
-| `r` | Distance from the geometry center to the nucleus. |
-| `delta` | Signed distance from the basal curve along the basal normal. |
+| Variable | Units | Meaning |
+|---|---|---|
+| `alpha` | rad | Polar angle of the nucleus around the geometry center. Bottom is `0`, right is `+pi/2`, left is `-pi/2`. |
+| `r` | R_soft | Distance from the geometry center to the nucleus, relative to `R_soft` |
+| `delta` | R_soft | Signed distance from the basal curve along the basal normal, relative to `R_soft` |
 
 The spatial variables are computed from the same basal geometry classes used by the simulation, so line, circle, and ellipse configurations all use their own projection and normal calculations.
 
 External-force formulas also expose:
 
-| Variable | Meaning |
-|---|---|
-| `x`, `y` | Cartesian nucleus position relative to the geometry center `C`. |
-| `N` | Unit basal normal into the tissue at the projected basal point `a`. |
-| `T` | Unit tangent perpendicular to the basal normal, `T = (-N_y, N_x)`. |
+| Variable | Units | Meaning |
+|---|---|---|
+| `x`, `y` | internal simulation length (R_soft-relative) | Cartesian nucleus position relative to geometry center `C`; for v2 inputs this is converted from micron-facing values |
+| `N` | unitless | Unit basal normal into the tissue at the projected basal point `a` |
+| `T` | unitless | Unit tangent perpendicular to the basal normal, `T = (-N_y, N_x)` |
 
 ## External Force Formulas
 
@@ -61,13 +66,13 @@ The formula editor preview uses the same external-force evaluator as the simulat
 
 Examples:
 
-| Formula | Effect |
-|---|---|
-| `10` | Magnitude-10 tangential flow toward `alpha = 0`. |
-| `10 * sin(t)` | Time-varying tangential flow. |
-| `3 * N` | Normal push into the tissue. |
-| `delta * N` | Normal force proportional to distance from the basal curve. |
-| `5 * T + 3 * N` | Tangential plus normal force. |
+| Formula | Units | Effect |
+|---|---|---|
+| `10` | target output units | Magnitude-10 tangential flow toward `alpha = 0`. |
+| `10 * sin(t)` | target output units (time-varying) | Time-varying tangential flow. |
+| `3 * N` | target output units | Normal push into the tissue. |
+| `delta * N` | target output units | Normal force proportional to distance from the basal curve. |
+| `5 * T + 3 * N` | target output units | Tangential plus normal force. |
 
 ## Constants
 
