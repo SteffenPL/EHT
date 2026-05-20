@@ -2,13 +2,12 @@
  * Time integration for the EHT simulation.
  * Implements the timestep with substeps.
  */
-import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
 import type { EHTSimulationState } from '../types';
 
 import type { EHTParams } from '../params/types';
 import { getCellType, updateCellPhase } from './cell';
-import { calcAllForces, CellForces } from './forces';
+import { calcAllForces, type CellForces } from './forces';
 import { applyAllConstraints } from './constraints';
 import { processAllEvents } from './events';
 import { processGlobalEvents } from './global-events';
@@ -25,12 +24,12 @@ function updateCytoskeleton(
     for (const cell of state.cells) {
         const cellType = getCellType(params, cell);
 
-        const pos = Vector2.from(cell.pos);
-        const A = Vector2.from(cell.A);
-        const B = Vector2.from(cell.B);
-
-        const distAX = pos.dist(A);
-        const distBX = pos.dist(B);
+        const ax = cell.pos.x - cell.A.x;
+        const ay = cell.pos.y - cell.A.y;
+        const bx = cell.pos.x - cell.B.x;
+        const by = cell.pos.y - cell.B.y;
+        const distAX = Math.sqrt(ax * ax + ay * ay);
+        const distBX = Math.sqrt(bx * bx + by * by);
 
         // Determine desired rest lengths
         let apicalDrl = Math.max(0, distAX - cell.R_soft);
@@ -64,7 +63,7 @@ function updateCytoskeleton(
             cell.eta_B = expFactor * (cell.eta_B - basalDrl) + basalDrl;
         } else {
             if (cell.running_mode >= 2 && cell.B.y > 0) {
-                cell.eta_B = Vector2.from(cell.B).dist(pos) - cell.R_soft;
+                cell.eta_B = distBX - cell.R_soft;
             } else {
                 cell.eta_B = expFactor * (cell.eta_B - basalDrl) + basalDrl;
             }
@@ -137,13 +136,14 @@ function integrateForces(
 
         // Integrate basal force or running motion
         if (cell.is_running) {
-            const B = Vector2.from(cell.B);
-            const pos = Vector2.from(cell.pos);
+            const dx = cell.B.x - cell.pos.x;
+            const dy = cell.B.y - cell.pos.y;
+            const distSq = dx * dx + dy * dy;
 
-            if (B.dist(pos) < 5) {
-                const dir = B.sub(pos).normalize();
-                cell.B.x += dt * dir.x * cellType.running_speed;
-                cell.B.y += dt * dir.y * cellType.running_speed;
+            if (distSq < 25 && distSq > 0) {
+                const scale = dt * cellType.running_speed / Math.sqrt(distSq);
+                cell.B.x += dx * scale;
+                cell.B.y += dy * scale;
             }
         } else {
             cell.B.x += (dt * f.fB.x) / mu;
@@ -187,12 +187,13 @@ export function performTimestep(
 
     // Substep integration
     const substepDt = fullDt / pg.n_substeps;
+    const forces: CellForces[] = [];
 
     for (let step = 0; step < pg.n_substeps; step++) {
         state.t += substepDt;
 
         // Calculate forces
-        const forces = calcAllForces(state, effectiveParams);
+        calcAllForces(state, effectiveParams, forces);
 
         // Integrate
         integrateForces(state, effectiveParams, forces, rng, substepDt);

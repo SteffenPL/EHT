@@ -59,10 +59,9 @@ export async function runCommand(args: string[]): Promise<void> {
   const timeSamples = generateTimeSamples(times.start, times.end, times.step);
   console.error(`Time samples: ${timeSamples.join(', ')}h`);
 
-  // Create and initialize simulation engine
+  // Create simulation engine
   // Explicitly use EHT Model for CLI default
   const engine = new SimulationEngine({ model: EHTModel, params });
-  engine.init();
 
   // Collect snapshots
   const snapshots: BatchSnapshot[] = [];

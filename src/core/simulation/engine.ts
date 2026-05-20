@@ -11,6 +11,7 @@ export interface SimulationEngineConfig<Params = any, State = any> {
   onSnapshot?: (snapshot: Record<string, any>[]) => void; // Changed to match model.getSnapshot format
   onBatchSnapshot?: (snapshot: BatchSnapshot) => void; // Batch snapshot might need update?
   snapshotInterval?: number; // Record every N steps (default: 1)
+  autoInit?: boolean; // Initialize immediately by default
 }
 
 /**
@@ -35,8 +36,9 @@ export class SimulationEngine<Params = any, State = any> {
     this.onSnapshot = config.onSnapshot;
     this.snapshotInterval = config.snapshotInterval ?? 1;
 
-    // Initialize immediately
-    this.init();
+    if (config.autoInit ?? true) {
+      this.init();
+    }
   }
 
   /**

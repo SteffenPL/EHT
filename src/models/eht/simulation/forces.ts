@@ -6,23 +6,48 @@
 import { Vector2 } from '@/core/math/vector2';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
-import { getCellType } from './cell';
 import { evaluateExternalForceAtPosition } from './external-force-formula';
+
+/** Mutable 2D force vector used in hot simulation loops. */
+export interface ForceVector {
+  x: number;
+  y: number;
+}
 
 /** Force accumulator for a cell */
 export interface CellForces {
-  f: Vector2;   // Force on nucleus
-  fA: Vector2;  // Force on apical point
-  fB: Vector2;  // Force on basal point
+  f: ForceVector;   // Force on nucleus
+  fA: ForceVector;  // Force on apical point
+  fB: ForceVector;  // Force on basal point
 }
 
 /** Create zero forces */
 export function zeroForces(): CellForces {
   return {
-    f: Vector2.zero(),
-    fA: Vector2.zero(),
-    fB: Vector2.zero(),
+    f: { x: 0, y: 0 },
+    fA: { x: 0, y: 0 },
+    fB: { x: 0, y: 0 },
   };
+}
+
+function resetForces(forces: CellForces[], n: number): CellForces[] {
+  for (let i = 0; i < n; i++) {
+    let force = forces[i];
+    if (!force) {
+      force = zeroForces();
+      forces[i] = force;
+    } else {
+      force.f.x = 0;
+      force.f.y = 0;
+      force.fA.x = 0;
+      force.fA.y = 0;
+      force.fB.x = 0;
+      force.fB.y = 0;
+    }
+  }
+
+  forces.length = n;
+  return forces;
 }
 
 /**
@@ -36,29 +61,35 @@ export function calcRepulsionForces(
 ): void {
   const cells = state.cells;
   const n = cells.length;
+  const cellTypes = params.cell_types;
+  const fallbackType = cellTypes.control;
 
   for (let i = 0; i < n; i++) {
     const ci = cells[i];
-    const ciType = getCellType(params, ci);
-    const ciPos = Vector2.from(ci.pos);
+    const ciType = cellTypes[ci.typeIndex] ?? fallbackType;
+    const ciX = ci.pos.x;
+    const ciY = ci.pos.y;
 
     for (let j = 0; j < i; j++) {
       const cj = cells[j];
-
-      const cjType = getCellType(params, cj);
-      const cjPos = Vector2.from(cj.pos);
-
-      const xixj = cjPos.sub(ciPos);
-      const d = xixj.mag();
       const Rij = ci.R_soft + cj.R_soft;
-      const sr = ciType.stiffness_repulsion + cjType.stiffness_repulsion;
+      const minDist = Rij / 20;
+      const dx = cj.pos.x - ciX;
+      const dy = cj.pos.y - ciY;
+      const dSq = dx * dx + dy * dy;
 
-      if (d < Rij && d > Rij / 20) {
+      if (dSq < Rij * Rij && dSq > minDist * minDist) {
+        const cjType = cellTypes[cj.typeIndex] ?? fallbackType;
+        const d = Math.sqrt(dSq);
+        const sr = ciType.stiffness_repulsion + cjType.stiffness_repulsion;
         const forceMag = -sr * (Rij - d) / (d * Rij * Rij);
-        const force = xixj.scale(forceMag);
+        const fx = dx * forceMag;
+        const fy = dy * forceMag;
 
-        forces[i].f = forces[i].f.add(force);
-        forces[j].f = forces[j].f.sub(force);
+        forces[i].f.x += fx;
+        forces[i].f.y += fy;
+        forces[j].f.x -= fx;
+        forces[j].f.y -= fy;
       }
     }
   }
@@ -77,22 +108,23 @@ export function calcApicalNucleiForces(
 
   for (let i = 0; i < cells.length; i++) {
     const ci = cells[i];
+    const ax = ci.pos.x - ci.A.x;
+    const ay = ci.pos.y - ci.A.y;
+    const alSq = ax * ax + ay * ay;
 
-    const pos = Vector2.from(ci.pos);
-    const A = Vector2.from(ci.A);
-
-    const ax = pos.sub(A);
-    const al = ax.mag();
-
-    if (al > 0) {
+    if (alSq > 0) {
+      const al = Math.sqrt(alSq);
       const radius = useHardRadius ? ci.R_hard : ci.R_soft;
       const rl = ci.eta_A + radius;
       const stiffness = ci.stiffness_nuclei_apical;
       const forceMag = 2 * stiffness * (al - rl) / (al * rl * rl);
-      const force = ax.scale(forceMag);
+      const fx = ax * forceMag;
+      const fy = ay * forceMag;
 
-      forces[i].f = forces[i].f.sub(force);
-      forces[i].fA = forces[i].fA.add(force);
+      forces[i].f.x -= fx;
+      forces[i].f.y -= fy;
+      forces[i].fA.x += fx;
+      forces[i].fA.y += fy;
     }
   }
 }
@@ -110,22 +142,23 @@ export function calcBasalNucleiForces(
 
   for (let i = 0; i < cells.length; i++) {
     const ci = cells[i];
+    const bx = ci.pos.x - ci.B.x;
+    const by = ci.pos.y - ci.B.y;
+    const blSq = bx * bx + by * by;
 
-    const pos = Vector2.from(ci.pos);
-    const B = Vector2.from(ci.B);
-
-    const bx = pos.sub(B);
-    const bl = bx.mag();
-
-    if (bl > 0) {
+    if (blSq > 0) {
+      const bl = Math.sqrt(blSq);
       const radius = useHardRadius ? ci.R_hard : ci.R_soft;
       const rl = ci.eta_B + radius;
       const stiffness = ci.stiffness_nuclei_basal;
       const forceMag = 2 * stiffness * (bl - rl) / (bl * rl * rl);
-      const force = bx.scale(forceMag);
+      const fx = bx * forceMag;
+      const fy = by * forceMag;
 
-      forces[i].f = forces[i].f.sub(force);
-      forces[i].fB = forces[i].fB.add(force);
+      forces[i].f.x -= fx;
+      forces[i].f.y -= fy;
+      forces[i].fB.x += fx;
+      forces[i].fB.y += fy;
     }
   }
 }
@@ -143,30 +176,32 @@ export function calcStraightnessForces(
 
   for (let i = 0; i < cells.length; i++) {
     const ci = cells[i];
+    const ax = ci.pos.x - ci.A.x;
+    const ay = ci.pos.y - ci.A.y;
+    const bx = ci.pos.x - ci.B.x;
+    const by = ci.pos.y - ci.B.y;
+    const alSq = ax * ax + ay * ay;
+    const blSq = bx * bx + by * by;
+    const ax_bx = ax * bx + ay * by;
 
-    const pos = Vector2.from(ci.pos);
-    const A = Vector2.from(ci.A);
-    const B = Vector2.from(ci.B);
-
-    const ax = pos.sub(A);
-    const bx = pos.sub(B);
-    const al = ax.mag();
-    const bl = bx.mag();
-
-    const ax_bx = ax.dot(bx);
-
-    if (ax_bx !== 0.0 && al > 0 && bl > 0) {
+    if (ax_bx !== 0.0 && alSq > 0 && blSq > 0) {
+      const al = Math.sqrt(alSq);
+      const bl = Math.sqrt(blSq);
       const f = ci.stiffness_straightness / (al * bl);
 
       // Derivative with respect to A
-      const dR = bx.scale(-1).add(ax.scale(ax_bx / (al * al))).scale(f);
+      const dRx = (-bx + ax * (ax_bx / alSq)) * f;
+      const dRy = (-by + ay * (ax_bx / alSq)) * f;
       // Derivative with respect to B
-      const dS = ax.scale(-1).add(bx.scale(ax_bx / (bl * bl))).scale(f);
+      const dSx = (-ax + bx * (ax_bx / blSq)) * f;
+      const dSy = (-ay + by * (ax_bx / blSq)) * f;
 
-      forces[i].fA = forces[i].fA.sub(dR);
-      forces[i].f = forces[i].f.add(dR);
-      forces[i].f = forces[i].f.add(dS);
-      forces[i].fB = forces[i].fB.sub(dS);
+      forces[i].fA.x -= dRx;
+      forces[i].fA.y -= dRy;
+      forces[i].f.x += dRx + dSx;
+      forces[i].f.y += dRy + dSy;
+      forces[i].fB.x -= dSx;
+      forces[i].fB.y -= dSy;
     }
   }
 }
@@ -185,19 +220,21 @@ export function calcApicalJunctionForces(
   for (const link of apLinks) {
     const ci = cells[link.l];
     const cj = cells[link.r];
+    const dx = ci.A.x - cj.A.x;
+    const dy = ci.A.y - cj.A.y;
+    const dSq = dx * dx + dy * dy;
 
-    const Ai = Vector2.from(ci.A);
-    const Aj = Vector2.from(cj.A);
-
-    const aiaj = Ai.sub(Aj);
-    const d = aiaj.mag();
-
-    if (d > 1e-6) {
+    if (dSq > 1e-12) {
+      const d = Math.sqrt(dSq);
       const stiffAvg = 0.5 * (ci.stiffness_apical_apical + cj.stiffness_apical_apical);
-      const force = aiaj.scale(0.25 * stiffAvg * (d - link.rl) / d);
+      const forceMag = 0.25 * stiffAvg * (d - link.rl) / d;
+      const fx = dx * forceMag;
+      const fy = dy * forceMag;
 
-      forces[link.l].fA = forces[link.l].fA.sub(force);
-      forces[link.r].fA = forces[link.r].fA.add(force);
+      forces[link.l].fA.x -= fx;
+      forces[link.l].fA.y -= fy;
+      forces[link.r].fA.x += fx;
+      forces[link.r].fA.y += fy;
     }
   }
 }
@@ -221,10 +258,12 @@ export function calcExternalForces(
   forces: CellForces[]
 ): void {
   const cells = state.cells;
+  const cellTypes = params.cell_types;
+  const fallbackType = cellTypes.control;
 
   for (let i = 0; i < cells.length; i++) {
     const ci = cells[i];
-    const cellType = getCellType(params, ci);
+    const cellType = cellTypes[ci.typeIndex] ?? fallbackType;
     const formula = cellType.external_force;
 
     // Skip if no external force
@@ -232,7 +271,8 @@ export function calcExternalForces(
 
     // Skip formulas already known to be invalid — use NaN force
     if (failedFormulas.has(formula)) {
-      forces[i].f = new Vector2(NaN, NaN);
+      forces[i].f.x = NaN;
+      forces[i].f.y = NaN;
       continue;
     }
 
@@ -244,12 +284,14 @@ export function calcExternalForces(
         t: state.t,
         constants: params.constants,
       });
-      forces[i].f = forces[i].f.add(force);
+      forces[i].f.x += force.x;
+      forces[i].f.y += force.y;
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       failedFormulas.set(formula, msg);
       console.warn(`[ExternalForce] Invalid formula "${formula}": ${msg}`);
-      forces[i].f = new Vector2(NaN, NaN);
+      forces[i].f.x = NaN;
+      forces[i].f.y = NaN;
     }
   }
 }
@@ -259,9 +301,10 @@ export function calcExternalForces(
  */
 export function calcAllForces(
   state: EHTSimulationState,
-  params: EHTParams
+  params: EHTParams,
+  reusableForces: CellForces[] = []
 ): CellForces[] {
-  const forces: CellForces[] = state.cells.map(() => zeroForces());
+  const forces = resetForces(reusableForces, state.cells.length);
 
   calcRepulsionForces(state, params, forces);
   calcApicalNucleiForces(state, params, forces);

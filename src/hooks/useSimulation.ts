@@ -71,9 +71,8 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
 
   // Initialize engine and history on first render
   useEffect(() => {
-    engineRef.current = new SimulationEngine({ model, params: initialParams });
+    engineRef.current = new SimulationEngine({ model, params: initialParams, autoInit });
     if (autoInit) {
-      engineRef.current.init();
       const initialState = engineRef.current.getState();
       const cloned = cloneState(initialState);
       stateHistoryRef.current = [cloned];

@@ -54,7 +54,6 @@ function runSingleSimulation(
 
   // Create engine
   const engine = new SimulationEngine({ model, params });
-  engine.init();
 
   const snapshots: BatchSnapshot[] = [];
   let nextSampleIndex = 0;

@@ -52,7 +52,6 @@ function runSimulation(request: WorkerRequest): BatchSnapshot[] {
 
   // Create model-aware engine
   const engine = new SimulationEngine({ model, params });
-  engine.init();
 
   const snapshots: BatchSnapshot[] = [];
   let nextSampleIndex = 0;

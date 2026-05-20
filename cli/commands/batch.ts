@@ -127,7 +127,6 @@ function runSingleSimulation(
 
   // Create engine
   const engine = new SimulationEngine({ model: EHTModel, params });
-  engine.init();
 
   const snapshots: BatchSnapshot[] = [];
   let nextSampleIndex = 0;
