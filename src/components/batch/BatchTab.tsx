@@ -37,6 +37,7 @@ import {
 import { runBatchExport, type BatchExportProgress } from '@/core/batch/exportRunner';
 import { setNestedValue, encodeParamsToUrl } from '@/core/params';
 import { useModel } from '@/contexts/ModelContext';
+import { getEHTStatisticMetadata } from '@/models/eht/statistics-metadata';
 
 export interface BatchTabProps {
   config: SimulationConfig;
@@ -490,6 +491,9 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const availableXAxisOptions = resultsColumns.filter(
     col => col === 'time_h' || (col.includes('.') && !['run_index', 'seed', 'cell_group'].includes(col))
   );
+  const selectedPlotStatistic = currentModel?.id === 'eht' && plotYAxis
+    ? getEHTStatisticMetadata(plotYAxis)
+    : undefined;
 
   // Prepare plot data based on plot type
   let plotData: any[] = [];
@@ -669,7 +673,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              All available statistics will be computed for all cell groups.
+              All available statistics will be computed for all cell groups. EHT distance statistics use legacy engine units (1 unit = 5 microns); ratios and fractions are unitless.
             </p>
 
             <div className="flex gap-4 items-center">
@@ -828,37 +832,53 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
               </div>
 
               {/* Plot display */}
-              {plotType === 'histogram' && plotYAxis && histogramData.length > 0 && (
-                <div className="mt-4 border rounded-md p-4 bg-muted/30">
-                  <BatchPlot
-                    data={plotData}
-                    dataWithCI={plotDataWithCI}
-                    histogramData={histogramData}
-                    xAxisLabel="Cell Group"
-                    yAxisLabel={plotYAxis}
-                    plotType={plotType}
-                    width={640}
-                    height={400}
-                    yMin={plotYMin !== '' ? parseFloat(plotYMin) : undefined}
-                    yMax={plotYMax !== '' ? parseFloat(plotYMax) : undefined}
-                  />
-                </div>
-              )}
+              {(
+                (plotType === 'histogram' && plotYAxis && histogramData.length > 0) ||
+                (plotType === 'line_ci' && plotXAxis && plotYAxis && plotDataWithCI.length > 0)
+              ) && (
+                <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,680px)_minmax(220px,1fr)] xl:items-start">
+                  <div className="min-w-0 rounded-md border bg-muted/30 p-4">
+                    <BatchPlot
+                      data={plotData}
+                      dataWithCI={plotDataWithCI}
+                      histogramData={histogramData}
+                      xAxisLabel={plotType === 'histogram' ? 'Cell Group' : (plotXAxis === 'time_h' ? 'Time (h)' : plotXAxis)}
+                      yAxisLabel={plotYAxis}
+                      plotType={plotType}
+                      width={640}
+                      height={400}
+                      yMin={plotYMin !== '' ? parseFloat(plotYMin) : undefined}
+                      yMax={plotYMax !== '' ? parseFloat(plotYMax) : undefined}
+                    />
+                  </div>
 
-              {plotType === 'line_ci' && plotXAxis && plotYAxis && plotDataWithCI.length > 0 && (
-                <div className="mt-4 border rounded-md p-4 bg-muted/30">
-                  <BatchPlot
-                    data={plotData}
-                    dataWithCI={plotDataWithCI}
-                    histogramData={histogramData}
-                    xAxisLabel={plotXAxis === 'time_h' ? 'Time (h)' : plotXAxis}
-                    yAxisLabel={plotYAxis}
-                    plotType={plotType}
-                    width={640}
-                    height={400}
-                    yMin={plotYMin !== '' ? parseFloat(plotYMin) : undefined}
-                    yMax={plotYMax !== '' ? parseFloat(plotYMax) : undefined}
-                  />
+                  {currentModel?.id === 'eht' && (
+                    <aside className="rounded-md border border-border bg-background p-3 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-medium">
+                          {selectedPlotStatistic ? selectedPlotStatistic.title : plotYAxis}
+                        </span>
+                        <a
+                          href="#/docs/eht/statistics"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+                        >
+                          Open statistics docs
+                        </a>
+                      </div>
+                      <p className="mt-2 text-muted-foreground">
+                        {selectedPlotStatistic
+                          ? selectedPlotStatistic.description
+                          : 'No description is available for the selected Y-axis statistic.'}
+                      </p>
+                      {selectedPlotStatistic && (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Unit: {selectedPlotStatistic.unit}.
+                        </p>
+                      )}
+                    </aside>
+                  )}
                 </div>
               )}
             </div>

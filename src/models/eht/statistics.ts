@@ -1,6 +1,9 @@
 /**
  * EHT model statistics definitions.
  * Computes comprehensive statistics for all cell groups.
+ *
+ * Length-like statistics are computed from simulation-state coordinates in
+ * legacy engine units. One engine unit represents 5 microns.
  */
 
 import type { StatisticDefinition } from '@/core/registry/types';
@@ -9,6 +12,7 @@ import type { EHTParams } from './params/types';
 import { Vector2 } from '@/core/math/vector2';
 import { createBasalGeometry } from '@/core/math';
 import { projectOntoApicalStrip, projectOntoBasalCurve } from './simulation/projections';
+import { EHT_STATISTIC_METADATA } from './statistics-metadata';
 
 /**
  * Per-cell computed values for statistics.
@@ -339,24 +343,12 @@ export function generateEHTStatistics(params: EHTParams): StatisticDefinition<EH
   const stats: StatisticDefinition<EHTSimulationState>[] = [];
   const groups = generateCellGroups(params);
 
-  const statNames = [
-    { id: 'ab_distance', label: 'AB Distance', description: 'Apical-basal distance' },
-    { id: 'AX', label: 'AX Distance', description: 'Distance from A to X' },
-    { id: 'BX', label: 'BX Distance', description: 'Distance from B to X' },
-    { id: 'ax', label: 'ax Distance', description: 'Distance from X to apical projection' },
-    { id: 'bx', label: 'bx Distance', description: 'Distance from X to basal projection' },
-    { id: 'x', label: 'x Position', description: 'Position on basal-apical scale (0-1)' },
-    { id: 'below_basal', label: 'Below Basal', description: 'Fraction of cells below basal layer' },
-    { id: 'above_apical', label: 'Above Apical', description: 'Fraction of cells above apical layer' },
-    { id: 'below_control_cells', label: 'Below Control Cells', description: 'Fraction of cells below the lowest control cell' },
-  ];
-
   for (const group of groups) {
-    for (const stat of statNames) {
+    for (const stat of EHT_STATISTIC_METADATA) {
       stats.push({
         id: `${stat.id}_${group}`,
         label: `${stat.label} (${group})`,
-        description: `${stat.description} for ${group} cells`,
+        description: `${stat.description} Unit: ${stat.unit}. Group: ${group} cells.`,
         compute: (s) => {
           const result = computeEHTStatistics(s, params);
           return result[`${stat.id}_${group}`] || 0;

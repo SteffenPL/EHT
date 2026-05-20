@@ -6,6 +6,7 @@ import { BatchTab } from './components/batch';
 import { ParameterConfigView } from './components/params';
 import { MarkdownPage } from './components/MarkdownPage';
 import { EHTFormulaDocsPage } from './components/docs/EHTFormulaDocsPage';
+import { EHTStatisticsDocsPage } from './components/docs/EHTStatisticsDocsPage';
 import { DEFAULT_TIME_SAMPLES, decodeParamsFromUrl, clearUrlParams } from './core/params';
 import type { SimulationConfig } from './core/params';
 import { ModelProvider, useModel, MessagesProvider } from './contexts';
@@ -16,7 +17,6 @@ import './models';
 // Static doc imports
 import docsIndex from './docs/index.md?raw';
 import ehtModel from './docs/EHT/model.md?raw';
-import ehtStatistics from './docs/EHT/statistics.md?raw';
 import ehtFormulas from './docs/EHT/formulas.md?raw';
 import ehtParameterFormatV2 from './docs/EHT/parameter-format-v2.md?raw';
 
@@ -83,7 +83,7 @@ function App() {
             <Route path="/" element={<AppContent />} />
             <Route path="/docs" element={<MarkdownPage content={docsIndex} />} />
             <Route path="/docs/eht/model" element={<MarkdownPage content={ehtModel} />} />
-            <Route path="/docs/eht/statistics" element={<MarkdownPage content={ehtStatistics} />} />
+            <Route path="/docs/eht/statistics" element={<EHTStatisticsDocsPage />} />
             <Route path="/docs/eht/formulas" element={<EHTFormulaDocsPage content={ehtFormulas} />} />
             <Route path="/docs/eht/parameter-format-v2" element={<MarkdownPage content={ehtParameterFormatV2} />} />
           </Routes>

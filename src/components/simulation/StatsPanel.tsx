@@ -42,6 +42,12 @@ export function StatsPanel({
         <CardTitle className="text-base">Statistics</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {currentModel?.id === 'eht' && (
+          <p className="text-xs text-muted-foreground">
+            Distance statistics use legacy engine units (1 unit = 5 microns). Ratios and fractions are unitless.
+          </p>
+        )}
+
         {/* Dynamic Statistics */}
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           {statDefs.map(def => (

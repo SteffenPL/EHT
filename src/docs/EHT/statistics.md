@@ -4,8 +4,11 @@ Statistics are computed per cell and then aggregated (mean or fraction) over cel
 
 ## Units
 
-- Position and length statistics are reported in **microns**.
-- Position ratios (`x`) and boolean fractions are **unitless** (0–1).
+- Position and length statistics are computed from the current simulation state in **legacy engine units**, where **1 engine unit = 5 microns**.
+- To interpret distance-like outputs in microns, multiply the reported value by 5.
+- This applies to `ab_distance`, `AX`, `BX`, `ax`, `bx`, and the per-cell coordinate columns exported by the frame statistics table (`X_*`, `A_*`, `B_*`, `a_*`, `b_*`).
+- This is intentionally different from v2 parameter files, where length-like inputs are stored in microns. See [Parameter Format v2](#/docs/eht/parameter-format-v2) for the input/output boundary.
+- Position ratios (`x`) and boolean fractions are **unitless** (0-1).
 - `below_control_cells` is a threshold-based fraction and therefore unitless.
 
 ## Cell Groups
@@ -20,10 +23,8 @@ Statistics are computed for the following groups:
 When `full_circle = false`:
 - The leftmost and rightmost 10% of control cells (based on arc length along the basal curve) are identified as **boundary cells**
 - These cells are reclassified as `control_boundary` for statistics purposes
-- `control_boundary` cells are:
-  - Excluded from the `all` group
-  - Excluded from the `control` group
-  - Not included as a separate statistics group (no plots generated)
+- `control_boundary` cells are excluded from the `all` and `control` groups
+- `control_boundary` is not included as a separate statistics group
 - This exclusion helps remove edge effects from statistical analysis
 
 When `full_circle = true`:
@@ -37,103 +38,11 @@ For each cell with nucleus **X**, apical point **A**, and basal point **B**:
 - **a**: Projection of X onto the apical line strip (formed by connected apical points)
 - **b**: Projection of X onto the basal curve
 
-Both are coordinates in **microns**.
+Both are coordinates in **legacy engine units**.
 
 ## Statistics Definitions
 
-### ab_distance
-
-**Apical-Basal Distance**
-
-$$\text{ab\_distance} = |A - B|$$
-
-Unit: **µm**
-
-The Euclidean distance between the apical and basal points. Measures the cell's vertical extent.
-
-### AX
-
-**Apical-Nucleus Distance**
-
-$$AX = |A - X|$$
-
-Unit: **µm**
-
-Distance from the apical point to the nucleus.
-
-### BX
-
-**Basal-Nucleus Distance**
-
-$$BX = |B - X|$$
-
-Unit: **µm**
-
-Distance from the basal point to the nucleus.
-
-### ax
-
-**Nucleus to Apical Strip Distance**
-
-$$ax = |X - a|$$
-
-Unit: **µm**
-
-Distance from the nucleus to its projection onto the apical line strip. Measures how far the nucleus is from the apical surface.
-
-### bx
-
-**Nucleus to Basal Curve Distance**
-
-$$bx = |X - b|$$
-
-Unit: **µm**
-
-Distance from the nucleus to its projection onto the basal curve. Measures how far the nucleus is from the basal membrane.
-
-### x
-
-**Position on Basal-Apical Scale**
-
-$$x = \frac{(X - b) \cdot (a - b)}{|a - b|^2}$$
-
-Unit: **unitless**
-
-Normalized position of the nucleus between basal (x=0) and apical (x=1) projections:
-- x = 0: Nucleus at basal level
-- x = 1: Nucleus at apical level
-- x < 0: Below basal
-- x > 1: Above apical
-
-### below_basal
-
-**Fraction Below Basal Layer**
-
-$$\text{below\_basal} = \begin{cases} 1 & \text{if } x < 0 \\ 0 & \text{otherwise} \end{cases}$$
-
-Unit: **unitless** (0 or 1)
-
-Binary indicator (0 or 1) for whether the cell's nucleus is below the basal layer. Aggregated as fraction over cell group.
-
-### above_apical
-
-**Fraction Above Apical Layer**
-
-$$\text{above\_apical} = \begin{cases} 1 & \text{if } x > 1 \\ 0 & \text{otherwise} \end{cases}$$
-
-Unit: **unitless** (0 or 1)
-
-Binary indicator for whether the cell's nucleus is above the apical layer. Aggregated as fraction over cell group.
-
-### below_control_cells
-
-**Fraction Below Lowest Control Cell**
-
-$$\text{below\_control\_cells} = \begin{cases} 1 & \text{if } bx < \min_{c \in \text{control (non-boundary)}} bx_c \\ 0 & \text{otherwise} \end{cases}$$
-
-Unit: **unitless** (0 or 1)
-
-Binary indicator for whether the cell's basal distance (bx) is less than the minimum bx among all non-boundary control cells. This identifies cells that have migrated below the control cell population. **Note:** Boundary control cells are excluded when computing the minimum control cell bx.
+{{STATISTIC_DEFINITIONS}}
 
 ## Output Format
 
@@ -145,9 +54,9 @@ Statistics are exported with the naming convention `{statistic}_{group}`.
 - `below_basal_emt`: Fraction of emt cells below basal layer
 - `below_control_cells_emt`: Fraction of emt cells below the lowest control cell
 
-## Total statistics count
+## Total Statistics Count
 
-For N cell types: `9 metrics × (N + 1) groups`
+For N cell types: `9 metrics x (N + 1) groups`
 
-- Example: 2 cell types → 27 statistics (9 × 3 groups: all, control, emt)
-- Example: 3 cell types → 36 statistics (9 × 4 groups: all, control, emt, counter_control)
+- Example: 2 cell types -> 27 statistics (9 x 3 groups: all, control, emt)
+- Example: 3 cell types -> 36 statistics (9 x 4 groups: all, control, emt, counter_control)
