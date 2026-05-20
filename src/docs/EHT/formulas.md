@@ -25,6 +25,7 @@ Unless otherwise noted, variable values are in:
 | `step(t, switch=5, before=0, after=1)` | h for `switch`; before/after in target units | Jump from one value to another | `step(t, switch=5, before=0, after=1)` |
 | `ramp(t, start=0, stop=10, from=1, to=2)` | h for `start/stop`; output in target units | Linear transition | `ramp(t, start=0, stop=10, from=1, to=2)` |
 | `triangle(t, period=10, min=1, max=2)` | h for `period`; output in target units | Periodic triangle wave | `triangle(t, period=10, min=1, max=2)` |
+| `sinwave(t, period=10, from=1, to=2)` | h for `period`; output in target units | Periodic sine wave | `sinwave(t, period=heartbeat, from=0, to=1)` |
 | `pulse(t, start=2, stop=5, off=0, on=1)` | h for start/stop; off/on in target units | On during a time window | `pulse(t, start=2, stop=5, off=0, on=1)` |
 | `smoothstep(t, start=0, stop=10, from=1, to=2)` | h for `start/stop`; output in target units | Smooth transition | `smoothstep(t, start=0, stop=10, from=1, to=2)` |
 

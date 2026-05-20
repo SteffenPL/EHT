@@ -53,14 +53,14 @@ export const FORMULA_PRESETS: FormulaPreset[] = [
   },
   {
     name: 'Sine Wave',
-    signature: 'min + ((max - min) / 2) * (1 + sin(2*pi*t/period - pi/2))',
-    description: 'Periodic sine wave oscillating smoothly between min and max',
+    signature: 'sinwave(t, period=10, from=1, to=2)',
+    description: 'Periodic sine wave oscillating smoothly between from and to',
     params: [
       { label: 'Period', defaultValue: 10 },
       { label: 'Min value', defaultValue: 1 },
       { label: 'Max value', defaultValue: 2 },
     ],
-    generate: (v) => `${v[1]} + ((${v[2]} - ${v[1]}) / 2) * (1 + sin(2 * pi * t / ${v[0]} - pi / 2))`,
+    generate: (v) => `sinwave(t, period=${v[0]}, from=${v[1]}, to=${v[2]})`,
   },
   {
     name: 'Pulse',

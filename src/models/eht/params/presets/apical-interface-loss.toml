@@ -2,7 +2,7 @@ label = "Apical Interface Loss"
 
 cell_prop = { }
 parameter_ranges = [ ]
-seeds_per_config = 1
+seeds_per_config = 10
 
 [metadata]
 model = "EHT"

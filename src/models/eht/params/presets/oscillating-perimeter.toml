@@ -1,0 +1,12 @@
+label = "Oscillating Perimeter"
+
+[metadata]
+model = "EHT"
+version = "2.0.0"
+unit_system = "microns"
+
+[general.formulas]
+perimeter = "sinwave(t, period=heartbeat, from=init_value * 0.95, to=init_value * 1.05)"
+
+[constants]
+heartbeat = 10

@@ -2,7 +2,7 @@
  * Formula Editor Dialog - Rich popup for editing math.js formulas.
  * Features: live graph preview, text editor, preset shapes with forms, variables reference.
  */
-import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect, useId } from 'react';
 import { evaluate } from 'mathjs';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 import {
@@ -33,13 +33,15 @@ interface FormulaEditorDialogProps {
   label: string;
   formula: string;
   currentNumericValue: number;
+  initialValueMin?: number;
+  initialValueMax?: number;
   tEnd: number;
   constants: Record<string, number>;
   context: FormulaContext;
   initialPerimeter?: number;
   initialAspectRatio?: number;
   softRadius?: number;
-  onSave: (formula: string) => void;
+  onSave: (formula: string, initialValue: number) => void;
   onClear: () => void;
 }
 
@@ -316,18 +318,43 @@ function FunctionsPanel({
 
 export function FormulaEditorDialog({
   open, onOpenChange, fieldName: _fieldName, label,
-  formula: initialFormula, currentNumericValue, tEnd,
+  formula: initialFormula, currentNumericValue, initialValueMin, initialValueMax, tEnd,
   constants, context, initialPerimeter, initialAspectRatio, softRadius, onSave, onClear,
 }: FormulaEditorDialogProps) {
   const [formula, setFormula] = useState(initialFormula);
+  const [initialValueText, setInitialValueText] = useState(String(currentNumericValue));
   const inputRef = useRef<HTMLInputElement>(null);
+  const formulaInputId = useId();
+  const initialValueInputId = useId();
+  const usesInitialValue = context !== 'external_force';
 
   // Reset local state when dialog opens
   useEffect(() => {
     if (open) {
       setFormula(initialFormula || String(currentNumericValue));
+      setInitialValueText(String(currentNumericValue));
     }
   }, [open, initialFormula, currentNumericValue]);
+
+  const parsedInitialValue = useMemo(() => {
+    if (!initialValueText.trim()) return null;
+    const value = Number(initialValueText);
+    return Number.isFinite(value) ? value : null;
+  }, [initialValueText]);
+
+  const initialValueError = useMemo(() => {
+    if (!usesInitialValue) return null;
+    if (parsedInitialValue === null) return 'Enter a finite number';
+    if (initialValueMin !== undefined && parsedInitialValue < initialValueMin) {
+      return `Must be at least ${initialValueMin}`;
+    }
+    if (initialValueMax !== undefined && parsedInitialValue > initialValueMax) {
+      return `Must be at most ${initialValueMax}`;
+    }
+    return null;
+  }, [initialValueMax, initialValueMin, parsedInitialValue, usesInitialValue]);
+
+  const effectiveInitialValue = parsedInitialValue ?? currentNumericValue;
 
   const insertAtCursor = useCallback((text: string, options: { implicitMultiply?: boolean } = {}) => {
     const input = inputRef.current;
@@ -362,15 +389,15 @@ export function FormulaEditorDialog({
 
       const scope: Record<string, unknown> = {
         t: 0, dt: 0.1,
-        old_value: currentNumericValue, init_value: currentNumericValue,
+        old_value: effectiveInitialValue, init_value: effectiveInitialValue,
         age: 0,
         p_div_out: 1,
         mu: 0.2,
         h_init: 5,
         w_init: 80,
         t_end: tEnd,
-        R_hard_div: currentNumericValue,
-        stiffness_apical_apical_div: currentNumericValue,
+        R_hard_div: effectiveInitialValue,
+        stiffness_apical_apical_div: effectiveInitialValue,
         INM: 0,
         ...constants, ...formulaFunctions,
       };
@@ -379,7 +406,7 @@ export function FormulaEditorDialog({
     } catch (e) {
       return e instanceof Error ? e.message : String(e);
     }
-  }, [formula, context, currentNumericValue, constants, tEnd, initialPerimeter, initialAspectRatio]);
+  }, [formula, context, effectiveInitialValue, constants, tEnd, initialPerimeter, initialAspectRatio]);
 
   const effectiveFormula = useMemo(() => {
     if (context !== 'external_force') return null;
@@ -413,8 +440,8 @@ export function FormulaEditorDialog({
               </Button>
               <Button
                 size="sm"
-                onClick={() => { onSave(formula); onOpenChange(false); }}
-                disabled={!!formulaError}
+                onClick={() => { onSave(formula, effectiveInitialValue); onOpenChange(false); }}
+                disabled={!!formulaError || !!initialValueError}
               >
                 OK
               </Button>
@@ -423,27 +450,49 @@ export function FormulaEditorDialog({
 
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <div className="space-y-4">
-              <div>
-                <Label className="mb-1.5 block text-xs font-medium text-muted-foreground">Formula</Label>
-                <Input
-                  ref={inputRef}
-                  type="text"
-                  value={formula}
-                  onChange={(e) => setFormula(e.target.value)}
-                  placeholder="Enter formula, for example triangle(t, period=10, min=1, max=2)"
-                  className="h-10 font-mono text-sm"
-                  autoFocus
-                />
-                {formulaError && (
-                  <p className="mt-1 text-xs text-destructive">{formulaError}</p>
-                )}
-                {effectiveFormula && (
-                  <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 text-xs">
-                    <span className="mr-2 font-medium text-muted-foreground">Effective formula</span>
-                    <code className="font-mono text-foreground">{effectiveFormula}</code>
+              <div className={`grid gap-3 ${usesInitialValue ? 'sm:grid-cols-[minmax(0,1fr)_180px]' : ''}`}>
+                <div>
+                  <Label htmlFor={formulaInputId} className="mb-1.5 block text-xs font-medium text-muted-foreground">Formula</Label>
+                  <Input
+                    id={formulaInputId}
+                    ref={inputRef}
+                    type="text"
+                    value={formula}
+                    onChange={(e) => setFormula(e.target.value)}
+                    placeholder="Enter formula, for example triangle(t, period=10, min=1, max=2)"
+                    className="h-10 font-mono text-sm"
+                    autoFocus
+                  />
+                  {formulaError && (
+                    <p className="mt-1 text-xs text-destructive">{formulaError}</p>
+                  )}
+                </div>
+                {usesInitialValue && (
+                  <div>
+                    <Label htmlFor={initialValueInputId} className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      Initial value
+                    </Label>
+                    <Input
+                      id={initialValueInputId}
+                      type="number"
+                      value={initialValueText}
+                      onChange={(e) => setInitialValueText(e.target.value)}
+                      min={initialValueMin}
+                      max={initialValueMax}
+                      className="h-10 font-mono text-sm"
+                    />
+                    {initialValueError && (
+                      <p className="mt-1 text-xs text-destructive">{initialValueError}</p>
+                    )}
                   </div>
                 )}
               </div>
+              {effectiveFormula && (
+                <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 text-xs">
+                  <span className="mr-2 font-medium text-muted-foreground">Effective formula</span>
+                  <code className="font-mono text-foreground">{effectiveFormula}</code>
+                </div>
+              )}
 
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
                 <main className="min-w-0 space-y-4">
@@ -464,7 +513,7 @@ export function FormulaEditorDialog({
                       <GraphPreview
                         formula={formula}
                         tEnd={tEnd}
-                        numericValue={currentNumericValue}
+                        numericValue={effectiveInitialValue}
                         constants={constants}
                       />
                     )}

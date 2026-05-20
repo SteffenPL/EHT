@@ -2,6 +2,7 @@
  * Named helper functions available in all formula evaluation scopes.
  * Registered into math.js scope so users can write e.g.
  * triangle(t, period=10, min=1, max=2).
+ * sinwave(t, period=10, from=1, to=2).
  */
 
 function step(t: number, t_switch: number, v_before: number, v_after: number): number {
@@ -34,10 +35,17 @@ function smoothstep(t: number, t_start: number, t_end: number, v_start: number, 
   return v_start + s * (v_end - v_start);
 }
 
+function sinwave(t: number, period: number, fromValue: number, toValue: number): number {
+  if (period <= 0) return fromValue;
+  const phase = ((t % period) + period) % period;
+  return fromValue + (toValue - fromValue) * (1 + Math.sin((2 * Math.PI * phase) / period - Math.PI / 2)) / 2;
+}
+
 export const formulaFunctions: Record<string, (...args: number[]) => number> = {
   step,
   ramp,
   triangle,
+  sinwave,
   pulse,
   smoothstep,
 };

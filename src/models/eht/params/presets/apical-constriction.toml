@@ -2,7 +2,7 @@ label = "Apical Constriction"
 
 cell_prop = { }
 parameter_ranges = [ ]
-seeds_per_config = 20
+seeds_per_config = 10
 
 [metadata]
 model = "EHT"

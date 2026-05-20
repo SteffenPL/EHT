@@ -30,7 +30,7 @@ function FormulaNumberInput({
   fieldName: string;
   numericValue: number;
   formulas: Record<string, string>;
-  onFormulaChange: (field: string, formula: string) => void;
+  onFormulaChange: (field: string, formula: string, initialValue: number) => void;
   onFormulaClear: (field: string) => void;
   onNumericChange: (value: number) => void;
   disabled?: boolean;
@@ -77,10 +77,12 @@ function FormulaNumberInput({
           label={label}
           formula={formula}
           currentNumericValue={numericValue}
+          initialValueMin={min}
+          initialValueMax={max}
           tEnd={tEnd}
           constants={constants}
           context={context}
-          onSave={(f) => onFormulaChange(fieldName, f)}
+          onSave={(f, initialValue) => onFormulaChange(fieldName, f, initialValue)}
           onClear={() => onFormulaClear(fieldName)}
         />
       </div>
@@ -115,10 +117,12 @@ function FormulaNumberInput({
         label={label}
         formula=""
         currentNumericValue={numericValue}
+        initialValueMin={min}
+        initialValueMax={max}
         tEnd={tEnd}
         constants={constants}
         context={context}
-        onSave={(f) => onFormulaChange(fieldName, f)}
+        onSave={(f, initialValue) => onFormulaChange(fieldName, f, initialValue)}
         onClear={() => onFormulaClear(fieldName)}
       />
     </div>
@@ -136,8 +140,12 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
 
   const desc = (key: string) => getParameterDescription(`general.${key}`);
 
-  const updateFormula = useCallback((field: string, formula: string) => {
+  const updateFormula = useCallback((field: string, formula: string, initialValue: number) => {
     const newParams = structuredClone(params);
+    const general = newParams.general as unknown as Record<string, unknown>;
+    if (typeof general[field] === 'number') {
+      general[field] = initialValue;
+    }
     newParams.general.formulas = { ...newParams.general.formulas, [field]: formula };
     onChange(newParams);
   }, [params, onChange]);

@@ -28,6 +28,6 @@ export function createDefaultSimulationConfig(): SimulationConfig {
     params: createDefaultParams(),
     parameterRanges: [],
     timeSamples: { ...DEFAULT_TIME_SAMPLES },
-    seedsPerConfig: 1,
+    seedsPerConfig: 10,
   };
 }

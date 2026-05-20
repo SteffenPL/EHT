@@ -37,7 +37,7 @@ function AppContent() {
   const [batchConfig, setBatchConfig] = useState({
     parameterRanges: [] as SimulationConfig['parameterRanges'],
     timeSamples: { ...DEFAULT_TIME_SAMPLES },
-    seedsPerConfig: 1,
+    seedsPerConfig: 10,
   });
 
   // Combine params from context with batch config
