@@ -21,6 +21,7 @@ import {
   getExternalForceEffectiveFormula,
 } from '@/models/eht/simulation/external-force-formula';
 import { FormulaSpatialExplainer } from './FormulaSpatialExplainer';
+import { insertFormulaText } from './formulaInsertion';
 import { variablesForContext } from './formulaVariables';
 
 export type FormulaContext = 'general' | 'cell_type' | 'external_force';
@@ -328,20 +329,16 @@ export function FormulaEditorDialog({
     }
   }, [open, initialFormula, currentNumericValue]);
 
-  const insertAtCursor = useCallback((text: string) => {
+  const insertAtCursor = useCallback((text: string, options: { implicitMultiply?: boolean } = {}) => {
     const input = inputRef.current;
-    if (!input) {
-      setFormula(prev => prev + text);
-      return;
-    }
-    const start = input.selectionStart ?? formula.length;
-    const end = input.selectionEnd ?? formula.length;
-    const newFormula = formula.slice(0, start) + text + formula.slice(end);
-    setFormula(newFormula);
+    const start = input?.selectionStart ?? formula.length;
+    const end = input?.selectionEnd ?? formula.length;
+    const result = insertFormulaText(formula, text, start, end, options);
+
+    setFormula(result.formula);
     requestAnimationFrame(() => {
-      input.focus();
-      const cursorPos = start + text.length;
-      input.setSelectionRange(cursorPos, cursorPos);
+      input?.focus();
+      input?.setSelectionRange(result.cursorPosition, result.cursorPosition);
     });
   }, [formula]);
 
@@ -481,8 +478,8 @@ export function FormulaEditorDialog({
                 </main>
 
                 <aside className="min-w-0 space-y-4">
-                  <PresetPanel onInsert={insertAtCursor} />
-                  <FunctionsPanel onInsert={insertAtCursor} />
+                  <PresetPanel onInsert={(text) => insertAtCursor(text, { implicitMultiply: true })} />
+                  <FunctionsPanel onInsert={(text) => insertAtCursor(text, { implicitMultiply: true })} />
                 </aside>
               </div>
             </div>

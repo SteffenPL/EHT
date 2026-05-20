@@ -52,6 +52,17 @@ export const FORMULA_PRESETS: FormulaPreset[] = [
     generate: (v) => `triangle(t, period=${v[0]}, min=${v[1]}, max=${v[2]})`,
   },
   {
+    name: 'Sine Wave',
+    signature: 'min + ((max - min) / 2) * (1 + sin(2*pi*t/period - pi/2))',
+    description: 'Periodic sine wave oscillating smoothly between min and max',
+    params: [
+      { label: 'Period', defaultValue: 10 },
+      { label: 'Min value', defaultValue: 1 },
+      { label: 'Max value', defaultValue: 2 },
+    ],
+    generate: (v) => `${v[1]} + ((${v[2]} - ${v[1]}) / 2) * (1 + sin(2 * pi * t / ${v[0]} - pi / 2))`,
+  },
+  {
     name: 'Pulse',
     signature: 'pulse(t, start=2, stop=5, off=0, on=1)',
     description: 'Value is "on" between start and end time, "off" otherwise',
