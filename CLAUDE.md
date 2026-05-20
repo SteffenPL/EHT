@@ -148,6 +148,10 @@ export function EHTModelDoc() {
 
 Routes: `/docs/eht/model`, `/docs/eht/statistics`
 
+### Documented Solutions
+
+[docs/solutions/](docs/solutions/) stores documented solutions to past problems, patterns, and decisions. Files are organized by category with YAML frontmatter such as `module`, `problem_type`, and `tags`, making them relevant when implementing, debugging, or making decisions in documented areas.
+
 ## Development Notes
 
 - **Adding EHT cell type parameters**: Requires changes to 4 files: `params/types.ts` (interface), `params/schema.ts` (Zod schema with `.default()`), `params/defaults.ts` (both `DEFAULT_CONTROL_CELL` and `DEFAULT_EMT_CELL`), `params/descriptions.ts` (help popover text). Zod `.default()` handles missing fields from older TOML files — no migration needed for optional params with defaults.
