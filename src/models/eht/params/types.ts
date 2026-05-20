@@ -8,6 +8,17 @@ import type { ParamsMetadata, RGBColor, Range, BaseSimulationParams } from '@/co
 // Re-export shared types for convenience
 export type { RGBColor, Range };
 
+export interface EHTParamsMetadata extends ParamsMetadata {
+  /** Previous parameter format version when a legacy file was migrated. */
+  migrated_from?: string;
+  /** Non-fatal notes from migration or preset curation. */
+  migration_notes?: string[];
+  /** Formula or preset cases that need scientific review. */
+  curation_warnings?: string[];
+  /** Public unit convention for persisted v2 parameter files. */
+  unit_system?: 'microns' | 'legacy-engine';
+}
+
 // =============================================================================
 // New Event System (v1.1.0)
 // =============================================================================
@@ -186,7 +197,7 @@ export type EHTCellTypesMap = Record<string, EHTCellTypeParams>;
 
 /** Complete EHT simulation parameters */
 export interface EHTParams extends BaseSimulationParams {
-  metadata: ParamsMetadata;
+  metadata: EHTParamsMetadata;
   general: EHTGeneralParams;
   cell_prop: EHTCellPropertyParams;
   cell_types: EHTCellTypesMap;
@@ -195,7 +206,7 @@ export interface EHTParams extends BaseSimulationParams {
 
 /** Deep partial type for EHT params input */
 export type PartialEHTParams = {
-  metadata?: Partial<ParamsMetadata>;
+  metadata?: Partial<EHTParamsMetadata>;
   general?: Partial<EHTGeneralParams>;
   cell_prop?: Partial<EHTCellPropertyParams>;
   cell_types?: {

@@ -2,19 +2,19 @@ import { describe, it, expect } from 'vitest';
 import { generateFormulaEvents, initializeEHTSimulation } from './init';
 import { performTimestep } from './step';
 import { createInitialEHTState } from '../types';
-import { DEFAULT_EHT_PARAMS } from '../params/defaults';
+import { LEGACY_DEFAULT_EHT_PARAMS } from '../params/defaults';
 import { computeEllipseFromPerimeter } from '../params/geometry';
 import { SeededRandom } from '@/core/math/random';
 
 describe('generateFormulaEvents', () => {
   it('does nothing when formulas maps are empty', () => {
-    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    const params = structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
     generateFormulaEvents(params);
     expect(params.general.global_events).toHaveLength(0);
   });
 
   it('generates global event for general formula', () => {
-    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    const params = structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
     params.general.formulas = { perimeter: 'init_value - t * 2' };
     generateFormulaEvents(params);
 
@@ -29,7 +29,7 @@ describe('generateFormulaEvents', () => {
   });
 
   it('generates per-cell event for cell type formula', () => {
-    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    const params = structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
     params.cell_types.control.formulas = { R_soft: '1.2 + 0.1 * sin(t)' };
     generateFormulaEvents(params);
 
@@ -45,7 +45,7 @@ describe('generateFormulaEvents', () => {
   });
 
   it('captures correct init_value from current param', () => {
-    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    const params = structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
     params.general.perimeter = 200;
     params.general.formulas = { perimeter: 'init_value * 0.5' };
     generateFormulaEvents(params);
@@ -55,7 +55,7 @@ describe('generateFormulaEvents', () => {
   });
 
   it('evaluates formula at t=0 to set initial param value', () => {
-    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    const params = structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
     params.general.perimeter = 999; // preset value that should be overridden
     params.general.formulas = { perimeter: '100 * (1 + t)' };
     generateFormulaEvents(params);
@@ -68,7 +68,7 @@ describe('generateFormulaEvents', () => {
   });
 
   it('evaluates cell type formula at t=0 to set initial param value', () => {
-    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    const params = structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
     params.cell_types.control.stiffness_nuclei_apical = 50;
     params.cell_types.control.formulas = { stiffness_nuclei_apical: 'init_value * 0.1' };
     generateFormulaEvents(params);
@@ -78,7 +78,7 @@ describe('generateFormulaEvents', () => {
   });
 
   it('generates events for multiple formulas', () => {
-    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    const params = structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
     params.general.formulas = {
       perimeter: 'init_value - t',
       aspect_ratio: '1 + 0.1 * t',
@@ -93,7 +93,7 @@ describe('generateFormulaEvents', () => {
 
 describe('integration: formula-driven parameters', () => {
   it('perimeter formula updates geometry each timestep', () => {
-    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    const params = structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
     params.general.formulas = { perimeter: 'init_value - t * 2' };
 
     const state = createInitialEHTState();
@@ -120,7 +120,7 @@ describe('integration: formula-driven parameters', () => {
   });
 
   it('cell type formula updates per-cell parameter each timestep', () => {
-    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    const params = structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
     params.cell_types.control.formulas = { stiffness_nuclei_apical: '99' };
 
     const state = createInitialEHTState();

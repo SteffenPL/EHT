@@ -16,11 +16,11 @@ export const PARAMETER_DESCRIPTIONS: Record<string, string> = {
 
   'general.full_circle': `If enabled, the tissue forms a complete circular (or elliptical) shape. Otherwise, it's an open arc.`,
 
-  'general.w_init': `Initial width of the tissue domain.`,
+  'general.w_init': `Initial width of the tissue domain in microns.`,
 
-  'general.h_init': `Initial height of the tissue domain.`,
+  'general.h_init': `Initial height of the tissue domain in microns.`,
 
-  'general.perimeter': `Perimeter of the basal membrane curve. Larger values create a longer tissue.`,
+  'general.perimeter': `Perimeter of the basal membrane curve in microns. Larger values create a longer tissue.`,
 
   'general.aspect_ratio': `Aspect ratio $b/a$ of the ellipse. 0 = straight line, 1 = circle.`,
 
@@ -30,11 +30,11 @@ export const PARAMETER_DESCRIPTIONS: Record<string, string> = {
 $$\\mu \\frac{d\\mathbf{x}}{dt} = \\mathbf{F}$$`,
 
   // === Cell Type Geometry ===
-  'cell_types.R_hard': `Hard sphere radius $R_{hard}$. Nuclei cannot overlap within this radius.`,
+  'cell_types.R_hard': `Hard sphere radius $R_{hard}$ in microns. Nuclei cannot overlap within this radius.`,
 
-  'cell_types.R_hard_div': `Hard sphere radius during cell division. Typically smaller to allow daughter cells to separate.`,
+  'cell_types.R_hard_div': `Hard sphere radius during cell division in microns. Typically smaller to allow daughter cells to separate.`,
 
-  'cell_types.R_soft': `Soft interaction radius $R_{soft}$. Used for repulsive forces between nearby nuclei.`,
+  'cell_types.R_soft': `Soft interaction radius $R_{soft}$ in microns. Used for repulsive forces between nearby nuclei; the compatibility adapter preserves the current engine-scale force behavior.`,
 
   // === Stiffness Parameters ===
   'cell_types.stiffness_repulsion': `Repulsion stiffness $k_{rep}$ between nuclei. Force increases as nuclei approach:
@@ -77,20 +77,20 @@ $$F_{na} = k_{na} \\cdot (|\\mathbf{x}_n - \\mathbf{x}_a| - L_{cytos})$$`,
 - \`"rest"\`: remaining space
 - Numeric value in $[-1, 1]$: specific position`,
 
-  'cell_types.diffusion': `Diffusion coefficient $D$ for random motion of the nucleus. Adds Brownian noise:
+  'cell_types.diffusion': `Micron-facing diffusion coefficient $D$ for random motion of the nucleus. Adds Brownian noise:
 $$d\\mathbf{x} = \\sqrt{2D}\\, d\\mathbf{W}$$`,
 
   'cell_types.basal_damping_ratio': `Damping ratio for basal point motion. Higher values make basal movement more sluggish.`,
 
-  'cell_types.max_basal_junction_dist': `Maximum distance for basal junction formation between neighboring cells.`,
+  'cell_types.max_basal_junction_dist': `Maximum distance in microns for basal junction formation between neighboring cells.`,
 
-  'cell_types.cytos_init': `Initial cytoskeleton length $L_{cytos}$ (distance from basal to apical point).`,
+  'cell_types.cytos_init': `Initial cytoskeleton length $L_{cytos}$ in microns (distance from basal to apical point).`,
 
   'cell_types.basal_membrane_repulsion': `Repulsion strength keeping nuclei inside the basal membrane boundary.`,
 
-  'cell_types.apical_junction_init': `Initial rest length for apical junctions between neighboring cells.`,
+  'cell_types.apical_junction_init': `Initial rest length in microns for apical junctions between neighboring cells.`,
 
-  'cell_types.max_cytoskeleton_length': `Maximum allowed cytoskeleton length. Prevents cells from stretching too far.`,
+  'cell_types.max_cytoskeleton_length': `Maximum allowed cytoskeleton length in microns. Prevents cells from stretching too far.`,
 
   'cell_types.external_force': `External force formula applied to cell nuclei. A **math.js** expression evaluated per cell per substep.
 

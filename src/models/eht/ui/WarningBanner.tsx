@@ -5,6 +5,7 @@ import { useMemo, useCallback } from 'react';
 import type { ModelWarningProps } from '@/core/registry';
 import type { EHTParams } from '../params/types';
 import { Button } from '@/components/ui/button';
+import { LEGACY_MICRONS_PER_UNIT } from '../params/unit-conversion';
 
 export function EHTWarningBanner({ params, onChange, disabled }: ModelWarningProps<EHTParams>) {
   const g = params.general;
@@ -35,11 +36,11 @@ export function EHTWarningBanner({ params, onChange, disabled }: ModelWarningPro
     return null;
   }, [totalNInit, g.perimeter, g.full_circle, avgMaxBasalJunctionDist]);
 
-  // Fix function: scale all max_basal_junction_dist to satisfy constraint with 5 unit margin
+  // Fix function: scale all max_basal_junction_dist to satisfy constraint with the legacy 5-unit margin in public microns.
   const handleFix = useCallback(() => {
     if (!onChange || !perimeterWarning) return;
 
-    const targetCoverage = g.perimeter + 5; // Add 5 unit margin
+    const targetCoverage = g.perimeter + 5 * LEGACY_MICRONS_PER_UNIT;
     const currentCoverage = perimeterWarning.maxCoverage;
     if (currentCoverage <= 0) return;
 

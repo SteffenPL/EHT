@@ -5,6 +5,17 @@
 
 import type { BatchParameterDefinition } from '@/core/registry/types';
 import type { EHTParams } from '../params/types';
+import { isLengthParameterPath } from '../params/unit-conversion';
+
+function withMicronUnit(def: BatchParameterDefinition): BatchParameterDefinition {
+  if (!isLengthParameterPath(def.path)) return def;
+  return {
+    ...def,
+    label: def.label.includes('(um)') || def.label.includes('(um/')
+      ? def.label
+      : `${def.label} (um)`,
+  };
+}
 
 /**
  * Generate batch parameters dynamically from the current EHT params.
@@ -78,7 +89,7 @@ export function generateEHTBatchParameters(params: EHTParams): BatchParameterDef
     );
   }
 
-  return batchParams;
+  return batchParams.map(withMicronUnit);
 }
 
 /** Static fallback batch parameters (used when params not available) */
@@ -93,7 +104,7 @@ export const EHT_BATCH_PARAMETERS: BatchParameterDefinition[] = [
   { path: 'cell_types.control.diffusion', label: 'control: diffusion' },
   { path: 'cell_types.control.max_basal_junction_dist', label: 'control: max_basal_junction_dist' },
   { path: 'cell_types.control.apical_junction_init', label: 'control: apical_junction_init' },
-];
+].map(withMicronUnit);
 
 // Legacy export for backwards compatibility
 export const AVAILABLE_PARAMS = EHT_BATCH_PARAMETERS;

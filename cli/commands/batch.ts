@@ -14,7 +14,6 @@ import { parseArgs } from '../utils/args';
 import { snapshotsToCSV, writeOutput, formatProgress } from '../utils/output';
 
 import { EHTHeadlessModel as EHTModel } from '../../src/models/eht/headless';
-import { computeEHTStatistics } from '../../src/models/eht/statistics';
 import type { EHTParams } from '../../src/models/eht/params/types';
 
 /**
@@ -73,8 +72,7 @@ function computeStatisticsFromSnapshots(
 
     const state = EHTModel.loadSnapshot(snapshot.data, snapshotParams);
 
-    // Use computeEHTStatistics directly with params to get per-group statistics
-    const allStats = computeEHTStatistics(state, snapshotParams);
+    const allStats = EHTModel.computeStats(state, snapshotParams);
 
     // Create one row per cell group
     for (const group of sortedGroups) {

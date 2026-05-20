@@ -4,7 +4,7 @@ import type { EHTSimulationState, CellState } from '../types';
 import { CellPhase } from '../types';
 import type { EHTParams } from '../params/types';
 import { createBasalGeometry } from '@/core/math';
-import { DEFAULT_EHT_PARAMS } from '../params/defaults';
+import { LEGACY_DEFAULT_EHT_PARAMS } from '../params/defaults';
 import { computeEllipseFromPerimeter } from '../params/geometry';
 
 function makeCell(x: number, y: number): CellState {
@@ -71,45 +71,45 @@ function makeGeometryState(params: EHTParams): EHTSimulationState {
 
 describe('rebuildGeometryIfNeeded', () => {
   it('does nothing when params match current geometry', () => {
-    const state = makeGeometryState(DEFAULT_EHT_PARAMS);
+    const state = makeGeometryState(LEGACY_DEFAULT_EHT_PARAMS);
     const oldPerimeter = state.basalGeometry.perimeter;
     rebuildGeometryIfNeeded(state);
     expect(state.basalGeometry.perimeter).toBe(oldPerimeter);
   });
 
   it('rebuilds when perimeter changes', () => {
-    const state = makeGeometryState(DEFAULT_EHT_PARAMS);
+    const state = makeGeometryState(LEGACY_DEFAULT_EHT_PARAMS);
     const oldPerimeter = state.basalGeometry.perimeter;
 
     // Simulate a global event having changed the perimeter
-    state.params!.general.perimeter = DEFAULT_EHT_PARAMS.general.perimeter - 20;
+    state.params!.general.perimeter = LEGACY_DEFAULT_EHT_PARAMS.general.perimeter - 20;
     rebuildGeometryIfNeeded(state);
 
     expect(state.basalGeometry.perimeter).not.toBe(oldPerimeter);
     expect(state.geometry!.curvature_1).not.toBe(
-      computeEllipseFromPerimeter(DEFAULT_EHT_PARAMS.general.perimeter, DEFAULT_EHT_PARAMS.general.aspect_ratio).curvature_1
+      computeEllipseFromPerimeter(LEGACY_DEFAULT_EHT_PARAMS.general.perimeter, LEGACY_DEFAULT_EHT_PARAMS.general.aspect_ratio).curvature_1
     );
   });
 
   it('rebuilds when aspect_ratio changes', () => {
-    const state = makeGeometryState(DEFAULT_EHT_PARAMS);
+    const state = makeGeometryState(LEGACY_DEFAULT_EHT_PARAMS);
 
     state.params!.general.aspect_ratio = 0.5;
     rebuildGeometryIfNeeded(state);
 
     const expected = computeEllipseFromPerimeter(
-      DEFAULT_EHT_PARAMS.general.perimeter, 0.5
+      LEGACY_DEFAULT_EHT_PARAMS.general.perimeter, 0.5
     );
     expect(state.geometry!.curvature_1).toBeCloseTo(expected.curvature_1, 6);
     expect(state.geometry!.curvature_2).toBeCloseTo(expected.curvature_2, 6);
   });
 
   it('re-projects cell basal points onto new curve', () => {
-    const state = makeGeometryState(DEFAULT_EHT_PARAMS);
+    const state = makeGeometryState(LEGACY_DEFAULT_EHT_PARAMS);
     const oldB = { ...state.cells[0].B };
 
     // Change perimeter significantly
-    state.params!.general.perimeter = DEFAULT_EHT_PARAMS.general.perimeter * 0.5;
+    state.params!.general.perimeter = LEGACY_DEFAULT_EHT_PARAMS.general.perimeter * 0.5;
     rebuildGeometryIfNeeded(state);
 
     // Basal point should have moved (re-projected onto smaller curve)
@@ -119,11 +119,11 @@ describe('rebuildGeometryIfNeeded', () => {
   });
 
   it('does not modify apical or nucleus positions', () => {
-    const state = makeGeometryState(DEFAULT_EHT_PARAMS);
+    const state = makeGeometryState(LEGACY_DEFAULT_EHT_PARAMS);
     const oldA = { ...state.cells[0].A };
     const oldPos = { ...state.cells[0].pos };
 
-    state.params!.general.perimeter = DEFAULT_EHT_PARAMS.general.perimeter * 0.5;
+    state.params!.general.perimeter = LEGACY_DEFAULT_EHT_PARAMS.general.perimeter * 0.5;
     rebuildGeometryIfNeeded(state);
 
     expect(state.cells[0].A.x).toBe(oldA.x);

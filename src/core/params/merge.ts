@@ -5,13 +5,20 @@
 // import type { SimulationParams, PartialSimulationParams } from '../types';
 type SimulationParams = any;
 type PartialSimulationParams = any;
-import { DEFAULT_PARAMS, DEFAULT_CONTROL_CELL } from './defaults';
+import {
+  DEFAULT_PARAMS,
+  DEFAULT_CONTROL_CELL,
+  LEGACY_DEFAULT_CONTROL_CELL,
+  LEGACY_DEFAULT_EHT_PARAMS,
+} from './defaults';
 import { mergeWith, isPlainObject } from 'lodash-es';
 import { ensureV1_1_0 } from '@/models/eht/params/migration-v1.1';
 import { ensureV1_2_0 } from '@/models/eht/params/migration-v1.2';
 import { ensureV1_3_0 } from '@/models/eht/params/migration-v1.3';
 import { ensureV1_4_0 } from '@/models/eht/params/migration-v1.4';
 import { ensureV1_5_0 } from '@/models/eht/params/migration-v1.5';
+import { ensureV2_0 } from '@/models/eht/params/migration-v2.0';
+import { compareVersionStrings, isBeforeParamFormatV2 } from '@/models/eht/params/unit-conversion';
 
 /**
  * Custom merge function that handles nested objects properly.
@@ -46,8 +53,12 @@ export function mergeWithDefaults(
   partial: PartialSimulationParams,
   defaults: SimulationParams = DEFAULT_PARAMS
 ): SimulationParams {
-  // Start with a deep copy of defaults
-  const result = structuredClone(defaults);
+  const inputVersion = partial.metadata?.version ?? '1.0.0';
+  const isLegacyInput = isBeforeParamFormatV2(inputVersion)
+    && partial.metadata?.unit_system !== 'microns';
+
+  // Start with a deep copy of the matching unit baseline.
+  const result = structuredClone(isLegacyInput ? LEGACY_DEFAULT_EHT_PARAMS : defaults);
 
   // Merge general params
   if (partial.general) {
@@ -59,19 +70,16 @@ export function mergeWithDefaults(
     mergeWith(result.cell_prop, partial.cell_prop, customMerge);
   }
 
-  // Detect input version for migration-aware merging
-  const inputVersion = partial.metadata?.version ?? '1.0.0';
-
   // Set the metadata version to the input version so migration checks work correctly.
-  // Without this, the result would have the default version (1.5.0) which skips all migrations.
+  // Without this, the result would have the default version which skips migrations.
   result.metadata = { ...result.metadata, ...partial.metadata, version: inputVersion };
 
   // Strip fields from defaults that only exist in later versions,
   // so the migration chain can add them properly
-  if (inputVersion < '1.2.0') {
+  if (compareVersionStrings(inputVersion, '1.2.0') < 0) {
     delete result.general.default_events;
   }
-  if (inputVersion < '1.1.0') {
+  if (compareVersionStrings(inputVersion, '1.1.0') < 0) {
     // Strip skip_default_events from cell type defaults for pre-v1.1.0
     for (const ct of Object.values(result.cell_types)) {
       delete (ct as unknown as Record<string, unknown>).skip_default_events;
@@ -86,10 +94,10 @@ export function mergeWithDefaults(
     result.cell_types = {};
     for (const [typeName, partialType] of Object.entries(partial.cell_types)) {
       // Each imported type is merged over control defaults for completeness
-      const newType = structuredClone(DEFAULT_CONTROL_CELL);
+      const newType = structuredClone(isLegacyInput ? LEGACY_DEFAULT_CONTROL_CELL : DEFAULT_CONTROL_CELL);
       // For pre-v1.1.0 files, remove events_v2 from defaults so migration
       // can convert legacy v1 events instead of keeping empty defaults
-      if (inputVersion < '1.1.0') {
+      if (compareVersionStrings(inputVersion, '1.1.0') < 0) {
         delete (newType as unknown as Record<string, unknown>).events_v2;
         delete (newType as unknown as Record<string, unknown>).skip_default_events;
       }
@@ -98,8 +106,8 @@ export function mergeWithDefaults(
     }
   }
 
-  // Run EHT migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0 → v1.4.0 → v1.5.0
-  return ensureV1_5_0(ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(result)))));
+  // Run EHT migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0 → v1.4.0 → v1.5.0 → v2.0.0
+  return ensureV2_0(ensureV1_5_0(ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(result))))));
 }
 
 /**

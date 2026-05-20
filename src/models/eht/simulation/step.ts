@@ -160,7 +160,8 @@ export function performTimestep(
     params: EHTParams,
     rng: SeededRandom
 ): void {
-    const pg = params.general;
+    const effectiveParams = state.params ?? params;
+    const pg = effectiveParams.general;
     const fullDt = pg.dt;
 
     // Process global events (may mutate state.params)
@@ -171,18 +172,18 @@ export function performTimestep(
 
     // Update cell phases
     for (const cell of state.cells) {
-        const cellType = getCellType(params, cell);
+        const cellType = getCellType(effectiveParams, cell);
         updateCellPhase(cell, cellType, state.t);
     }
 
     // Process events (division, reset, parameter changes, etc.)
-    processAllEvents(state, params, fullDt, rng);
+    processAllEvents(state, effectiveParams, fullDt, rng);
 
     // Update cytoskeleton
-    updateCytoskeleton(state, params, fullDt);
+    updateCytoskeleton(state, effectiveParams, fullDt);
 
     // Update apical junctions
-    updateApicalJunctions(state, params, fullDt);
+    updateApicalJunctions(state, effectiveParams, fullDt);
 
     // Substep integration
     const substepDt = fullDt / pg.n_substeps;
@@ -191,13 +192,13 @@ export function performTimestep(
         state.t += substepDt;
 
         // Calculate forces
-        const forces = calcAllForces(state, params);
+        const forces = calcAllForces(state, effectiveParams);
 
         // Integrate
-        integrateForces(state, params, forces, rng, substepDt);
+        integrateForces(state, effectiveParams, forces, rng, substepDt);
 
         // Apply constraints
-        applyAllConstraints(state, params);
+        applyAllConstraints(state, effectiveParams);
     }
 
     state.step_count++;

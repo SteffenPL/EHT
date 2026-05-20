@@ -5,14 +5,14 @@ import { initializeEHTSimulation } from './init';
 import { createInitialEHTState } from '../types';
 import type { EHTParams } from '../params/types';
 import { StraightLineGeometry } from '@/core/math/basal-geometry';
-import { DEFAULT_EHT_PARAMS } from '../params/defaults';
+import { LEGACY_DEFAULT_EHT_PARAMS } from '../params/defaults';
 import { computeEllipseFromPerimeter } from '../params/geometry';
 import { SeededRandom } from '@/core/math/random';
 import { Vector2 } from '@/core/math/vector2';
 import type { EHTSimulationState } from '../types';
 
 function makeTestState(t: number, params?: EHTParams): EHTSimulationState {
-  const p = params ?? structuredClone(DEFAULT_EHT_PARAMS);
+  const p = params ?? structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
   return {
     cells: [],
     ap_links: [],
@@ -31,7 +31,7 @@ describe('processGlobalEvents', () => {
   it('does nothing when global_events is empty', () => {
     const state = makeTestState(10);
     processGlobalEvents(state, 0.1);
-    expect(state.params!.general.perimeter).toBe(DEFAULT_EHT_PARAMS.general.perimeter);
+    expect(state.params!.general.perimeter).toBe(LEGACY_DEFAULT_EHT_PARAMS.general.perimeter);
   });
 
   it('fires a one-time event within time window', () => {
@@ -77,7 +77,7 @@ describe('processGlobalEvents', () => {
       formula: 'old_value - 10',
     }];
     processGlobalEvents(state, 0.1);
-    expect(state.params!.general.perimeter).toBe(DEFAULT_EHT_PARAMS.general.perimeter);
+    expect(state.params!.general.perimeter).toBe(LEGACY_DEFAULT_EHT_PARAMS.general.perimeter);
   });
 
   it('fires periodic events respecting period interval', () => {
@@ -152,7 +152,7 @@ describe('processGlobalEvents', () => {
 
 describe('integration: geometry change during simulation', () => {
   it('shrinks perimeter mid-simulation via global event', () => {
-    const params = structuredClone(DEFAULT_EHT_PARAMS);
+    const params = structuredClone(LEGACY_DEFAULT_EHT_PARAMS);
     params.general.global_events = [{
       id: 'shrink_at_t2',
       start: 1.5,

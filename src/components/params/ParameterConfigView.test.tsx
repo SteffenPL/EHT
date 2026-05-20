@@ -75,6 +75,26 @@ describe('ParameterConfigView', () => {
     expect(screen.queryByRole('button', { name: 'Collapse' })).not.toBeInTheDocument();
   });
 
+  it('shows parameter format version and public micron unit state separately from model controls', () => {
+    renderParameterConfig();
+
+    const summary = screen.getByTestId('parameter-format-summary');
+    expect(within(summary).getByText('Parameter format v2.0.0')).toBeInTheDocument();
+    expect(within(summary).getByText('Length fields in microns')).toBeInTheDocument();
+  });
+
+  it('shows migration and curation warnings when metadata carries them', () => {
+    const params = cloneDeep(DEFAULT_EHT_PARAMS);
+    params.metadata.migrated_from = '1.5.0';
+    params.metadata.curation_warnings = ['Review formula for cell_types.control.R_soft; v2 stores this target in microns.'];
+
+    renderParameterConfig(createConfig({ params }));
+
+    const summary = screen.getByTestId('parameter-format-summary');
+    expect(within(summary).getByText('Migrated from v1.5.0')).toBeInTheDocument();
+    expect(within(summary).getByText(/cell_types\.control\.R_soft/)).toBeInTheDocument();
+  });
+
   it('places batch setup in the model parameter tab row', () => {
     renderParameterConfig();
 

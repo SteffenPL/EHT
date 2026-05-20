@@ -10,6 +10,10 @@ import { CellCyclePhase } from './types';
 export const metadataSchema = z.object({
   model: z.string(),
   version: z.string(),
+  migrated_from: z.string().optional(),
+  migration_notes: z.array(z.string()).optional(),
+  curation_warnings: z.array(z.string()).optional(),
+  unit_system: z.literal('microns').optional(),
 });
 
 /** RGB color schema */

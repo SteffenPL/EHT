@@ -3,10 +3,9 @@
  * Evaluates global events and mutates state.params accordingly.
  */
 
-import { evaluate } from 'mathjs';
 import type { EHTSimulationState } from '../types';
 import type { GlobalEvent } from '../params/types';
-import { formulaFunctions } from './formula-functions';
+import { evaluateUnitAwareFormula } from '../compat/formula-units';
 
 /**
  * Get a nested property value from an object using dot-notation path.
@@ -85,17 +84,15 @@ export function processGlobalEvents(state: EHTSimulationState, dt: number): void
     const oldValue = getNestedValue(params as unknown as Record<string, unknown>, event.target_parameter);
 
     // Evaluate formula
-    const scope: Record<string, unknown> = {
-      old_value: oldValue as number,
+    const newValue = evaluateUnitAwareFormula({
+      formula: event.formula,
+      targetParameter: event.target_parameter,
+      oldValue: oldValue as number,
+      initValue: event.init_value,
       t: state.t,
       dt,
-      ...formulaFunctions,
-      ...constants,
-    };
-    if (event.init_value !== undefined) {
-      scope.init_value = event.init_value;
-    }
-    const newValue = evaluate(event.formula, scope);
+      params: { ...params, constants },
+    });
 
     // Set new value
     setNestedValue(params as unknown as Record<string, unknown>, event.target_parameter, newValue);

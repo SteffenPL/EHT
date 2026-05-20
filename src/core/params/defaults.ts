@@ -10,6 +10,8 @@ export {
   DEFAULT_CONTROL_CELL,
   DEFAULT_EMT_CELL,
   DEFAULT_EHT_PARAMS as DEFAULT_PARAMS,
+  LEGACY_DEFAULT_CONTROL_CELL,
+  LEGACY_DEFAULT_EHT_PARAMS,
   createDefaultEHTParams as createDefaultParams,
   EHT_PRESETS as PARAM_PRESETS,
 } from '@/models/eht/params/defaults';

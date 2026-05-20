@@ -669,7 +669,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
           {/* Geometry */}
           <SectionHeader section={SECTIONS[1]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
-          <CellTypeRow label="R Hard" description={desc('R_hard')}>
+          <CellTypeRow label="R Hard (um)" description={desc('R_hard')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -680,7 +680,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="R Hard (div)" description={desc('R_hard_div')}>
+          <CellTypeRow label="R Hard div (um)" description={desc('R_hard_div')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -691,7 +691,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="R Soft" description={desc('R_soft')}>
+          <CellTypeRow label="R Soft (um)" description={desc('R_soft')}>
             {cellTypeKeys.map((key) => (
               <FormulaCell
                 key={key}
@@ -703,7 +703,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 onNumericChange={(v) => updateCellType(key, 'R_soft', v)}
                 disabled={disabled}
                 min={0}
-                label="R Soft"
+                label="R Soft (um)"
                 tEnd={params.general.t_end}
                 constants={params.constants ?? {}}
               />
@@ -952,7 +952,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
           {/* Cell-Type Specific Properties */}
           <SectionHeader section={SECTIONS[6]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
-          <CellTypeRow label="Diffusion" description={desc('diffusion')}>
+          <CellTypeRow label="Diffusion (um)" description={desc('diffusion')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -974,7 +974,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Max Basal Junc Dist" description={desc('max_basal_junction_dist')}>
+          <CellTypeRow label="Max Basal Junc Dist (um)" description={desc('max_basal_junction_dist')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -985,7 +985,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Cytos Init" description={desc('cytos_init')}>
+          <CellTypeRow label="Cytos Init (um)" description={desc('cytos_init')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -1007,7 +1007,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Apical Junc Init" description={desc('apical_junction_init')}>
+          <CellTypeRow label="Apical Junc Init (um)" description={desc('apical_junction_init')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -1018,7 +1018,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Max Cytos Length" description={desc('max_cytoskeleton_length')}>
+          <CellTypeRow label="Max Cytos Length (um)" description={desc('max_cytoskeleton_length')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}
@@ -1044,7 +1044,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="Running Speed" description={desc('running_speed')}>
+          <CellTypeRow label="Running Speed (um/h)" description={desc('running_speed')}>
             {cellTypeKeys.map((key) => (
               <NumberCell
                 key={key}

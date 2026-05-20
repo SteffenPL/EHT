@@ -101,9 +101,10 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
             ba_links: [],
             t: 0,
             step_count: 0,
-            basalGeometry: createBasalGeometry(0, 0, 360),
-            rngSeed: String(params.general.random_seed),
-            global_event_states: {},
+        basalGeometry: createBasalGeometry(0, 0, 360),
+        rngSeed: String(params.general.random_seed),
+        params: structuredClone(params),
+        global_event_states: {},
         };
     }
 
@@ -123,6 +124,7 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
         basalGeometry: createBasalGeometry(curvature_1, curvature_2, 360),
         // Use seed from params since it's not saved in CSV (would require schema change)
         rngSeed: String(params.general.random_seed),
+        params: structuredClone(params),
         global_event_states: {},
     };
 

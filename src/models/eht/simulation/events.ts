@@ -6,12 +6,11 @@
 
 import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
-import { evaluate } from 'mathjs';
 import type { EHTSimulationState, ApicalLink, BasalLink, CellState, CellEventState } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, ParameterChangeEvent, SpecialEvent, SpecialEventName } from '../params/types';
-import { formulaFunctions } from './formula-functions';
 import { createCell, getCellType, getEffectiveEvents, inheritEventStates, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
 import { divideSingleCell } from './division';
+import { evaluateUnitAwareFormula } from '../compat/formula-units';
 
 /**
  * Resolve event period to a number. Handles 'dt' as a special value.
@@ -286,6 +285,8 @@ const specialEventHandlers: Record<SpecialEventName, (state: EHTSimulationState,
  * Scope includes old_value, t, dt, period, general params, and cell type params.
  */
 function evaluateFormula(
+  params: EHTParams,
+  targetParameter: string,
   formula: string,
   oldValue: number,
   t: number,
@@ -299,41 +300,20 @@ function evaluateFormula(
   constants?: Record<string, number>
 ): number {
   try {
-    const scope: Record<string, unknown> = {
-      old_value: oldValue,
+    return evaluateUnitAwareFormula({
+      formula,
+      targetParameter,
+      oldValue,
       t,
       dt,
       period: period || 1,
-      age: t - birthTime,
-      ...formulaFunctions,
-      ...(constants ?? {}),
-    };
-
-    if (initValue !== undefined) {
-      scope.init_value = initValue;
-    }
-
-    if (cellContext) {
-      scope.alpha = cellContext.alpha;
-      scope.r = cellContext.r;
-      scope.delta = cellContext.delta;
-    }
-
-    if (generalParams) {
-      scope.p_div_out = generalParams.p_div_out;
-      scope.mu = generalParams.mu;
-      scope.h_init = generalParams.h_init;
-      scope.w_init = generalParams.w_init;
-      scope.t_end = generalParams.t_end;
-    }
-
-    if (cellTypeParams) {
-      scope.R_hard_div = cellTypeParams.R_hard_div;
-      scope.stiffness_apical_apical_div = cellTypeParams.stiffness_apical_apical_div;
-      scope.INM = cellTypeParams.INM;
-    }
-
-    return evaluate(formula, scope);
+      birthTime,
+      initValue,
+      cellContext,
+      generalParams,
+      cellTypeParams,
+      params: { ...params, constants: constants ?? params.constants },
+    });
   } catch (error) {
     console.error(`[Events] Failed to evaluate formula "${formula}":`, error);
     return oldValue; // Return unchanged value on error
@@ -496,6 +476,7 @@ function processParameterChangeEvent(
   eventState: CellEventState,
   cell: CellState,
   state: EHTSimulationState,
+  params: EHTParams,
   t: number,
   dt: number,
   generalParams?: import('../params/types').EHTGeneralParams,
@@ -520,7 +501,21 @@ function processParameterChangeEvent(
   const cellContext = { alpha, r, delta };
 
   const effectivePeriod = resolveEffectivePeriod(event.period, dt);
-  const newValue = evaluateFormula(event.formula, oldValue, t, dt, effectivePeriod, cell.birth_time, generalParams, cellTypeParams, event.init_value, cellContext, constants);
+  const newValue = evaluateFormula(
+    state.params ?? params,
+    event.target_parameter,
+    event.formula,
+    oldValue,
+    t,
+    dt,
+    effectivePeriod,
+    cell.birth_time,
+    generalParams,
+    cellTypeParams,
+    event.init_value,
+    cellContext,
+    constants
+  );
   setCellParameter(cell, event.target_parameter, newValue);
 
   // Update event state
@@ -593,7 +588,7 @@ export function processV2Events(
 
       if (shouldEventFire(eventState, eventDef, cell, t, dt)) {
         if (eventDef.type === 'parameter_change') {
-          processParameterChangeEvent(eventDef, eventState, cell, state, t, dt, params.general, cellType, params.constants);
+          processParameterChangeEvent(eventDef, eventState, cell, state, params, t, dt, params.general, cellType, params.constants);
         } else if (eventDef.type === 'special') {
           // Deferred events: collect indices and process after main loop
           if (eventDef.special_name === 'lose_apical_interface') {

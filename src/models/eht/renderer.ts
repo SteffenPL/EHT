@@ -10,6 +10,7 @@ import type { EHTSimulationState, GeometryState } from './types';
 import type { EHTParams } from './params/types';
 import { shapeCenter } from '@/core/math/geometry';
 import { computeEllipseFromPerimeter } from './params/geometry';
+import { toEHTEngineParams } from './compat/engine-params';
 
 /**
  * Get curvatures from state.geometry or compute from params as fallback.
@@ -179,11 +180,12 @@ function drawCellIds(ctx: ModelRenderContext, state: EHTSimulationState): void {
  */
 export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
   getBoundingBox(params: EHTParams, state?: EHTSimulationState): BoundingBox {
-    const { curvature_1, curvature_2 } = getCurvatures(state, params);
-    const h_init = params.general.h_init;
-    const w_init = params.general.w_init;
-    const w_screen = params.general.w_screen;
-    const h_screen = params.general.h_screen;
+    const engineParams = toEHTEngineParams(params);
+    const { curvature_1, curvature_2 } = getCurvatures(state, engineParams);
+    const h_init = engineParams.general.h_init;
+    const w_init = engineParams.general.w_init;
+    const w_screen = engineParams.general.w_screen;
+    const h_screen = engineParams.general.h_screen;
 
     let minX: number, maxX: number, minY: number, maxY: number;
 
@@ -227,20 +229,21 @@ export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
   },
 
   render(ctx: ModelRenderContext, state: EHTSimulationState, params: EHTParams): void {
+    const engineParams = toEHTEngineParams(params);
     const theme = ctx.isDark ? DARK_THEME : LIGHT_THEME;
     const cellsGraphics = ctx.graphics.cells as Graphics;
     const linksGraphics = ctx.graphics.links as Graphics;
-    const { curvature_1, curvature_2 } = getCurvatures(state, params);
+    const { curvature_1, curvature_2 } = getCurvatures(state, engineParams);
 
     // Draw basal membrane
-    drawBasalCurve(linksGraphics, curvature_1, curvature_2, params.general.w_init, theme);
+    drawBasalCurve(linksGraphics, curvature_1, curvature_2, engineParams.general.w_init, theme);
 
     // Draw links (behind cells)
     drawBasalLinks(linksGraphics, state, theme);
     drawApicalLinks(linksGraphics, state, theme);
 
     // Draw cells
-    drawCells(cellsGraphics, state, params, theme);
+    drawCells(cellsGraphics, state, engineParams, theme);
 
     // Draw cell IDs if enabled
     if (ctx.renderOptions?.showCellIds) {

@@ -10,11 +10,19 @@ import { mergeWithDefaults } from './merge';
 import type { SimulationConfig } from './config';
 import { DEFAULT_TIME_SAMPLES } from './config';
 import { validatePartialParams, safeValidatePartialParams } from './schema';
+import {
+  isBeforeParamFormatV2,
+  scaleValueForPath,
+} from '@/models/eht/params/unit-conversion';
 
 /** Result of parsing TOML with optional batch config */
 export interface TomlParseResult {
   params: SimulationParams;
   parameterRanges?: ParameterRange[];
+}
+
+function migrateRangeValue(value: number, path: string, isLegacyConfig: boolean): number {
+  return isLegacyConfig ? scaleValueForPath(value, path, 'legacy-to-microns') : value;
 }
 
 /**
@@ -192,6 +200,9 @@ export async function loadTomlFromUrl(url: string): Promise<SimulationParams> {
  */
 export function parseTomlWithRanges(tomlString: string): TomlParseResult {
   const parsed = restoreInfinityValues(TOML.parse(tomlString)) as Record<string, unknown>;
+  const sourceVersion = ((parsed.metadata as Record<string, unknown> | undefined)?.version as string | undefined) ?? '1.0.0';
+  const isLegacyConfig = isBeforeParamFormatV2(sourceVersion)
+    && (parsed.metadata as Record<string, unknown> | undefined)?.unit_system !== 'microns';
 
   // Extract parameter_ranges if present
   let parameterRanges: ParameterRange[] | undefined;
@@ -200,8 +211,8 @@ export function parseTomlWithRanges(tomlString: string): TomlParseResult {
       const range = r as Record<string, unknown>;
       return {
         path: String(range.path ?? ''),
-        min: Number(range.min ?? 0),
-        max: Number(range.max ?? 0),
+        min: migrateRangeValue(Number(range.min ?? 0), String(range.path ?? ''), isLegacyConfig),
+        max: migrateRangeValue(Number(range.max ?? 0), String(range.path ?? ''), isLegacyConfig),
         steps: Number(range.steps ?? 1),
       };
     });
@@ -243,6 +254,9 @@ export function toTomlWithRanges(
  */
 export function parseSimulationConfigToml(tomlString: string): SimulationConfig {
   const parsed = restoreInfinityValues(TOML.parse(tomlString)) as Record<string, unknown>;
+  const sourceVersion = ((parsed.metadata as Record<string, unknown> | undefined)?.version as string | undefined) ?? '1.0.0';
+  const isLegacyConfig = isBeforeParamFormatV2(sourceVersion)
+    && (parsed.metadata as Record<string, unknown> | undefined)?.unit_system !== 'microns';
 
   // Extract parameter_ranges if present
   let parameterRanges: ParameterRange[] = [];
@@ -251,8 +265,8 @@ export function parseSimulationConfigToml(tomlString: string): SimulationConfig 
       const range = r as Record<string, unknown>;
       return {
         path: String(range.path ?? ''),
-        min: Number(range.min ?? 0),
-        max: Number(range.max ?? 0),
+        min: migrateRangeValue(Number(range.min ?? 0), String(range.path ?? ''), isLegacyConfig),
+        max: migrateRangeValue(Number(range.max ?? 0), String(range.path ?? ''), isLegacyConfig),
         steps: Number(range.steps ?? 1),
       };
     });

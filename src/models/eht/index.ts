@@ -20,6 +20,7 @@ import { ehtRenderer } from './renderer';
 import { getSnapshot, loadSnapshot } from './output';
 import { SeededRandom } from '@/core/math/random';
 import { EHTRenderOptionsPanel, defaultEHTRenderOptions } from './renderOptions';
+import { toEHTEngineParams } from './compat/engine-params';
 
 /**
  * EHT Model Definition
@@ -39,32 +40,34 @@ export const EHTModel: SimulationModel<EHTParams, EHTSimulationState> = {
 
   // Simulation Loop
   init: (params: EHTParams, seed?: string): EHTSimulationState => {
-    const effectiveSeed = seed ?? String(params.general.random_seed);
+    const engineParams = toEHTEngineParams(params);
+    const effectiveSeed = seed ?? String(engineParams.general.random_seed);
     const rng = new SeededRandom(effectiveSeed);
     const state = createInitialEHTState(effectiveSeed);
-    initializeEHTSimulation(params, state, rng);
+    initializeEHTSimulation(engineParams, state, rng);
     return state;
   },
 
   step: (state: EHTSimulationState, _dt: number, params: EHTParams): EHTSimulationState => {
+    const engineParams = state.params ?? toEHTEngineParams(params);
     // Create seeded RNG for this step (deterministic based on step count)
     // Uses stored rngSeed for proper replay from loaded state
     const rng = new SeededRandom(`${state.rngSeed}_step_${state.step_count}`);
 
-    performTimestep(state, params, rng);
+    performTimestep(state, engineParams, rng);
 
     return state; // In-place mutation for performance, but return it.
   },
 
   // I/O
   getSnapshot: (state: EHTSimulationState) => getSnapshot(state),
-  loadSnapshot: (rows: Record<string, any>[], params: EHTParams) => loadSnapshot(rows, params),
-  exportCellMetrics: (state: EHTSimulationState, params: EHTParams) => exportCellMetrics(state, params),
+  loadSnapshot: (rows: Record<string, any>[], params: EHTParams) => loadSnapshot(rows, toEHTEngineParams(params)),
+  exportCellMetrics: (state: EHTSimulationState, params: EHTParams) => exportCellMetrics(state, toEHTEngineParams(params)),
 
   // Statistics
-  computeStats: (state: EHTSimulationState, params?: EHTParams) => computeEHTStatistics(state, params),
-  statistics: generateEHTStatistics(DEFAULT_EHT_PARAMS),
-  generateStatistics: (params: EHTParams) => generateEHTStatistics(params),
+  computeStats: (state: EHTSimulationState, params?: EHTParams) => computeEHTStatistics(state, params ? toEHTEngineParams(params) : undefined),
+  statistics: generateEHTStatistics(toEHTEngineParams(DEFAULT_EHT_PARAMS)),
+  generateStatistics: (params: EHTParams) => generateEHTStatistics(toEHTEngineParams(params)),
 
   // Batch parameters - dynamic generation
   generateBatchParameters: (params: EHTParams) => generateEHTBatchParameters(params),

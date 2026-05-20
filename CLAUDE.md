@@ -158,7 +158,7 @@ Routes: `/docs/eht/model`, `/docs/eht/statistics`
 - **In-place state mutation**: For performance, the EHT model mutates state in-place during `step()` rather than creating new objects
 - **Deterministic RNG**: Use `SeededRandom` from [src/core/math/random.ts](src/core/math/random.ts) for reproducible simulations
 - **Parameter validation**: Models use Zod schemas for runtime parameter validation
-- **Parameter migrations**: Migration chain in `params/migration-v1.*.ts` (v1.1→v1.5). Add a migration when changing parameter semantics or restructuring; use Zod `.default()` for simple additions. The chain runs in `mergePresetWithDefaults()` in `defaults.ts`.
+- **Parameter migrations**: Migration chain in `params/migration-v1.*.ts` and `params/migration-v2.0.ts` (v1.1→v2.0). Add a migration when changing parameter semantics or restructuring; use Zod `.default()` for simple additions. The chain runs in `mergePresetWithDefaults()` in `defaults.ts` and `mergeWithDefaults()` in `src/core/params/merge.ts`. EHT v2 stores public length-like values in microns and adapts them to legacy engine units at the model boundary.
 - **TOML format**: Parameters can be imported/exported as TOML files
 - **URL state**: Parameters can be encoded in URL for sharing
 - **CSV snapshots**: Simulations can be saved/loaded as CSV files with metadata

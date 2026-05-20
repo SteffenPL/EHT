@@ -12,6 +12,13 @@ import { ensureV1_2_0 } from './migration-v1.2';
 import { ensureV1_3_0 } from './migration-v1.3';
 import { ensureV1_4_0 } from './migration-v1.4';
 import { ensureV1_5_0 } from './migration-v1.5';
+import { ensureV2_0 } from './migration-v2.0';
+import {
+  compareVersionStrings,
+  EHT_PARAM_FORMAT_VERSION,
+  isBeforeParamFormatV2,
+  legacyParamsToMicrons,
+} from './unit-conversion';
 
 // =============================================================================
 // Default Events
@@ -120,8 +127,8 @@ const DEFAULT_EMT_EVENTS_V2: EventDefinition[] = [
   },
 ];
 
-/** Default control cell type */
-export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
+/** Legacy default control cell type in current engine units. */
+export const LEGACY_DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
   N_init: 25,
   location: "",
   R_hard: 0.4,
@@ -173,8 +180,8 @@ export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
   formulas: {},
 };
 
-/** Default EMT cell type */
-export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
+/** Legacy default EMT cell type in current engine units. */
+export const LEGACY_DEFAULT_EMT_CELL: EHTCellTypeParams = {
   N_init: 5,
   location: "bottom",
   R_hard: 0.4,
@@ -226,8 +233,8 @@ export const DEFAULT_EMT_CELL: EHTCellTypeParams = {
   formulas: {},
 };
 
-/** Default EHT simulation parameters */
-export const DEFAULT_EHT_PARAMS: EHTParams = {
+/** Legacy default EHT simulation parameters in current engine units. */
+export const LEGACY_DEFAULT_EHT_PARAMS: EHTParams = {
   metadata: {
     model: 'EHT',
     version: '1.5.0',
@@ -256,11 +263,29 @@ export const DEFAULT_EHT_PARAMS: EHTParams = {
     // All properties moved to per-cell-type in cell_types
   },
   cell_types: {
-    control: DEFAULT_CONTROL_CELL,
-    emt: DEFAULT_EMT_CELL,
+    control: LEGACY_DEFAULT_CONTROL_CELL,
+    emt: LEGACY_DEFAULT_EMT_CELL,
   },
   constants: {},
 };
+
+const PUBLIC_DEFAULT_EHT_PARAMS = legacyParamsToMicrons(LEGACY_DEFAULT_EHT_PARAMS);
+
+/** Default EHT simulation parameters in v2 public microns. */
+export const DEFAULT_EHT_PARAMS: EHTParams = {
+  ...PUBLIC_DEFAULT_EHT_PARAMS,
+  metadata: {
+    model: 'EHT',
+    version: EHT_PARAM_FORMAT_VERSION,
+    unit_system: 'microns',
+  },
+};
+
+/** Default control cell type in v2 public microns. */
+export const DEFAULT_CONTROL_CELL: EHTCellTypeParams = DEFAULT_EHT_PARAMS.cell_types.control;
+
+/** Default EMT cell type in v2 public microns. */
+export const DEFAULT_EMT_CELL: EHTCellTypeParams = DEFAULT_EHT_PARAMS.cell_types.emt;
 
 /**
  * Create a deep copy of the default EHT parameters.
@@ -285,7 +310,10 @@ interface PresetMeta {
  * Also applies v1.0.0 to v1.1.0 migration if needed.
  */
 function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
-  const base = cloneDeep(DEFAULT_EHT_PARAMS);
+  const presetVersion = partial.metadata?.version ?? '1.0.0';
+  const isLegacyPreset = isBeforeParamFormatV2(presetVersion)
+    && partial.metadata?.unit_system !== 'microns';
+  const base = cloneDeep(isLegacyPreset ? LEGACY_DEFAULT_EHT_PARAMS : DEFAULT_EHT_PARAMS);
 
   // Merge general params
   if (partial.general) {
@@ -302,12 +330,9 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
     base.metadata = { ...base.metadata, ...partial.metadata };
   }
 
-  // Detect input version for migration-aware merging
-  const presetVersion = partial.metadata?.version ?? '1.0.0';
-
   // Strip fields from defaults that only exist in later versions,
   // so the migration chain can add them properly
-  if (presetVersion < '1.2.0') {
+  if (compareVersionStrings(presetVersion, '1.2.0') < 0) {
     delete (base.general as unknown as Record<string, unknown>).default_events;
   }
 
@@ -322,10 +347,10 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
     for (const [typeName, typeParams] of Object.entries(partial.cell_types)) {
       if (typeParams) {
         // Use existing cell type as base if it exists, otherwise use DEFAULT_CONTROL_CELL
-        const baseType = base.cell_types[typeName] ?? cloneDeep(DEFAULT_CONTROL_CELL);
+        const baseType = base.cell_types[typeName] ?? cloneDeep(isLegacyPreset ? LEGACY_DEFAULT_CONTROL_CELL : DEFAULT_CONTROL_CELL);
         // For pre-v1.1.0 presets, remove events_v2 and skip_default_events from the base
         // so migration can convert the legacy v1 events properly
-        if (presetVersion < '1.1.0') {
+        if (compareVersionStrings(presetVersion, '1.1.0') < 0) {
           delete (baseType as unknown as Record<string, unknown>).events_v2;
           delete (baseType as unknown as Record<string, unknown>).skip_default_events;
         }
@@ -334,8 +359,39 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
     }
   }
 
-  // Apply migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0 → v1.4.0 → v1.5.0
-  return ensureV1_5_0(ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(base)))));
+  // Apply migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0 → v1.4.0 → v1.5.0 → v2.0.0
+  return ensureV2_0(ensureV1_5_0(ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(base))))));
+}
+
+function promisedEricPerimeter(relativePath: string): number | undefined {
+  const match = relativePath.match(/\((\d+)\s*µ?m\)/);
+  return match ? Number(match[1]) : undefined;
+}
+
+function annotatePresetUnits(parsed: PartialEHTParams, group: string, relativePath: string): void {
+  if (!group.startsWith('eric')) return;
+
+  parsed.metadata = {
+    ...parsed.metadata,
+    unit_system: 'microns',
+    migration_notes: [
+      ...(parsed.metadata?.migration_notes ?? []),
+      'Eric preset curated as an already micron-profile parameter file.',
+    ],
+  };
+
+  const promisedPerimeter = promisedEricPerimeter(relativePath);
+  const rawPerimeter = parsed.general?.perimeter;
+  if (
+    promisedPerimeter !== undefined
+    && typeof rawPerimeter === 'number'
+    && Math.abs(rawPerimeter - promisedPerimeter) > 1e-9
+  ) {
+    parsed.metadata.curation_warnings = [
+      ...(parsed.metadata.curation_warnings ?? []),
+      `Eric preset path promises perimeter ${promisedPerimeter} microns but file contains ${rawPerimeter}.`,
+    ];
+  }
 }
 
 // Load all TOML presets at build time using Vite's import.meta.glob
@@ -372,6 +428,7 @@ function parsePresets(): PresetMeta[] {
       const label = parsed.label ?? filename;
       // Remove label from params (it's metadata, not a param)
       delete (parsed as Record<string, unknown>).label;
+      annotatePresetUnits(parsed, group, relativePath);
 
       presets.push({ key, label, group, params: parsed });
     } catch (e) {

@@ -71,6 +71,15 @@ function ParameterConfigBody({
   onTimeSamplesChange,
   onSeedsChange,
 }: ParameterConfigBodyProps) {
+  const metadata = config.params.metadata as {
+    version?: string;
+    migrated_from?: string;
+    migration_notes?: string[];
+    curation_warnings?: string[];
+    unit_system?: string;
+  } | undefined;
+  const curationWarnings = metadata?.curation_warnings ?? [];
+
   return (
     <div className="space-y-4">
       {/* File Operations - compact toolbar */}
@@ -129,6 +138,22 @@ function ParameterConfigBody({
           <Link2 className="h-3.5 w-3.5" />
           {linkCopied ? 'Copied!' : 'Share'}
         </Button>
+      </div>
+
+      <div className="space-y-1 text-xs" data-testid="parameter-format-summary">
+        <div className="flex flex-wrap items-center gap-2 text-muted-foreground">
+          <span className="rounded border bg-muted px-2 py-0.5 font-medium text-foreground">
+            Parameter format v{metadata?.version ?? 'unknown'}
+          </span>
+          {metadata?.unit_system === 'microns' && <span>Length fields in microns</span>}
+          {metadata?.migrated_from && <span>Migrated from v{metadata.migrated_from}</span>}
+        </div>
+        {curationWarnings.length > 0 && (
+          <div className="rounded border border-yellow-500/30 bg-yellow-500/10 px-2 py-1 text-yellow-700 dark:text-yellow-400">
+            {curationWarnings[0]}
+            {curationWarnings.length > 1 && ` (${curationWarnings.length - 1} more)`}
+          </div>
+        )}
       </div>
 
       <Separator />
