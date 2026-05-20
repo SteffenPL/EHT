@@ -580,7 +580,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
   }, [addCellType, copyFromType]);
 
   return (
-    <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+    <div className="overflow-x-auto" data-testid="cell-types-table-scroll">
       <div className="flex justify-end items-center gap-2 mb-2">
         <span className="text-xs text-muted-foreground">Copy from:</span>
         <Select value={copyFromType || '__new__'} onValueChange={setCopyFromType}>

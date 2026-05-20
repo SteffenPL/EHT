@@ -58,14 +58,14 @@ function AppContent() {
 
   return (
     <AppLayout>
-      <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-4">
-        <section>
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <section className="min-w-0">
           <SingleSimulationTab />
         </section>
-        <section>
+        <section className="min-w-0">
           <ParameterConfigView config={config} onConfigChange={handleConfigChange} />
         </section>
-        <section className="lg:col-span-2">
+        <section className="min-w-0 lg:col-span-2">
           <BatchTab config={config} onConfigChange={handleConfigChange} />
         </section>
       </div>

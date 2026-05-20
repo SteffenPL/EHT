@@ -3,12 +3,13 @@
  * Handles unified load/save to TOML so all values stay together.
  */
 import { useRef, useState } from 'react';
-import { Upload, Download, FileSpreadsheet, Link2 } from 'lucide-react';
+import { Download, FileSpreadsheet, Link2, Maximize2, Upload } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
 import { Separator } from '../ui/separator';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import {
   Select,
   SelectContent,
@@ -33,12 +34,206 @@ export interface ParameterConfigViewProps {
   disabled?: boolean;
 }
 
+interface ParameterConfigBodyProps {
+  config: SimulationConfig;
+  disabled?: boolean;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  xlsxInputRef: React.RefObject<HTMLInputElement | null>;
+  isImporting: boolean;
+  linkCopied: boolean;
+  presetOptions: typeof PARAM_PRESETS;
+  onLoadConfig: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onImportXLSX: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onSaveConfig: () => void;
+  onCopyShareLink: () => void;
+  onApplyPreset: (key: string) => void;
+  onParamsChange: (params: BaseSimulationParams) => void;
+  onRangesChange: (parameterRanges: SimulationConfig['parameterRanges']) => void;
+  onTimeSamplesChange: (timeSamples: SimulationConfig['timeSamples']) => void;
+  onSeedsChange: (value: string) => void;
+}
+
+function ParameterConfigBody({
+  config,
+  disabled,
+  fileInputRef,
+  xlsxInputRef,
+  isImporting,
+  linkCopied,
+  presetOptions,
+  onLoadConfig,
+  onImportXLSX,
+  onSaveConfig,
+  onCopyShareLink,
+  onApplyPreset,
+  onParamsChange,
+  onRangesChange,
+  onTimeSamplesChange,
+  onSeedsChange,
+}: ParameterConfigBodyProps) {
+  return (
+    <div className="space-y-4">
+      {/* File Operations - compact toolbar */}
+      <div className="flex gap-1.5 items-center flex-wrap">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".toml"
+          onChange={onLoadConfig}
+          className="hidden"
+        />
+        <input
+          ref={xlsxInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={onImportXLSX}
+          className="hidden"
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled}
+          className="h-7 text-xs gap-1.5"
+        >
+          <Upload className="h-3.5 w-3.5" />
+          Load
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onSaveConfig}
+          disabled={disabled}
+          className="h-7 text-xs gap-1.5"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Save
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => xlsxInputRef.current?.click()}
+          disabled={disabled || isImporting}
+          className="h-7 text-xs gap-1.5"
+        >
+          <FileSpreadsheet className="h-3.5 w-3.5" />
+          {isImporting ? 'Importing...' : 'XLSX'}
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCopyShareLink}
+          disabled={disabled}
+          className="h-7 text-xs gap-1.5"
+        >
+          <Link2 className="h-3.5 w-3.5" />
+          {linkCopied ? 'Copied!' : 'Share'}
+        </Button>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-1">
+        <Label className="text-sm font-medium">Select preset</Label>
+        <Select onValueChange={onApplyPreset} disabled={disabled}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Choose a preset" />
+          </SelectTrigger>
+          <SelectContent>
+            {(() => {
+              // Group presets by their group path
+              const grouped = new Map<string, typeof presetOptions>();
+              for (const preset of presetOptions) {
+                const group = (preset as { group?: string }).group ?? '';
+                if (!grouped.has(group)) grouped.set(group, []);
+                grouped.get(group)!.push(preset);
+              }
+              const elements: React.ReactNode[] = [];
+              for (const [group, items] of grouped) {
+                if (group === '') {
+                  // Root-level presets without a group header
+                  for (const preset of items) {
+                    elements.push(
+                      <SelectItem key={preset.key} value={preset.key}>
+                        {preset.label}
+                      </SelectItem>
+                    );
+                  }
+                } else {
+                  elements.push(
+                    <SelectGroup key={group}>
+                      <SelectLabel className="text-xs text-muted-foreground">{group}</SelectLabel>
+                      {items.map((preset) => (
+                        <SelectItem key={preset.key} value={preset.key}>
+                          {preset.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  );
+                }
+              }
+              return elements;
+            })()}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator />
+
+      <div className="border rounded-md" data-testid="model-parameter-panel-frame">
+        <ModelParameterPanel
+          params={config.params}
+          onChange={onParamsChange}
+          batchSetupContent={
+            <>
+              <ParameterRangeList
+                ranges={config.parameterRanges}
+                onChange={onRangesChange}
+                baseParams={config.params}
+                disabled={disabled}
+              />
+
+              <Separator />
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Batch Sampling</Label>
+                <TimeSampleConfig
+                  config={config.timeSamples}
+                  onChange={onTimeSamplesChange}
+                  disabled={disabled}
+                />
+                <div className="space-y-1">
+                  <Label htmlFor="seeds" className="text-xs text-muted-foreground">
+                    Seeds per configuration
+                  </Label>
+                  <Input
+                    id="seeds"
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={config.seedsPerConfig}
+                    onChange={(e) => onSeedsChange(e.target.value)}
+                    disabled={disabled}
+                    className="h-8 w-32"
+                  />
+                </div>
+              </div>
+            </>
+          }
+          disabled={disabled}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function ParameterConfigView({ config, onConfigChange, disabled }: ParameterConfigViewProps) {
   const { currentModel } = useModel();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
   const presetOptions = PARAM_PRESETS;
 
   const applyPreset = (key: string) => {
@@ -135,162 +330,67 @@ export function ParameterConfigView({ config, onConfigChange, disabled }: Parame
     }
   };
 
+  const body = (
+    <ParameterConfigBody
+      config={config}
+      disabled={disabled}
+      fileInputRef={fileInputRef}
+      xlsxInputRef={xlsxInputRef}
+      isImporting={isImporting}
+      linkCopied={linkCopied}
+      presetOptions={presetOptions}
+      onLoadConfig={handleLoadConfig}
+      onImportXLSX={handleImportXLSX}
+      onSaveConfig={handleSaveConfig}
+      onCopyShareLink={handleCopyShareLink}
+      onApplyPreset={applyPreset}
+      onParamsChange={handleParamsChange}
+      onRangesChange={handleRangesChange}
+      onTimeSamplesChange={handleTimeSamplesChange}
+      onSeedsChange={handleSeedsChange}
+    />
+  );
+
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-3">
+    <Card className="h-full overflow-hidden">
+      <CardHeader className="pb-3 flex-row items-center justify-between gap-3 space-y-0">
         <CardTitle className="text-base">Parameters &amp; Ranges</CardTitle>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsMaximized(true)}
+          className="h-7 text-xs gap-1.5"
+        >
+          <Maximize2 className="h-3.5 w-3.5" />
+          Maximize
+        </Button>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* File Operations - compact toolbar */}
-        <div className="flex gap-1.5 items-center flex-wrap">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".toml"
-            onChange={handleLoadConfig}
-            className="hidden"
-          />
-          <input
-            ref={xlsxInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleImportXLSX}
-            className="hidden"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled}
-            className="h-7 text-xs gap-1.5"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Load
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSaveConfig}
-            disabled={disabled}
-            className="h-7 text-xs gap-1.5"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Save
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => xlsxInputRef.current?.click()}
-            disabled={disabled || isImporting}
-            className="h-7 text-xs gap-1.5"
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5" />
-            {isImporting ? 'Importing...' : 'XLSX'}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopyShareLink}
-            disabled={disabled}
-            className="h-7 text-xs gap-1.5"
-          >
-            <Link2 className="h-3.5 w-3.5" />
-            {linkCopied ? 'Copied!' : 'Share'}
-          </Button>
-        </div>
-
-        <Separator />
-
-        <div className="space-y-1">
-          <Label className="text-sm font-medium">Select preset</Label>
-          <Select onValueChange={applyPreset} disabled={disabled}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Choose a preset" />
-            </SelectTrigger>
-            <SelectContent>
-              {(() => {
-                // Group presets by their group path
-                const grouped = new Map<string, typeof presetOptions>();
-                for (const preset of presetOptions) {
-                  const group = (preset as { group?: string }).group ?? '';
-                  if (!grouped.has(group)) grouped.set(group, []);
-                  grouped.get(group)!.push(preset);
-                }
-                const elements: React.ReactNode[] = [];
-                for (const [group, items] of grouped) {
-                  if (group === '') {
-                    // Root-level presets without a group header
-                    for (const preset of items) {
-                      elements.push(
-                        <SelectItem key={preset.key} value={preset.key}>
-                          {preset.label}
-                        </SelectItem>
-                      );
-                    }
-                  } else {
-                    elements.push(
-                      <SelectGroup key={group}>
-                        <SelectLabel className="text-xs text-muted-foreground">{group}</SelectLabel>
-                        {items.map((preset) => (
-                          <SelectItem key={preset.key} value={preset.key}>
-                            {preset.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    );
-                  }
-                }
-                return elements;
-              })()}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Separator />
-
-        <div className="h-[min(500px,calc(100vh-320px))] min-h-[300px] border rounded-md overflow-hidden relative">
-          <ModelParameterPanel
-            params={config.params}
-            onChange={handleParamsChange}
-            disabled={disabled}
-          />
-        </div>
-
-        <Separator />
-
-        <ParameterRangeList
-          ranges={config.parameterRanges}
-          onChange={handleRangesChange}
-          baseParams={config.params}
-          disabled={disabled}
-        />
-
-        <Separator />
-
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Batch Sampling</Label>
-          <TimeSampleConfig
-            config={config.timeSamples}
-            onChange={handleTimeSamplesChange}
-            disabled={disabled}
-          />
-          <div className="space-y-1">
-            <Label htmlFor="seeds" className="text-xs text-muted-foreground">
-              Seeds per configuration
-            </Label>
-            <Input
-              id="seeds"
-              type="number"
-              min={1}
-              step={1}
-              value={config.seedsPerConfig}
-              onChange={(e) => handleSeedsChange(e.target.value)}
-              disabled={disabled}
-              className="h-8 w-32"
-            />
-          </div>
+      <CardContent className="p-0">
+        <div
+          data-testid="parameter-workspace-scroll"
+          className="h-[min(78vh,900px)] min-h-[520px] overflow-y-auto overflow-x-hidden px-6 pb-4 pt-0"
+        >
+          {!isMaximized && body}
         </div>
       </CardContent>
+
+      <Dialog open={isMaximized} onOpenChange={setIsMaximized}>
+        <DialogContent className="w-[min(1280px,calc(100vw-2rem))] max-w-none max-h-[92vh] gap-0 overflow-hidden p-0">
+          <div className="flex max-h-[92vh] min-h-0 flex-col">
+            <div className="border-b bg-background px-4 py-3 pr-14">
+              <DialogHeader>
+                <DialogTitle>Parameters &amp; Ranges</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Edit parameters, parameter ranges, and batch sampling in a larger workspace.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4" data-testid="parameter-workspace-modal-scroll">
+              {body}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
