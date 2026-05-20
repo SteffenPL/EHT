@@ -176,6 +176,7 @@ function ExternalForceCell({
   constants,
   initialPerimeter,
   initialAspectRatio,
+  softRadius,
   error,
 }: {
   value: string;
@@ -186,6 +187,7 @@ function ExternalForceCell({
   constants: Record<string, number>;
   initialPerimeter: number;
   initialAspectRatio: number;
+  softRadius: number;
   error?: string;
 }) {
   const [editorOpen, setEditorOpen] = useState(false);
@@ -228,6 +230,7 @@ function ExternalForceCell({
         context="external_force"
         initialPerimeter={initialPerimeter}
         initialAspectRatio={initialAspectRatio}
+        softRadius={softRadius}
         onSave={(formula) => onChange(formula.trim() || '0')}
         onClear={() => onChange('0')}
       />
@@ -856,6 +859,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                   constants={params.constants ?? {}}
                   initialPerimeter={params.general.perimeter}
                   initialAspectRatio={params.general.aspect_ratio}
+                  softRadius={getCellType(key).R_soft}
                   error={error}
                 />
               );

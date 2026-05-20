@@ -16,7 +16,10 @@ import { Vector2 } from '@/core/math/vector2';
 import { FORMULA_PRESETS, type FormulaPreset } from '@/models/eht/params/formula-presets';
 import { computeEllipseFromPerimeter } from '@/models/eht/params/geometry';
 import { formulaFunctions } from '@/models/eht/simulation/formula-functions';
-import { evaluateExternalForceAtPosition } from '@/models/eht/simulation/external-force-formula';
+import {
+  evaluateExternalForceAtPosition,
+  getExternalForceEffectiveFormula,
+} from '@/models/eht/simulation/external-force-formula';
 import { FormulaSpatialExplainer } from './FormulaSpatialExplainer';
 import { variablesForContext } from './formulaVariables';
 
@@ -34,6 +37,7 @@ interface FormulaEditorDialogProps {
   context: FormulaContext;
   initialPerimeter?: number;
   initialAspectRatio?: number;
+  softRadius?: number;
   onSave: (formula: string) => void;
   onClear: () => void;
 }
@@ -312,7 +316,7 @@ function FunctionsPanel({
 export function FormulaEditorDialog({
   open, onOpenChange, fieldName: _fieldName, label,
   formula: initialFormula, currentNumericValue, tEnd,
-  constants, context, initialPerimeter, initialAspectRatio, onSave, onClear,
+  constants, context, initialPerimeter, initialAspectRatio, softRadius, onSave, onClear,
 }: FormulaEditorDialogProps) {
   const [formula, setFormula] = useState(initialFormula);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -380,6 +384,11 @@ export function FormulaEditorDialog({
     }
   }, [formula, context, currentNumericValue, constants, tEnd, initialPerimeter, initialAspectRatio]);
 
+  const effectiveFormula = useMemo(() => {
+    if (context !== 'external_force') return null;
+    return getExternalForceEffectiveFormula(formula.trim() || '0').effectiveFormula;
+  }, [context, formula]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(1180px,calc(100vw-2rem))] max-w-none max-h-[92vh] gap-0 overflow-hidden p-0">
@@ -431,6 +440,12 @@ export function FormulaEditorDialog({
                 {formulaError && (
                   <p className="mt-1 text-xs text-destructive">{formulaError}</p>
                 )}
+                {effectiveFormula && (
+                  <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 text-xs">
+                    <span className="mr-2 font-medium text-muted-foreground">Effective formula</span>
+                    <code className="font-mono text-foreground">{effectiveFormula}</code>
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -446,6 +461,7 @@ export function FormulaEditorDialog({
                         constants={constants}
                         initialPerimeter={initialPerimeter}
                         initialAspectRatio={initialAspectRatio}
+                        softRadius={softRadius}
                       />
                     ) : (
                       <GraphPreview

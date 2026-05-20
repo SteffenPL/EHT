@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { createBasalGeometry, type BasalGeometry } from '@/core/math/basal-geometry';
 import { Vector2 } from '@/core/math/vector2';
+import { Slider } from '@/components/ui/slider';
 import { computeEllipseFromPerimeter } from '@/models/eht/params/geometry';
 import {
   buildExternalForceScope,
@@ -17,6 +18,7 @@ interface FormulaSpatialExplainerProps {
   constants?: Record<string, number>;
   initialPerimeter?: number;
   initialAspectRatio?: number;
+  softRadius?: number;
 }
 
 interface Point {
@@ -27,11 +29,12 @@ interface Point {
 const CENTER = { x: 300, y: 220 };
 const DEFAULT_PERIMETER = 105;
 const DEFAULT_ASPECT_RATIO = 1;
+const DEFAULT_SOFT_RADIUS = 6;
 const MIN_PERIMETER = 20;
 const MAX_PERIMETER = 900;
 const MIN_ASPECT_RATIO = -3;
 const MAX_ASPECT_RATIO = 3;
-const FIELD_SAMPLE_COUNT = 20;
+const FIELD_SAMPLE_COUNT = 16;
 const FORCE_COLOR = '#60a5fa';
 
 function clamp(value: number, min: number, max: number): number {
@@ -80,44 +83,72 @@ function formulaErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function nucleusPositionForAlpha(
+function basalPositionForAlpha(
   a: number,
   b: number,
   alpha: number,
-  lineHalfWidth: number,
-  lineHalfHeight: number
+  lineHalfWidth: number
 ): Vector2 {
   if (!Number.isFinite(a) || !Number.isFinite(b)) {
-    return new Vector2(
-      Math.sin(alpha) * lineHalfWidth * 0.72,
-      -Math.cos(alpha) * lineHalfHeight * 0.72
-    );
+    return new Vector2(Math.sin(alpha) * lineHalfWidth * 0.88, 0);
   }
 
   const sinAlpha = Math.sin(alpha);
   const cosAlpha = Math.cos(alpha);
   const boundaryRadius = 1 / Math.sqrt((sinAlpha * sinAlpha) / (a * a) + (cosAlpha * cosAlpha) / (b * b));
-  const nucleusRadius = boundaryRadius * 0.78;
-  return new Vector2(nucleusRadius * sinAlpha, -nucleusRadius * cosAlpha);
+  return new Vector2(boundaryRadius * sinAlpha, -boundaryRadius * cosAlpha);
 }
 
-function sampleFieldPositions(geometry: BasalGeometry, offset: number, lineHalfWidth: number): Vector2[] {
+function positionForAlphaDelta(
+  geometry: BasalGeometry,
+  a: number,
+  b: number,
+  alpha: number,
+  delta: number,
+  lineHalfWidth: number
+): Vector2 {
+  const basalPoint = basalPositionForAlpha(a, b, alpha, lineHalfWidth);
+  const projectedPoint = geometry.projectPoint(basalPoint);
+  const normal = geometry.getNormal(projectedPoint);
+  return projectedPoint.add(normal.scale(delta));
+}
+
+function radialDirection(point: Vector2): Vector2 {
+  const toCenter = Vector2.zero().sub(point);
+  if (toCenter.mag() <= 1e-9) {
+    return new Vector2(0, 1);
+  }
+  return toCenter.normalize();
+}
+
+function sampleFieldPositions(
+  geometry: BasalGeometry,
+  offset: number,
+  lineHalfWidth: number,
+  a: number,
+  b: number
+): Vector2[] {
   const positions: Vector2[] = [];
 
   if (geometry.type === 'line') {
-    for (let i = 0; i < FIELD_SAMPLE_COUNT; i++) {
-      const t = i / (FIELD_SAMPLE_COUNT - 1);
-      const basalPoint = new Vector2(-lineHalfWidth + t * lineHalfWidth * 2, 0);
-      const normal = geometry.getNormal(basalPoint);
-      positions.push(basalPoint.add(normal.scale(offset)));
+    for (const signedOffset of [-offset, offset]) {
+      for (let i = 0; i < FIELD_SAMPLE_COUNT; i++) {
+        const t = (i + 0.5) / FIELD_SAMPLE_COUNT;
+        const basalPoint = new Vector2(-lineHalfWidth + t * lineHalfWidth * 2, 0);
+        const normal = geometry.getNormal(basalPoint);
+        positions.push(basalPoint.add(normal.scale(signedOffset)));
+      }
     }
     return positions;
   }
 
-  for (let i = 0; i < FIELD_SAMPLE_COUNT; i++) {
-    const basalPoint = geometry.getPointAtArcLength((i / FIELD_SAMPLE_COUNT) * geometry.perimeter);
-    const normal = geometry.getNormal(basalPoint);
-    positions.push(basalPoint.add(normal.scale(offset)));
+  for (const direction of [1, -1]) {
+    for (let i = 0; i < FIELD_SAMPLE_COUNT; i++) {
+      const alpha = -Math.PI + ((i + 0.5) / FIELD_SAMPLE_COUNT) * 2 * Math.PI;
+      const basalPoint = geometry.projectPoint(basalPositionForAlpha(a, b, alpha, lineHalfWidth));
+      const towardCenter = radialDirection(basalPoint);
+      positions.push(basalPoint.add(towardCenter.scale(offset * direction)));
+    }
   }
   return positions;
 }
@@ -185,6 +216,46 @@ function Control({
   );
 }
 
+function SliderControl({
+  label,
+  value,
+  min,
+  max,
+  step,
+  suffix,
+  help,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  suffix?: string;
+  help: ReactNode;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center justify-between gap-3 text-xs font-semibold">
+        <span>{label}</span>
+        <output className="font-mono text-primary">
+          {format(value, step >= 1 ? 0 : 2)}
+          {suffix ? ` ${suffix}` : ''}
+        </output>
+      </label>
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={[value]}
+        onValueChange={([next]) => onChange(next ?? value)}
+      />
+      <p className="text-[11px] leading-snug text-muted-foreground">{help}</p>
+    </div>
+  );
+}
+
 export function FormulaSpatialExplainer({
   className,
   compact = false,
@@ -192,6 +263,7 @@ export function FormulaSpatialExplainer({
   constants,
   initialPerimeter,
   initialAspectRatio,
+  softRadius,
 }: FormulaSpatialExplainerProps) {
   const markerPrefix = useId().replace(/:/g, '');
   const [perimeter, setPerimeter] = useState(() =>
@@ -201,19 +273,24 @@ export function FormulaSpatialExplainer({
     clamp(initialAspectRatio ?? DEFAULT_ASPECT_RATIO, MIN_ASPECT_RATIO, MAX_ASPECT_RATIO)
   );
   const [alphaDegrees, setAlphaDegrees] = useState(45);
+  const [time, setTime] = useState(0);
+  const [delta, setDelta] = useState(12);
 
   const model = useMemo(() => {
     const { a, b, curvature_1, curvature_2 } = computeEllipseFromPerimeter(perimeter, aspectRatio);
     const basalGeometry = createBasalGeometry(curvature_1, curvature_2, 360);
     const visibleHalfWidth = Number.isFinite(a) ? a : perimeter / 2;
     const visibleHalfHeight = Number.isFinite(b) ? b : Math.max(12, perimeter * 0.22);
+    const deltaLimit = Math.max(5, Math.min(visibleHalfWidth, visibleHalfHeight) * 0.6);
+    const previewDelta = clamp(delta, -deltaLimit, deltaLimit);
+    const fieldOffset = Math.max(2, 2 * (softRadius ?? DEFAULT_SOFT_RADIUS));
     const scale = Math.min(
-      220 / Math.max(visibleHalfWidth, 1),
-      150 / Math.max(visibleHalfHeight, 1)
+      220 / Math.max(visibleHalfWidth + fieldOffset, 1),
+      150 / Math.max(visibleHalfHeight + fieldOffset, 1)
     );
     const alpha = (alphaDegrees * Math.PI) / 180;
-    const nucleus = nucleusPositionForAlpha(a, b, alpha, visibleHalfWidth, visibleHalfHeight);
-    const spatial = buildExternalForceScope(nucleus, basalGeometry, 0, constants);
+    const nucleus = positionForAlphaDelta(basalGeometry, a, b, alpha, previewDelta, visibleHalfWidth);
+    const spatial = buildExternalForceScope(nucleus, basalGeometry, time, constants);
     const safeFormula = formula?.trim() || '0';
     let selectedEvaluation: ExternalForceEvaluation | null = null;
     let previewError: string | null = null;
@@ -223,17 +300,14 @@ export function FormulaSpatialExplainer({
         formula: safeFormula,
         position: nucleus,
         basalGeometry,
-        t: 0,
+        t: time,
         constants,
       });
     } catch (error) {
       previewError = formulaErrorMessage(error);
     }
 
-    const offset = basalGeometry.type === 'line'
-      ? Math.max(4, visibleHalfHeight * 0.3)
-      : Math.max(2, Math.min(visibleHalfWidth, visibleHalfHeight) * 0.22);
-    const field = sampleFieldPositions(basalGeometry, offset, visibleHalfWidth).map((position) => {
+    const field = sampleFieldPositions(basalGeometry, fieldOffset, visibleHalfWidth, a, b).map((position) => {
       try {
         return {
           position,
@@ -241,7 +315,7 @@ export function FormulaSpatialExplainer({
             formula: safeFormula,
             position,
             basalGeometry,
-            t: 0,
+            t: time,
             constants,
           }),
         };
@@ -264,13 +338,16 @@ export function FormulaSpatialExplainer({
       maxForceMagnitude,
       nucleus,
       previewError,
+      previewDelta,
       scale,
       selectedEvaluation,
       spatial,
+      deltaLimit,
+      fieldOffset,
       visibleHalfHeight,
       visibleHalfWidth,
     };
-  }, [alphaDegrees, aspectRatio, constants, formula, perimeter]);
+  }, [alphaDegrees, aspectRatio, constants, delta, formula, perimeter, softRadius, time]);
 
   const nucleusScreen = simToScreen(model.nucleus, model.scale);
   const projectionScreen = simToScreen(model.spatial.projectedPoint, model.scale);
@@ -287,24 +364,24 @@ export function FormulaSpatialExplainer({
 
   return (
     <section className={cn('rounded-md border bg-card p-3 text-card-foreground', className)}>
-      <div className={cn('grid gap-3', compact ? 'lg:grid-cols-[1fr_260px]' : 'lg:grid-cols-[minmax(0,1fr)_320px]')}>
+      <div className="space-y-3">
         <div className="rounded-md border bg-background p-2">
           <svg viewBox="0 0 600 440" role="img" aria-label="Formula spatial variable explainer" className="aspect-[1.35/1] w-full">
             <defs>
-              <marker id={`${markerPrefix}-formula-arrow-blue`} markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-                <path d="M0,0 L0,6 L9,3 z" fill={FORCE_COLOR} />
+              <marker id={`${markerPrefix}-formula-arrow-blue`} markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+                <path d="M0,0 L0,5 L7,2.5 z" fill={FORCE_COLOR} />
               </marker>
-              <marker id={`${markerPrefix}-formula-arrow-teal`} markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-                <path d="M0,0 L0,6 L9,3 z" fill="#0f766e" />
+              <marker id={`${markerPrefix}-formula-arrow-teal`} markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+                <path d="M0,0 L0,5 L7,2.5 z" fill="#0f766e" />
               </marker>
-              <marker id={`${markerPrefix}-formula-arrow-gold`} markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-                <path d="M0,0 L0,6 L9,3 z" fill="#b7791f" />
+              <marker id={`${markerPrefix}-formula-arrow-gold`} markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+                <path d="M0,0 L0,5 L7,2.5 z" fill="#b7791f" />
               </marker>
-              <marker id={`${markerPrefix}-formula-arrow-red`} markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-                <path d="M0,0 L0,6 L9,3 z" fill="#a4493f" />
+              <marker id={`${markerPrefix}-formula-arrow-red`} markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+                <path d="M0,0 L0,5 L7,2.5 z" fill="#a4493f" />
               </marker>
-              <marker id={`${markerPrefix}-formula-arrow-violet`} markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-                <path d="M0,0 L0,6 L9,3 z" fill="#6b5ca5" />
+              <marker id={`${markerPrefix}-formula-arrow-violet`} markerWidth="7" markerHeight="7" refX="6" refY="2.5" orient="auto">
+                <path d="M0,0 L0,5 L7,2.5 z" fill="#6b5ca5" />
               </marker>
             </defs>
 
@@ -320,7 +397,8 @@ export function FormulaSpatialExplainer({
                 strokeWidth="3"
               />
             )}
-            <path d={geometryPath(model.basalGeometry, model.scale, model.visibleHalfWidth)} fill="none" stroke="hsl(var(--muted-foreground))" strokeWidth="5" strokeLinecap="round" />
+            <path d={geometryPath(model.basalGeometry, model.scale, model.visibleHalfWidth)} fill="none" stroke="hsl(var(--background))" strokeWidth="6" strokeLinecap="round" />
+            <path d={geometryPath(model.basalGeometry, model.scale, model.visibleHalfWidth)} fill="none" stroke="hsl(var(--foreground))" strokeWidth="3" strokeLinecap="round" />
             <line x1={CENTER.x - model.visibleHalfWidth * model.scale - 18} y1={CENTER.y} x2={CENTER.x + model.visibleHalfWidth * model.scale + 18} y2={CENTER.y} stroke="hsl(var(--border))" strokeWidth="2" strokeDasharray="6 6" />
             <line x1={CENTER.x} y1={CENTER.y - model.visibleHalfHeight * model.scale - 18} x2={CENTER.x} y2={CENTER.y + model.visibleHalfHeight * model.scale + 18} stroke="hsl(var(--border))" strokeWidth="2" strokeDasharray="6 6" />
             <line x1={CENTER.x} y1={CENTER.y} x2={boundaryScreen.x} y2={boundaryScreen.y} stroke="#6b5ca5" strokeWidth="2" strokeDasharray="4 5" />
@@ -340,8 +418,8 @@ export function FormulaSpatialExplainer({
                   x2={end.x}
                   y2={end.y}
                   stroke={FORCE_COLOR}
-                  strokeWidth="2.5"
-                  strokeOpacity="0.55"
+                  strokeWidth="2"
+                  strokeOpacity="0.6"
                   markerEnd={`url(#${markerPrefix}-formula-arrow-blue)`}
                 />
               ) : (
@@ -351,7 +429,7 @@ export function FormulaSpatialExplainer({
 
             <line x1={CENTER.x} y1={CENTER.y} x2={nucleusScreen.x} y2={nucleusScreen.y} stroke="#6b5ca5" strokeWidth="3" strokeDasharray="5 5" markerEnd={`url(#${markerPrefix}-formula-arrow-violet)`} />
             {hasSelectedForce && (
-              <line x1={nucleusScreen.x} y1={nucleusScreen.y} x2={forceEnd.x} y2={forceEnd.y} stroke={FORCE_COLOR} strokeWidth="5" markerEnd={`url(#${markerPrefix}-formula-arrow-blue)`} />
+              <line x1={nucleusScreen.x} y1={nucleusScreen.y} x2={forceEnd.x} y2={forceEnd.y} stroke={FORCE_COLOR} strokeWidth="4" markerEnd={`url(#${markerPrefix}-formula-arrow-blue)`} />
             )}
             <line x1={projectionScreen.x} y1={projectionScreen.y} x2={nucleusScreen.x} y2={nucleusScreen.y} stroke="#b7791f" strokeWidth="3" strokeDasharray="5 5" markerEnd={`url(#${markerPrefix}-formula-arrow-gold)`} />
             <line x1={projectionScreen.x} y1={projectionScreen.y} x2={nEnd.x} y2={nEnd.y} stroke="#0f766e" strokeWidth="4" markerEnd={`url(#${markerPrefix}-formula-arrow-teal)`} />
@@ -376,42 +454,70 @@ export function FormulaSpatialExplainer({
         </div>
 
         <aside className="space-y-3 rounded-md border bg-muted/30 p-3">
-          <div>
-            <h3 className="text-sm font-semibold">Mapping controls</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              These controls only affect the explainer. They show how formula variables are mapped from a sample nucleus position.
-            </p>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold">Mapping controls</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                These controls only affect the explainer. The arrow bands are fixed at 2 x R_soft toward and away from the center.
+              </p>
+            </div>
+            <div className="rounded-md border bg-background px-2 py-1 text-xs">
+              <span className="text-muted-foreground">t</span>
+              <span className="ml-2 font-mono text-primary">{format(time, 1)} h</span>
+            </div>
           </div>
 
-          <Control
-            label="Perimeter"
-            value={perimeter}
-            min={MIN_PERIMETER}
-            max={MAX_PERIMETER}
-            step={5}
-            suffix="um"
-            help={<>Starts from <code>general.perimeter</code> and rescales the preview to fit.</>}
-            onChange={setPerimeter}
-          />
-          <Control
-            label="Aspect ratio"
-            value={aspectRatio}
-            min={MIN_ASPECT_RATIO}
-            max={MAX_ASPECT_RATIO}
-            step={0.05}
-            help={<>Uses <code>aspect_ratio = b/a</code>. 0 is a straight line; 1 is a circle.</>}
-            onChange={setAspectRatio}
-          />
-          <Control
-            label="Alpha"
-            value={alphaDegrees}
-            min={-180}
-            max={180}
-            step={1}
-            suffix="deg"
-            help={<>Moves the nucleus using <code>alpha = atan2(x, -y)</code>.</>}
-            onChange={setAlphaDegrees}
-          />
+          <div className={cn('grid gap-3', compact ? 'md:grid-cols-2 xl:grid-cols-5' : 'md:grid-cols-2 lg:grid-cols-5')}>
+            <Control
+              label="Perimeter"
+              value={perimeter}
+              min={MIN_PERIMETER}
+              max={MAX_PERIMETER}
+              step={5}
+              suffix="um"
+              help={<>Starts from <code>general.perimeter</code> and rescales the preview to fit.</>}
+              onChange={setPerimeter}
+            />
+            <Control
+              label="Aspect ratio"
+              value={aspectRatio}
+              min={MIN_ASPECT_RATIO}
+              max={MAX_ASPECT_RATIO}
+              step={0.05}
+              help={<>Uses <code>aspect_ratio = b/a</code>. 0 is a straight line; 1 is a circle.</>}
+              onChange={setAspectRatio}
+            />
+            <Control
+              label="Alpha"
+              value={alphaDegrees}
+              min={-180}
+              max={180}
+              step={1}
+              suffix="deg"
+              help={<>Chooses a basal point using <code>alpha = atan2(x, -y)</code>.</>}
+              onChange={setAlphaDegrees}
+            />
+            <Control
+              label="Time"
+              value={time}
+              min={0}
+              max={120}
+              step={0.5}
+              suffix="h"
+              help={<>Sets <code>t</code> for time-dependent formulas.</>}
+              onChange={setTime}
+            />
+            <SliderControl
+              label="Delta"
+              value={model.previewDelta}
+              min={-model.deltaLimit}
+              max={model.deltaLimit}
+              step={0.5}
+              suffix="um"
+              help={<>Moves only the highlighted nucleus point along <code>N</code>.</>}
+              onChange={setDelta}
+            />
+          </div>
 
           <dl className="grid grid-cols-2 gap-2 text-xs">
             <div className="rounded-md border bg-background p-2">
@@ -453,6 +559,14 @@ export function FormulaSpatialExplainer({
             <div className="rounded-md border bg-background p-2">
               <dt className="font-semibold uppercase text-muted-foreground">force</dt>
               <dd className="font-mono">({format(force.x, 2)}, {format(force.y, 2)})</dd>
+            </div>
+            <div className="rounded-md border bg-background p-2">
+              <dt className="font-semibold uppercase text-muted-foreground">t</dt>
+              <dd className="font-mono">{format(time, 1)} h</dd>
+            </div>
+            <div className="rounded-md border bg-background p-2">
+              <dt className="font-semibold uppercase text-muted-foreground">field offset</dt>
+              <dd className="font-mono">2 x R_soft = {format(model.fieldOffset)} um</dd>
             </div>
           </dl>
 
