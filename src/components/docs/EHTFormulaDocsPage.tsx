@@ -9,7 +9,12 @@ export function EHTFormulaDocsPage({ content }: { content: string }) {
         <p className="mt-2 text-muted-foreground">
           Adjust perimeter, aspect ratio, and alpha to see how a sample nucleus position and the surrounding vector field map to formula variables.
         </p>
-        <FormulaSpatialExplainer className="mt-4" />
+        <FormulaSpatialExplainer
+          className="mt-4"
+          initialPerimeter={420}
+          initialAspectRatio={1.25}
+          softRadius={14}
+        />
       </section>
     </MarkdownPage>
   );

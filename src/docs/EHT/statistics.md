@@ -2,6 +2,12 @@
 
 Statistics are computed per cell and then aggregated (mean or fraction) over cell groups. Groups include individual cell types (e.g., `control`, `emt`) and `all`. **Note:** Pair combinations (e.g., `control+emt`) are not computed.
 
+## Units
+
+- Position and length statistics are reported in **microns**.
+- Position ratios (`x`) and boolean fractions are **unitless** (0–1).
+- `below_control_cells` is a threshold-based fraction and therefore unitless.
+
 ## Cell Groups
 
 Statistics are computed for the following groups:
@@ -31,6 +37,8 @@ For each cell with nucleus **X**, apical point **A**, and basal point **B**:
 - **a**: Projection of X onto the apical line strip (formed by connected apical points)
 - **b**: Projection of X onto the basal curve
 
+Both are coordinates in **microns**.
+
 ## Statistics Definitions
 
 ### ab_distance
@@ -38,6 +46,8 @@ For each cell with nucleus **X**, apical point **A**, and basal point **B**:
 **Apical-Basal Distance**
 
 $$\text{ab\_distance} = |A - B|$$
+
+Unit: **µm**
 
 The Euclidean distance between the apical and basal points. Measures the cell's vertical extent.
 
@@ -47,6 +57,8 @@ The Euclidean distance between the apical and basal points. Measures the cell's 
 
 $$AX = |A - X|$$
 
+Unit: **µm**
+
 Distance from the apical point to the nucleus.
 
 ### BX
@@ -54,6 +66,8 @@ Distance from the apical point to the nucleus.
 **Basal-Nucleus Distance**
 
 $$BX = |B - X|$$
+
+Unit: **µm**
 
 Distance from the basal point to the nucleus.
 
@@ -63,6 +77,8 @@ Distance from the basal point to the nucleus.
 
 $$ax = |X - a|$$
 
+Unit: **µm**
+
 Distance from the nucleus to its projection onto the apical line strip. Measures how far the nucleus is from the apical surface.
 
 ### bx
@@ -71,6 +87,8 @@ Distance from the nucleus to its projection onto the apical line strip. Measures
 
 $$bx = |X - b|$$
 
+Unit: **µm**
+
 Distance from the nucleus to its projection onto the basal curve. Measures how far the nucleus is from the basal membrane.
 
 ### x
@@ -78,6 +96,8 @@ Distance from the nucleus to its projection onto the basal curve. Measures how f
 **Position on Basal-Apical Scale**
 
 $$x = \frac{(X - b) \cdot (a - b)}{|a - b|^2}$$
+
+Unit: **unitless**
 
 Normalized position of the nucleus between basal (x=0) and apical (x=1) projections:
 - x = 0: Nucleus at basal level
@@ -91,6 +111,8 @@ Normalized position of the nucleus between basal (x=0) and apical (x=1) projecti
 
 $$\text{below\_basal} = \begin{cases} 1 & \text{if } x < 0 \\ 0 & \text{otherwise} \end{cases}$$
 
+Unit: **unitless** (0 or 1)
+
 Binary indicator (0 or 1) for whether the cell's nucleus is below the basal layer. Aggregated as fraction over cell group.
 
 ### above_apical
@@ -99,6 +121,8 @@ Binary indicator (0 or 1) for whether the cell's nucleus is below the basal laye
 
 $$\text{above\_apical} = \begin{cases} 1 & \text{if } x > 1 \\ 0 & \text{otherwise} \end{cases}$$
 
+Unit: **unitless** (0 or 1)
+
 Binary indicator for whether the cell's nucleus is above the apical layer. Aggregated as fraction over cell group.
 
 ### below_control_cells
@@ -106,6 +130,8 @@ Binary indicator for whether the cell's nucleus is above the apical layer. Aggre
 **Fraction Below Lowest Control Cell**
 
 $$\text{below\_control\_cells} = \begin{cases} 1 & \text{if } bx < \min_{c \in \text{control (non-boundary)}} bx_c \\ 0 & \text{otherwise} \end{cases}$$
+
+Unit: **unitless** (0 or 1)
 
 Binary indicator for whether the cell's basal distance (bx) is less than the minimum bx among all non-boundary control cells. This identifies cells that have migrated below the control cell population. **Note:** Boundary control cells are excluded when computing the minimum control cell bx.
 
@@ -119,7 +145,9 @@ Statistics are exported with the naming convention `{statistic}_{group}`.
 - `below_basal_emt`: Fraction of emt cells below basal layer
 - `below_control_cells_emt`: Fraction of emt cells below the lowest control cell
 
-**Total statistics count:**
-- For N cell types: `9 metrics × (N + 1) groups`
+## Total statistics count
+
+For N cell types: `9 metrics × (N + 1) groups`
+
 - Example: 2 cell types → 27 statistics (9 × 3 groups: all, control, emt)
 - Example: 3 cell types → 36 statistics (9 × 4 groups: all, control, emt, counter_control)
