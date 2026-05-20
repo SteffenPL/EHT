@@ -2,7 +2,11 @@ import { SimulationEngine } from '../simulation/engine';
 import { setNestedValue } from '../params';
 import { modelRegistry } from '../registry';
 import { OffscreenRenderer } from '../export/offscreenRenderer';
-import { createVideoEncoder, type IVideoEncoder, type VideoFormat } from '../export/videoEncoder';
+import {
+  createVideoEncoder,
+  getVideoFormatInfo,
+  type IVideoEncoder,
+} from '../export/videoEncoder';
 import { ZipBuilder } from '../export/zipBuilder';
 import { stringify as stringifyToml } from '@iarna/toml';
 import { batchSnapshotsToCSV, statisticsToCSV } from './serialization';
@@ -191,7 +195,7 @@ export async function runBatchExport(
           estimateFinalFrame(endTime, params),
           'Video frames'
         );
-        videoEncoder = createVideoEncoder(exportConfig.videos.format as VideoFormat, {
+        videoEncoder = createVideoEncoder(exportConfig.videos.format, {
           width: exportConfig.videos.resolution,
           height: exportConfig.videos.resolution,
           frameRate: exportConfig.videos.frameRate,
@@ -347,9 +351,9 @@ export async function runBatchExport(
           message: `Encoding video for run ${runNumber}...`,
         });
 
-        const ext = exportConfig.videos.format === 'webm' ? 'webm' : 'mp4';
+        const { extension } = getVideoFormatInfo(exportConfig.videos.format);
         const movieBlob = await videoEncoder.finish();
-        zipBuilder.addFile(`${runDir}/movie.${ext}`, movieBlob);
+        zipBuilder.addFile(`${runDir}/movie.${extension}`, movieBlob);
       }
     }
   }

@@ -7,13 +7,30 @@ import {
   ArrayBufferTarget as WebMArrayBufferTarget,
 } from 'webm-muxer';
 
-export type VideoFormat = 'mp4' | 'mp4-av1' | 'webm';
+export type VideoFormat = 'mp4' | 'mp4-av1' | 'webm' | 'webm-vp9' | 'webm-vp8';
 
 export interface VideoEncoderOptions {
   width: number;
   height: number;
   frameRate: number;
   bitrate?: number; // bits per second, defaults based on resolution
+}
+
+export interface VideoFormatInfo {
+  extension: 'mp4' | 'webm';
+  mimeType: string;
+}
+
+const VIDEO_FORMAT_INFO: Record<VideoFormat, VideoFormatInfo> = {
+  mp4: { extension: 'mp4', mimeType: 'video/mp4' },
+  'mp4-av1': { extension: 'mp4', mimeType: 'video/mp4' },
+  webm: { extension: 'webm', mimeType: 'video/webm' },
+  'webm-vp9': { extension: 'webm', mimeType: 'video/webm' },
+  'webm-vp8': { extension: 'webm', mimeType: 'video/webm' },
+};
+
+export function getVideoFormatInfo(format: VideoFormat): VideoFormatInfo {
+  return VIDEO_FORMAT_INFO[format];
 }
 
 /**
@@ -363,9 +380,11 @@ export class WebMVideoEncoder implements IVideoEncoder {
   private frameCount = 0;
   private isFinished = false;
   private encodePromises: Promise<void>[] = [];
+  private preferredCodec: 'vp09.00.10.08' | 'vp8' | null;
 
-  constructor(options: VideoEncoderOptions) {
+  constructor(options: VideoEncoderOptions, preferredCodec?: 'vp09.00.10.08' | 'vp8') {
     this.options = options;
+    this.preferredCodec = preferredCodec ?? null;
   }
 
   /**
@@ -395,21 +414,36 @@ export class WebMVideoEncoder implements IVideoEncoder {
 
     // Try VP9 codec configurations
     const codecConfigs = [
-      {
-        codec: 'vp09.00.10.08', // VP9 Profile 0
-        name: 'VP9',
-        hardwareAcceleration: 'prefer-hardware' as const,
-      },
-      {
-        codec: 'vp09.00.10.08',
-        name: 'VP9 (Software)',
-        hardwareAcceleration: 'prefer-software' as const,
-      },
-      {
-        codec: 'vp8',
-        name: 'VP8',
-        hardwareAcceleration: 'prefer-hardware' as const,
-      },
+      ...(this.preferredCodec === 'vp8'
+        ? [
+          {
+            codec: 'vp8',
+            name: 'VP8',
+            hardwareAcceleration: 'prefer-hardware' as const,
+          },
+          {
+            codec: 'vp8',
+            name: 'VP8 (Software)',
+            hardwareAcceleration: 'prefer-software' as const,
+          },
+        ]
+        : [
+          {
+            codec: 'vp09.00.10.08', // VP9 Profile 0
+            name: 'VP9',
+            hardwareAcceleration: 'prefer-hardware' as const,
+          },
+          {
+            codec: 'vp09.00.10.08',
+            name: 'VP9 (Software)',
+            hardwareAcceleration: 'prefer-software' as const,
+          },
+          {
+            codec: 'vp8',
+            name: 'VP8',
+            hardwareAcceleration: 'prefer-hardware' as const,
+          },
+        ]),
     ];
 
     let selectedConfig: VideoEncoderConfig | null = null;
@@ -870,7 +904,7 @@ export class MP4AV1VideoEncoder implements IVideoEncoder {
 
 /**
  * Factory function to create a video encoder for the specified format.
- * @param format The video format ('mp4', 'mp4-av1', or 'webm')
+ * @param format The video format
  * @param options Encoder options (resolution, framerate, etc.)
  * @returns A video encoder instance
  */
@@ -880,6 +914,10 @@ export function createVideoEncoder(format: VideoFormat, options: VideoEncoderOpt
       return new MP4VideoEncoder(options);
     case 'mp4-av1':
       return new MP4AV1VideoEncoder(options);
+    case 'webm-vp8':
+      return new WebMVideoEncoder(options, 'vp8');
+    case 'webm-vp9':
+      return new WebMVideoEncoder(options, 'vp09.00.10.08');
     case 'webm':
       return new WebMVideoEncoder(options);
     default:

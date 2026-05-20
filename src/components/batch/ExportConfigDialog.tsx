@@ -353,7 +353,9 @@ export function ExportConfigDialog({
                     className="h-8 px-2 rounded-md border border-input bg-background text-sm"
                   >
                     <option value="mp4">MP4 (H.264)</option>
-                    <option value="webm">WebM (VP9)</option>
+                    <option value="webm">WebM (Auto)</option>
+                    <option value="webm-vp9">WebM (VP9)</option>
+                    <option value="webm-vp8">WebM (VP8)</option>
                     <option value="mp4-av1">MP4 (AV1)</option>
                   </select>
                 </div>

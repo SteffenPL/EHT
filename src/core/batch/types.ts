@@ -76,7 +76,7 @@ export interface BatchExportDialogConfig {
     /** Inclusive simulation frame range. null end = through the final simulation frame. */
     frameStart: number;
     frameEnd: number | null;
-    format: 'mp4' | 'webm' | 'mp4-av1';
+    format: 'mp4' | 'webm' | 'webm-vp9' | 'webm-vp8' | 'mp4-av1';
     maxSamples: number | null;
     seedsPerSample: number | null;
   };

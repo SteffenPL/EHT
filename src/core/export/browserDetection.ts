@@ -1,6 +1,7 @@
 /**
  * Browser detection utilities for video export.
  */
+import type { VideoFormat } from './videoEncoder';
 
 export interface BrowserInfo {
   name: 'chrome' | 'firefox' | 'safari' | 'edge' | 'other';
@@ -87,12 +88,12 @@ export function detectBrowser(): BrowserInfo {
 /**
  * Get recommended video format for the current browser.
  */
-export function getRecommendedVideoFormat(): 'mp4' | 'mp4-av1' | 'webm' {
+export function getRecommendedVideoFormat(): VideoFormat {
   const browser = detectBrowser();
 
   // Firefox: recommend WebM due to H.264 encoding bugs
   if (browser.isFirefox) {
-    return 'webm';
+    return 'webm-vp9';
   }
 
   // Safari: only supports MP4/H.264, not WebM
@@ -113,12 +114,16 @@ export function getFormatRecommendationMessage(): string | null {
   if (browser.isFirefox) {
     return (
       'Firefox users: We recommend WebM (VP9) format due to known H.264 encoding issues in Firefox. ' +
-      'To convert to MP4 later, use: ffmpeg -i video.webm -c:v libx264 -crf 23 video.mp4'
+      'To convert to MP4 later, use: ffmpeg -i video.webm -c:v libx264 -crf 23 video.mp4. ' +
+      'If compatibility issues remain, re-encode the file with HandBrake using a standard H.264 preset.'
     );
   }
 
   if (browser.isSafari && browser.version && browser.version < 16) {
-    return 'Your Safari version may not support video recording. Please update to Safari 16.4 or later.';
+    return (
+      'Your Safari version may not support video recording. Please update to Safari 16.4 or later. ' +
+      'If compatibility issues remain, re-encode the file with HandBrake using a standard H.264 preset.'
+    );
   }
 
   return null;

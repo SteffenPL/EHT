@@ -213,7 +213,10 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
         console.log('Export cancelled');
       } else {
         console.error('Export failed:', err);
-        alert('Export failed. Check console for details.');
+        alert(
+          'Export failed. Check console for details. If the selected video format keeps causing compatibility issues,\n' +
+          'try a different WebM codec (VP9/VP8) or re-encode the exported movie files in HandBrake using a standard H.264 preset.'
+        );
       }
       setExportProgress(null);
     } finally {

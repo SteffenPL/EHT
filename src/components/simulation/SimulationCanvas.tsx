@@ -8,6 +8,7 @@ import { useTheme, useModel } from '@/contexts';
 import type { BaseSimulationParams } from '../../core/registry';
 import {
   createVideoEncoder,
+  getVideoFormatInfo,
   isMP4Supported,
   isMP4AV1Supported,
   isWebMSupported,
@@ -131,7 +132,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
         isFinishingRef.current = false;
 
         // Return blob with appropriate MIME type
-        const mimeType = format === 'mp4' ? 'video/mp4' : 'video/webm';
+        const { mimeType } = getVideoFormatInfo(format);
         return { blob, mimeType };
       } catch (error) {
         console.error('Failed to finalize video:', error);

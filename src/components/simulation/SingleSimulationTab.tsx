@@ -8,7 +8,7 @@ import { SimulationCanvas, type SimulationCanvasRef } from './SimulationCanvas';
 import { SimulationControls } from './SimulationControls';
 import { FrameStatsPanel } from './FrameStatsPanel';
 import { Card } from '../ui/card';
-import type { VideoFormat } from '@/core/export/videoEncoder';
+import { getVideoFormatInfo, type VideoFormat } from '@/core/export/videoEncoder';
 import { getRecommendedVideoFormat, getFormatRecommendationMessage } from '@/core/export/browserDetection';
 
 /**
@@ -84,7 +84,7 @@ function SingleSimulationTabInner() {
         if (result) {
           const { blob } = result;
           // Get file extension based on format
-          const extension = videoFormat === 'webm' ? 'webm' : 'mp4';
+          const { extension } = getVideoFormatInfo(videoFormat);
           const link = document.createElement('a');
           link.download = `simulation_${time.toFixed(2)}h.${extension}`;
           link.href = URL.createObjectURL(blob);
@@ -112,9 +112,12 @@ function SingleSimulationTabInner() {
         if (videoFormat === 'mp4-av1') {
           formatName = 'MP4 (AV1)';
           supportInfo = 'Chrome 90+, Edge 90+ (Safari not supported)';
-        } else if (videoFormat === 'webm') {
+        } else if (videoFormat === 'webm' || videoFormat === 'webm-vp9' || videoFormat === 'webm-vp8') {
           formatName = 'WebM (VP9)';
           supportInfo = 'Chrome 94+, Edge 94+ (Safari not supported)';
+          if (videoFormat === 'webm-vp8') {
+            formatName = 'WebM (VP8)';
+          }
         }
 
         let errorMessage = `Failed to start ${formatName} recording. Your browser may not support this format.\n\nSupported browsers: ${supportInfo}`;
@@ -124,7 +127,8 @@ function SingleSimulationTabInner() {
           errorMessage += '\n\n⚠️ Firefox has known issues with H.264 and AV1 encoding.\n';
           errorMessage += '✅ Solution: Select "WebM (VP9)" format instead.\n';
           errorMessage += '\n💡 To convert WebM to MP4 later, use:\n';
-          errorMessage += 'ffmpeg -i video.webm -c:v libx264 -crf 23 video.mp4';
+          errorMessage += 'ffmpeg -i video.webm -c:v libx264 -crf 23 video.mp4\n';
+          errorMessage += 'If compatibility issues remain, you can re-encode with HandBrake using a standard H.264 preset.';
         }
 
         alert(errorMessage);

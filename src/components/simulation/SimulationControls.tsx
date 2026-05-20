@@ -177,7 +177,9 @@ export function SimulationControls({
                 <SelectContent>
                   <SelectItem value="mp4">MP4 (H.264)</SelectItem>
                   <SelectItem value="mp4-av1">MP4 (AV1)</SelectItem>
-                  <SelectItem value="webm">WebM (VP9)</SelectItem>
+                  <SelectItem value="webm">WebM (Auto)</SelectItem>
+                  <SelectItem value="webm-vp9">WebM (VP9)</SelectItem>
+                  <SelectItem value="webm-vp8">WebM (VP8)</SelectItem>
                 </SelectContent>
               </Select>
             )}
