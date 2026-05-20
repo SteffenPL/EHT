@@ -42,7 +42,7 @@ export function StatsPanel({
         <CardTitle className="text-base">Statistics</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {currentModel?.id === 'eht' && (
+        {currentModel?.id?.toLowerCase() === 'eht' && (
           <p className="text-xs text-muted-foreground">
             Distance statistics use legacy engine units (1 unit = 5 microns). Ratios and fractions are unitless.
           </p>

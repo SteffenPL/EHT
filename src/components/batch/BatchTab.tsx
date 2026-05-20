@@ -491,7 +491,8 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const availableXAxisOptions = resultsColumns.filter(
     col => col === 'time_h' || (col.includes('.') && !['run_index', 'seed', 'cell_group'].includes(col))
   );
-  const selectedPlotStatistic = currentModel?.id === 'eht' && plotYAxis
+  const isEHTModel = currentModel?.id?.toLowerCase() === 'eht';
+  const selectedPlotStatistic = isEHTModel && plotYAxis
     ? getEHTStatisticMetadata(plotYAxis)
     : undefined;
 
@@ -852,25 +853,27 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
                     />
                   </div>
 
-                  {currentModel?.id === 'eht' && (
+                  {plotYAxis && (
                     <aside className="rounded-md border border-border bg-background p-3 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-medium">
                           {selectedPlotStatistic ? selectedPlotStatistic.title : plotYAxis}
                         </span>
-                        <a
-                          href="#/docs/eht/statistics"
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs font-medium text-primary underline-offset-2 hover:underline"
-                        >
-                          Open statistics docs
-                        </a>
+                        {isEHTModel && (
+                          <a
+                            href="#/docs/eht/statistics"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+                          >
+                            Open statistics docs
+                          </a>
+                        )}
                       </div>
                       <p className="mt-2 text-muted-foreground">
                         {selectedPlotStatistic
                           ? selectedPlotStatistic.description
-                          : 'No description is available for the selected Y-axis statistic.'}
+                          : `Selected Y-axis statistic: ${plotYAxis}.`}
                       </p>
                       {selectedPlotStatistic && (
                         <p className="mt-2 text-xs text-muted-foreground">
