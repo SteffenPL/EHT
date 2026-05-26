@@ -2,7 +2,7 @@
 
 EHT parameter files with `metadata.version = "2.0.0"` store length-like values in **microns**. This includes the initial width and height, screen bounds, perimeter, cell radii, cytoskeleton and junction lengths, running speed, diffusion, and batch ranges that target those paths.
 
-The current mechanics still run in the legacy internal scale where one simulation unit represents 5 microns. The EHT model wrapper converts v2 public params to that legacy engine view before initialization, timesteps, rendering bounds, snapshot loading, and statistics. This keeps existing trajectories stable while making saved TOML files readable as physical micron values.
+The current mechanics still run in the legacy internal scale where one simulation unit represents 5 microns. The EHT model wrapper converts v2 public params to that legacy engine view before initialization, timesteps, rendering bounds, and snapshot loading. Statistics convert distance-like outputs back to microns at the output boundary. This keeps existing trajectories stable while making saved TOML files and statistics readable as physical micron values.
 
 ## Units after conversion
 
@@ -51,4 +51,4 @@ Eric presets are treated as curated micron-profile inputs. Their public `general
 
 ## Outputs
 
-CSV snapshots, statistics rows, and saved simulation state coordinates remain engine-facing in this step. A future micron-native or output-conversion pass can change those surfaces separately.
+CSV snapshots and saved simulation state coordinates remain engine-facing because they are restartable state. Statistics rows and per-cell metric coordinates are reported in microns.

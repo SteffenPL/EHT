@@ -674,7 +674,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              All available statistics will be computed for all cell groups. EHT distance statistics use legacy engine units (1 unit = 5 microns); ratios and fractions are unitless.
+              All available statistics will be computed for all cell groups. EHT distance statistics are reported in microns; ratios and fractions are unitless.
             </p>
 
             <div className="flex gap-4 items-center">

@@ -179,7 +179,7 @@ function SingleSimulationTabInner() {
           k => k !== 'cell_id'
         );
 
-        // Build merged row: id, then metrics (including cell_type), then rest of snapshot
+        // Build merged row: id, snapshot state, then computed metrics where names overlap.
         const { id, typeIndex: _typeIndex, ...restSnapshot } = row as Record<string, unknown>;
         const metricValues: Record<string, unknown> = {};
         for (const k of metricKeys) {
@@ -189,7 +189,7 @@ function SingleSimulationTabInner() {
         // Use cell_type from metrics as typeIndex if available, otherwise use original
         const typeIndex = metricRow.cell_type ?? _typeIndex;
 
-        return { id, typeIndex, ...metricValues, ...restSnapshot };
+        return { id, typeIndex, ...restSnapshot, ...metricValues };
       });
     }
 

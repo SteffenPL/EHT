@@ -19,7 +19,7 @@ tags: [eht, parameter-migration, unit-conversion, compatibility-adapter, toml, s
 
 EHT parameter files used a mix of public-looking length values and legacy engine units where one engine unit represented 5 microns. Width, height, perimeter, radii, running speed, diffusion, junction distances, presets, batch ranges, formulas, rendering, and statistics all touched these values in different places. The requested change was to make parameter files and the editor use microns while preserving existing simulation behavior.
 
-The important constraint was that this was not the micron-native mechanics step. Force formulas and runtime mechanics still depend on the current engine scale, and formulas depending on `R_soft` must keep the same effective behavior. Output rows and statistics also remain engine-facing until a later outward conversion layer is designed.
+The important constraint was that this was not the micron-native mechanics step. Force formulas and runtime mechanics still depend on the current engine scale, and formulas depending on `R_soft` must keep the same effective behavior. Restartable output rows remain engine-facing, while statistics now use an outward conversion layer so user-facing distance outputs are microns.
 
 ## Guidance
 
@@ -29,10 +29,11 @@ The durable shape for EHT is:
 
 - `src/models/eht/params/unit-conversion.ts` owns `LEGACY_MICRONS_PER_UNIT = 5`, `EHT_PARAM_FORMAT_VERSION = "2.0.0"`, and the path catalog for length-like fields.
 - `src/models/eht/params/migration-v2.0.ts` migrates legacy params to v2 public microns and adds provenance or curation warnings.
-- `src/models/eht/compat/engine-params.ts` converts public v2 params back to legacy engine units for simulation, rendering, stats, snapshots loaded with params, and batch workers.
+- `src/models/eht/compat/engine-params.ts` converts public v2 params back to legacy engine units for simulation, rendering, snapshot loading, and batch workers.
 - `src/models/eht/compat/formula-units.ts` exposes micron-facing scope values for length-target formulas, then converts their result back to engine units.
 - UI labels and TOML exports stay public micron-facing.
-- Snapshots, per-cell metrics, statistics, and simulation state coordinates stay engine-facing for this step.
+- Snapshots and simulation state coordinates stay engine-facing for restart/load compatibility.
+- Per-cell metric coordinates and distance-like statistics scale outward to microns before display or CSV export.
 
 The adapter is intentionally model-local:
 
@@ -66,7 +67,7 @@ const publicState = EHTHeadlessModel.init(DEFAULT_EHT_PARAMS, seed);
 expect(sampleSnapshot(publicState)).toEqual(sampleSnapshot(legacyState));
 ```
 
-Keep the output-unit decision visible. It is easy for users to assume that once parameter files are micron-facing, statistics are also micron-facing. In this step they are not: distance-like stats such as `ab_distance`, `AX`, `BX`, `ax`, and `bx` are still computed from engine-state coordinates. Multiply those by 5 to interpret them as microns until an explicit output conversion pass exists.
+Keep the output-unit decision visible. It is easy for users to assume that once parameter files are micron-facing, statistics are also micron-facing. Distance-like stats such as `ab_distance`, `AX`, `BX`, `ax`, and `bx` are still derived from engine-state coordinates, but the statistics layer multiplies them by the legacy 5 microns-per-unit factor before exposing them.
 
 ## Why This Matters
 
@@ -76,7 +77,7 @@ The explicit catalog also prevents accidental coupling to `R_soft`. `R_soft` is 
 
 Formula handling needs a separate compatibility surface because saved formula text is user-authored scientific content. Rewriting formulas symbolically would be fragile. Evaluating length-target formulas with public-scope length variables preserves the saved v2 meaning while feeding equivalent engine values to runtime mechanics.
 
-Output units deserve their own plan because exports are user-facing scientific data. Silently converting statistics during a parameter-file migration would change downstream analysis assumptions. Leaving them engine-facing is less surprising if it is documented and tested.
+Output units deserve their own plan because exports are user-facing scientific data. When changing them, convert at the statistics/export boundary, update labels and docs in the same patch, and add tests that prove distance values are micron-facing while ratios and fractions remain unitless.
 
 ## When to Apply
 
@@ -111,9 +112,9 @@ Formula-bearing files:
 
 Statistics and exports:
 
-- `ab_distance`, `AX`, `BX`, `ax`, `bx`, and per-cell coordinate exports are engine-facing.
+- `ab_distance`, `AX`, `BX`, `ax`, `bx`, and per-cell coordinate metric exports are micron-facing.
 - `x`, `below_basal`, `above_apical`, and `below_control_cells` are unitless.
-- A later output conversion plan should decide whether to add micron-facing export columns, rename existing columns, or preserve both.
+- Restartable snapshots remain engine-facing.
 
 ## Related
 

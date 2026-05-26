@@ -13,11 +13,11 @@ export function statsCommand(_args: string[]): void {
 
   console.log('\nAvailable Statistics\n');
   console.log('Use these IDs with --stats when running simulations.\n');
-  console.log('Units: EHT distance statistics are reported in legacy engine units (1 unit = 5 microns). Multiply distance-like outputs by 5 for microns; ratios and fractions are unitless.\n');
+  console.log('Units: EHT distance statistics are reported in microns; ratios and fractions are unitless.\n');
 
   // Group statistics by category
   const categories: Record<string, typeof stats> = {
-    'Distances (engine units)': stats.filter((s) =>
+    'Distances (microns)': stats.filter((s) =>
       s.id.startsWith('ab_distance_') ||
       s.id.startsWith('AX_') ||
       s.id.startsWith('BX_') ||

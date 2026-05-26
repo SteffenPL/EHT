@@ -15,7 +15,7 @@ export const EHT_STATISTIC_METADATA: EHTStatisticMetadata[] = [
     title: 'Apical-Basal Distance',
     description: "The Euclidean distance between the apical and basal points. Measures the cell's vertical extent.",
     formula: String.raw`\text{ab\_distance} = |A - B|`,
-    unit: 'legacy engine units (multiply by 5 for microns)',
+    unit: 'microns',
     notes: [],
   },
   {
@@ -24,7 +24,7 @@ export const EHT_STATISTIC_METADATA: EHTStatisticMetadata[] = [
     title: 'Apical-Nucleus Distance',
     description: 'Distance from the apical point to the nucleus.',
     formula: String.raw`AX = |A - X|`,
-    unit: 'legacy engine units (multiply by 5 for microns)',
+    unit: 'microns',
     notes: [],
   },
   {
@@ -33,7 +33,7 @@ export const EHT_STATISTIC_METADATA: EHTStatisticMetadata[] = [
     title: 'Basal-Nucleus Distance',
     description: 'Distance from the basal point to the nucleus.',
     formula: String.raw`BX = |B - X|`,
-    unit: 'legacy engine units (multiply by 5 for microns)',
+    unit: 'microns',
     notes: [],
   },
   {
@@ -42,7 +42,7 @@ export const EHT_STATISTIC_METADATA: EHTStatisticMetadata[] = [
     title: 'Nucleus to Apical Strip Distance',
     description: 'Distance from the nucleus to its projection onto the apical line strip. Measures how far the nucleus is from the apical surface.',
     formula: String.raw`ax = |X - a|`,
-    unit: 'legacy engine units (multiply by 5 for microns)',
+    unit: 'microns',
     notes: [],
   },
   {
@@ -51,7 +51,7 @@ export const EHT_STATISTIC_METADATA: EHTStatisticMetadata[] = [
     title: 'Nucleus to Basal Curve Distance',
     description: 'Distance from the nucleus to its projection onto the basal curve. Measures how far the nucleus is from the basal membrane.',
     formula: String.raw`bx = |X - b|`,
-    unit: 'legacy engine units (multiply by 5 for microns)',
+    unit: 'microns',
     notes: [],
   },
   {
@@ -100,4 +100,3 @@ export const EHT_STATISTIC_METADATA: EHTStatisticMetadata[] = [
 export function getEHTStatisticMetadata(id: string): EHTStatisticMetadata | undefined {
   return EHT_STATISTIC_METADATA.find((stat) => stat.id === id);
 }
-

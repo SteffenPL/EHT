@@ -2,8 +2,9 @@
  * EHT model statistics definitions.
  * Computes comprehensive statistics for all cell groups.
  *
- * Length-like statistics are computed from simulation-state coordinates in
- * legacy engine units. One engine unit represents 5 microns.
+ * Length-like statistics are reported in public microns. The simulation state
+ * still stores coordinates in legacy engine units, so distance and coordinate
+ * outputs are scaled at this outward boundary.
  */
 
 import type { StatisticDefinition } from '@/core/registry/types';
@@ -13,6 +14,7 @@ import { Vector2 } from '@/core/math/vector2';
 import { createBasalGeometry } from '@/core/math';
 import { projectOntoApicalStrip, projectOntoBasalCurve } from './simulation/projections';
 import { EHT_STATISTIC_METADATA } from './statistics-metadata';
+import { LEGACY_MICRONS_PER_UNIT } from './params/unit-conversion';
 
 /**
  * Per-cell computed values for statistics.
@@ -35,6 +37,13 @@ interface CellMetrics {
   isBoundary: boolean;          // Is this control cell in the boundary (left/right 10%)
   effectiveType: string;        // Effective type for statistics ('control_boundary' for boundary cells)
 }
+
+const toMicrons = (value: number): number => value * LEGACY_MICRONS_PER_UNIT;
+
+const vectorToMicrons = (value: Vector2): { x: number; y: number } => ({
+  x: toMicrons(value.x),
+  y: toMicrons(value.y),
+});
 
 /**
  * Get a working BasalGeometry instance from state.
@@ -246,11 +255,11 @@ function aggregateMetrics(metrics: CellMetrics[]): Record<string, number> {
   const fraction = (values: boolean[]) => values.filter(v => v).length / values.length;
 
   return {
-    ab_distance: mean(metrics.map(m => m.A.dist(m.B))),
-    AX: mean(metrics.map(m => m.AX)),
-    BX: mean(metrics.map(m => m.BX)),
-    ax: mean(metrics.map(m => m.ax)),
-    bx: mean(metrics.map(m => m.bx)),
+    ab_distance: toMicrons(mean(metrics.map(m => m.A.dist(m.B)))),
+    AX: toMicrons(mean(metrics.map(m => m.AX))),
+    BX: toMicrons(mean(metrics.map(m => m.BX))),
+    ax: toMicrons(mean(metrics.map(m => m.ax))),
+    bx: toMicrons(mean(metrics.map(m => m.bx))),
     x: mean(metrics.map(m => m.x)),
     below_basal: fraction(metrics.map(m => m.below_basal)),
     above_apical: fraction(metrics.map(m => m.above_apical)),
@@ -273,7 +282,7 @@ export function computeEHTStatistics(
     const abDist = state.cells.length > 0
       ? state.cells.reduce((sum, c) => sum + Vector2.from(c.A).dist(Vector2.from(c.B)), 0) / state.cells.length
       : 0;
-    result['ab_distance_all'] = abDist;
+    result['ab_distance_all'] = toMicrons(abDist);
     return result;
   }
 
@@ -310,29 +319,37 @@ export function exportCellMetrics(
 ): Array<Record<string, any>> {
   const cellMetrics = computeCellMetrics(state, params);
 
-  return cellMetrics.map((m, idx) => ({
-    cell_id: idx,
-    cell_type: m.effectiveType, // Use effectiveType instead of original typeIndex
-    X_x: m.X.x,
-    X_y: m.X.y,
-    A_x: m.A.x,
-    A_y: m.A.y,
-    B_x: m.B.x,
-    B_y: m.B.y,
-    a_x: m.a.x,
-    a_y: m.a.y,
-    b_x: m.b.x,
-    b_y: m.b.y,
-    ab_distance: m.A.dist(m.B),
-    AX: m.AX,
-    BX: m.BX,
-    ax: m.ax,
-    bx: m.bx,
-    x: m.x,
-    below_basal: m.below_basal ? 1 : 0,
-    above_apical: m.above_apical ? 1 : 0,
-    below_control_cells: m.below_control_cells ? 1 : 0,
-  }));
+  return cellMetrics.map((m, idx) => {
+    const X = vectorToMicrons(m.X);
+    const A = vectorToMicrons(m.A);
+    const B = vectorToMicrons(m.B);
+    const a = vectorToMicrons(m.a);
+    const b = vectorToMicrons(m.b);
+
+    return {
+      cell_id: idx,
+      cell_type: m.effectiveType, // Use effectiveType instead of original typeIndex
+      X_x: X.x,
+      X_y: X.y,
+      A_x: A.x,
+      A_y: A.y,
+      B_x: B.x,
+      B_y: B.y,
+      a_x: a.x,
+      a_y: a.y,
+      b_x: b.x,
+      b_y: b.y,
+      ab_distance: toMicrons(m.A.dist(m.B)),
+      AX: toMicrons(m.AX),
+      BX: toMicrons(m.BX),
+      ax: toMicrons(m.ax),
+      bx: toMicrons(m.bx),
+      x: m.x,
+      below_basal: m.below_basal ? 1 : 0,
+      above_apical: m.above_apical ? 1 : 0,
+      below_control_cells: m.below_control_cells ? 1 : 0,
+    };
+  });
 }
 
 /**

@@ -4,10 +4,9 @@ Statistics are computed per cell and then aggregated (mean or fraction) over cel
 
 ## Units
 
-- Position and length statistics are computed from the current simulation state in **legacy engine units**, where **1 engine unit = 5 microns**.
-- To interpret distance-like outputs in microns, multiply the reported value by 5.
+- Position and length statistics are reported in **microns**.
 - This applies to `ab_distance`, `AX`, `BX`, `ax`, `bx`, and the per-cell coordinate columns exported by the frame statistics table (`X_*`, `A_*`, `B_*`, `a_*`, `b_*`).
-- This is intentionally different from v2 parameter files, where length-like inputs are stored in microns. See [Parameter Format v2](#/docs/eht/parameter-format-v2) for the input/output boundary.
+- The simulation engine still stores coordinates in its compatibility scale internally, but statistics convert distance-like outputs to microns before display or CSV export. See [Parameter Format v2](#/docs/eht/parameter-format-v2) for the input/runtime boundary.
 - Position ratios (`x`) and boolean fractions are **unitless** (0-1).
 - `below_control_cells` is a threshold-based fraction and therefore unitless.
 
@@ -38,7 +37,7 @@ For each cell with nucleus **X**, apical point **A**, and basal point **B**:
 - **a**: Projection of X onto the apical line strip (formed by connected apical points)
 - **b**: Projection of X onto the basal curve
 
-Both are coordinates in **legacy engine units**.
+Both are reported in **microns**.
 
 ## Statistics Definitions
 

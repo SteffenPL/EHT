@@ -2,7 +2,7 @@
  * Tests for EHT statistics computation with multiple cell types.
  */
 import { describe, it, expect } from 'vitest';
-import { computeEHTStatistics, generateEHTStatistics } from './statistics';
+import { computeEHTStatistics, generateEHTStatistics, exportCellMetrics } from './statistics';
 import type { EHTSimulationState, CellState } from './types';
 import type { EHTParams } from './params/types';
 import { DEFAULT_EHT_PARAMS } from './params/defaults';
@@ -168,13 +168,31 @@ describe('EHT Statistics - Cell Type Groups', () => {
 
     const stats = computeEHTStatistics(state, params);
 
-    // All group should have 30 cells (10 per type)
-    expect(stats['ab_distance_all']).toBeCloseTo(5, 0);
+    // All group should have 30 cells (10 per type). Distances are reported in microns.
+    expect(stats['ab_distance_all']).toBeCloseTo(25, 0);
 
     // Individual groups should each have 10 cells
-    expect(stats['ab_distance_control']).toBeCloseTo(5, 0);
-    expect(stats['ab_distance_emt']).toBeCloseTo(5, 0);
-    expect(stats['ab_distance_counter_control']).toBeCloseTo(5, 0);
+    expect(stats['ab_distance_control']).toBeCloseTo(25, 0);
+    expect(stats['ab_distance_emt']).toBeCloseTo(25, 0);
+    expect(stats['ab_distance_counter_control']).toBeCloseTo(25, 0);
+  });
+
+  it('should report distance statistics and per-cell metric coordinates in microns', () => {
+    const state = createTestState(['control']);
+    const params = createTestParams(['control']);
+
+    const stats = computeEHTStatistics(state, params);
+    const metrics = exportCellMetrics(state, params);
+
+    expect(stats['ab_distance_control']).toBeCloseTo(25);
+    expect(stats['AX_control']).toBeCloseTo(10);
+    expect(stats['BX_control']).toBeCloseTo(15);
+    expect(metrics[0].X_y).toBe(150);
+    expect(metrics[0].A_y).toBe(140);
+    expect(metrics[0].B_y).toBe(165);
+    expect(metrics[0].ab_distance).toBe(25);
+    expect(metrics[0].AX).toBe(10);
+    expect(metrics[0].BX).toBe(15);
   });
 
   it('should list all groups correctly for debugging', () => {
