@@ -16,6 +16,26 @@ import {
   type VideoFormat,
 } from '../../core/export/videoEncoder';
 
+function waitForDocumentReady(): Promise<void> {
+  if (typeof document === 'undefined' || document.readyState !== 'loading') {
+    return Promise.resolve();
+  }
+
+  return new Promise(resolve => {
+    document.addEventListener('DOMContentLoaded', () => resolve(), { once: true });
+  });
+}
+
+function waitForAnimationFrame(): Promise<void> {
+  if (typeof requestAnimationFrame === 'undefined') {
+    return Promise.resolve();
+  }
+
+  return new Promise(resolve => {
+    requestAnimationFrame(() => resolve());
+  });
+}
+
 /** Ref interface exposed by SimulationCanvas */
 export interface SimulationCanvasRef {
   /** Get a screenshot of the current canvas as a data URL */
@@ -201,24 +221,43 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let mounted = true;
+    let cancelled = false;
 
     const initRenderer = async () => {
-      const renderer = new SimulationRenderer({ width: size.width, height: size.height, isDark });
-      await renderer.init(canvas);
+      let renderer: SimulationRenderer | null = null;
 
-      if (mounted) {
+      try {
+        await waitForDocumentReady();
+        await waitForAnimationFrame();
+
+        if (cancelled || canvasRef.current !== canvas || !canvas.isConnected) {
+          return;
+        }
+
+        renderer = new SimulationRenderer({ width: size.width, height: size.height, isDark });
+        await renderer.init(canvas);
+
+        if (cancelled || canvasRef.current !== canvas) {
+          renderer.destroy();
+          return;
+        }
+
         rendererRef.current = renderer;
         renderer.setModel(currentModel);
         renderer.setParams(params);
         setIsReady(true);
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to initialize simulation renderer:', error);
+        }
+        renderer?.destroy();
       }
     };
 
     initRenderer();
 
     return () => {
-      mounted = false;
+      cancelled = true;
       if (rendererRef.current) {
         rendererRef.current.destroy();
         rendererRef.current = null;

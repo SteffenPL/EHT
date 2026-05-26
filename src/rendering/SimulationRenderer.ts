@@ -210,6 +210,8 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
     if (this.renderOptions.showScaleBar !== false) {
       this.drawScaleBar();
     }
+
+    this.flush();
   }
 
   /**
