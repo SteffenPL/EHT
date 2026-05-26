@@ -4,7 +4,7 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
-import type { EHTSimulationState } from '../types';
+import { CellPhase, type EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 import { normalizeExternalForces } from '../params/external-forces';
 import { evaluateExternalForceAtPosition } from './external-force-formula';
@@ -285,6 +285,13 @@ export function calcExternalForces(
           basalGeometry: state.basalGeometry,
           t: state.t,
           constants: params.constants,
+          cellContext: {
+            age: state.t - ci.birth_time,
+            R_soft: ci.R_soft,
+            R_hard: ci.R_hard,
+            G2: ci.phase === CellPhase.G2 ? 1 : 0,
+            Mitosis: ci.phase === CellPhase.Mitosis ? 1 : 0,
+          },
         });
         forces[i].f.x += force.x;
         forces[i].f.y += force.y;

@@ -21,7 +21,7 @@ export interface FormulaQuickPreset {
   name: string;
   context: 'time' | 'external_force';
   description: string;
-  generate: (options?: { softRadius?: number }) => string;
+  generate: () => string;
 }
 
 export const FORMULA_PRESETS: FormulaPreset[] = [
@@ -105,24 +105,24 @@ export const FORMULA_QUICK_PRESETS: FormulaQuickPreset[] = [
     generate: () => 'sinwave(t, period=heartbeat, from=init_value, to=init_value * 1.1)',
   },
   {
-    key: 'towards_center',
-    name: 'Towards center',
+    key: 'towards_bottom',
+    name: 'Towards bottom',
     context: 'external_force',
-    description: 'Constant-magnitude radial force toward the geometry center',
-    generate: () => '-1 * matrix([x, y]) / max(r, 1e-9)',
+    description: 'Constant tangential force toward alpha = 0 at the bottom',
+    generate: () => '5 * sign(alpha) * T',
   },
   {
     key: 'basal_repulsion',
     name: 'Basal repulsion',
     context: 'external_force',
-    description: 'Radius-aware inward basal-boundary repulsion using this cell type R_soft',
-    generate: ({ softRadius } = {}) => `max(0, ${softRadius ?? 1} - delta) * N`,
+    description: 'Radius-aware basal-boundary repulsion using the current cell R_soft',
+    generate: () => '0.1 * max(0, R_soft - delta) * N',
   },
   {
     key: 'fluid_pressure',
     name: 'Fluid pressure',
     context: 'external_force',
     description: 'Pressure force active after the nucleus center is more than 2 * R_soft inside the tissue',
-    generate: ({ softRadius } = {}) => `max(0, delta - ${2 * (softRadius ?? 1)}) * N`,
+    generate: () => '-0.1 * max(0, delta - 2 * R_soft) * N',
   },
 ];

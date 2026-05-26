@@ -123,7 +123,7 @@ function radialDirection(point: Vector2): Vector2 {
 
 function sampleFieldPositions(
   geometry: BasalGeometry,
-  offset: number,
+  signedOffsets: number[],
   lineHalfWidth: number,
   a: number,
   b: number
@@ -131,7 +131,7 @@ function sampleFieldPositions(
   const positions: Vector2[] = [];
 
   if (geometry.type === 'line') {
-    for (const signedOffset of [-offset, offset]) {
+    for (const signedOffset of signedOffsets) {
       for (let i = 0; i < FIELD_SAMPLE_COUNT; i++) {
         const t = (i + 0.5) / FIELD_SAMPLE_COUNT;
         const basalPoint = new Vector2(-lineHalfWidth + t * lineHalfWidth * 2, 0);
@@ -142,12 +142,12 @@ function sampleFieldPositions(
     return positions;
   }
 
-  for (const direction of [1, -1]) {
+  for (const signedOffset of signedOffsets) {
     for (let i = 0; i < FIELD_SAMPLE_COUNT; i++) {
       const alpha = -Math.PI + ((i + 0.5) / FIELD_SAMPLE_COUNT) * 2 * Math.PI;
       const basalPoint = geometry.projectPoint(basalPositionForAlpha(a, b, alpha, lineHalfWidth));
       const towardCenter = radialDirection(basalPoint);
-      positions.push(basalPoint.add(towardCenter.scale(offset * direction)));
+      positions.push(basalPoint.add(towardCenter.scale(signedOffset)));
     }
   }
   return positions;
@@ -283,14 +283,23 @@ export function FormulaSpatialExplainer({
     const visibleHalfHeight = Number.isFinite(b) ? b : Math.max(12, perimeter * 0.22);
     const deltaLimit = Math.max(5, Math.min(visibleHalfWidth, visibleHalfHeight) * 0.6);
     const previewDelta = clamp(delta, -deltaLimit, deltaLimit);
-    const fieldOffset = Math.max(2, 2 * (softRadius ?? DEFAULT_SOFT_RADIUS));
+    const radius = softRadius ?? DEFAULT_SOFT_RADIUS;
+    const fieldOffsets = [-1.5 * radius, 1.5 * radius, 3 * radius];
+    const maxFieldOffset = Math.max(2, ...fieldOffsets.map(Math.abs));
     const scale = Math.min(
-      220 / Math.max(visibleHalfWidth + fieldOffset, 1),
-      150 / Math.max(visibleHalfHeight + fieldOffset, 1)
+      220 / Math.max(visibleHalfWidth + maxFieldOffset, 1),
+      150 / Math.max(visibleHalfHeight + maxFieldOffset, 1)
     );
+    const cellContext = {
+      age: time,
+      R_soft: radius,
+      R_hard: radius,
+      G2: 0,
+      Mitosis: 0,
+    };
     const alpha = (alphaDegrees * Math.PI) / 180;
     const nucleus = positionForAlphaDelta(basalGeometry, a, b, alpha, previewDelta, visibleHalfWidth);
-    const spatial = buildExternalForceScope(nucleus, basalGeometry, time, constants);
+    const spatial = buildExternalForceScope(nucleus, basalGeometry, time, constants, cellContext);
     const safeFormula = formula?.trim() || '0';
     let selectedEvaluation: ExternalForceEvaluation | null = null;
     let previewError: string | null = null;
@@ -302,12 +311,13 @@ export function FormulaSpatialExplainer({
         basalGeometry,
         t: time,
         constants,
+        cellContext,
       });
     } catch (error) {
       previewError = formulaErrorMessage(error);
     }
 
-    const field = sampleFieldPositions(basalGeometry, fieldOffset, visibleHalfWidth, a, b).map((position) => {
+    const field = sampleFieldPositions(basalGeometry, fieldOffsets, visibleHalfWidth, a, b).map((position) => {
       try {
         return {
           position,
@@ -317,6 +327,7 @@ export function FormulaSpatialExplainer({
             basalGeometry,
             t: time,
             constants,
+            cellContext,
           }),
         };
       } catch (error) {
@@ -343,7 +354,7 @@ export function FormulaSpatialExplainer({
       selectedEvaluation,
       spatial,
       deltaLimit,
-      fieldOffset,
+      fieldOffsets,
       visibleHalfHeight,
       visibleHalfWidth,
     };
@@ -458,7 +469,7 @@ export function FormulaSpatialExplainer({
             <div>
               <h3 className="text-sm font-semibold">Mapping controls</h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                These controls only affect the explainer. The arrow bands are fixed at 2 x R_soft toward and away from the center.
+                These controls only affect the explainer. The arrow bands are fixed at delta = -1.5, 1.5, and 3 x R_soft.
               </p>
             </div>
             <div className="rounded-md border bg-background px-2 py-1 text-xs">
@@ -565,8 +576,10 @@ export function FormulaSpatialExplainer({
               <dd className="font-mono">{format(time, 1)} h</dd>
             </div>
             <div className="rounded-md border bg-background p-2">
-              <dt className="font-semibold uppercase text-muted-foreground">field offset</dt>
-              <dd className="font-mono">2 x R_soft = {format(model.fieldOffset)} um</dd>
+              <dt className="font-semibold uppercase text-muted-foreground">field offsets</dt>
+              <dd className="font-mono">
+                {model.fieldOffsets.map(offset => `${format(offset)} um`).join(', ')}
+              </dd>
             </div>
           </dl>
 

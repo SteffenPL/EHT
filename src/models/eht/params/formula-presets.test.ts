@@ -34,28 +34,48 @@ describe('FORMULA_PRESETS', () => {
     expect(evaluate(formula, { ...scope, t: 10 })).toBeCloseTo(100);
   });
 
-  it('generates radius-aware basal repulsion from the supplied soft radius', () => {
+  it('generates tangential force toward the bottom', () => {
+    const preset = FORMULA_QUICK_PRESETS.find(p => p.key === 'towards_bottom');
+    const geometry = createBasalGeometry(1 / 5, 1 / 5);
+
+    expect(preset).toBeDefined();
+    const formula = preset!.generate();
+
+    const force = evaluateExternalForceAtPosition({
+      formula,
+      position: new Vector2(5, 0),
+      basalGeometry: geometry,
+      t: 0,
+    }).force;
+
+    expect(force.x).toBeCloseTo(0);
+    expect(force.y).toBeCloseTo(-5);
+  });
+
+  it('generates radius-aware basal repulsion from the current soft radius', () => {
     const preset = FORMULA_QUICK_PRESETS.find(p => p.key === 'basal_repulsion');
     const geometry = createBasalGeometry(0, 0);
 
     expect(preset).toBeDefined();
-    const formula = preset!.generate({ softRadius: 2 });
+    const formula = preset!.generate();
 
     const outside = evaluateExternalForceAtPosition({
       formula,
       position: new Vector2(0, -1),
       basalGeometry: geometry,
       t: 0,
+      cellContext: { R_soft: 2 },
     }).force;
     const insideBeyondRadius = evaluateExternalForceAtPosition({
       formula,
       position: new Vector2(0, 3),
       basalGeometry: geometry,
       t: 0,
+      cellContext: { R_soft: 2 },
     }).force;
 
     expect(outside.x).toBeCloseTo(0);
-    expect(outside.y).toBeCloseTo(3);
+    expect(outside.y).toBeCloseTo(0.3);
     expect(insideBeyondRadius.x).toBeCloseTo(0);
     expect(insideBeyondRadius.y).toBeCloseTo(0);
   });
@@ -65,22 +85,24 @@ describe('FORMULA_PRESETS', () => {
     const geometry = createBasalGeometry(0, 0);
 
     expect(preset).toBeDefined();
-    const formula = preset!.generate({ softRadius: 2 });
+    const formula = preset!.generate();
 
     const nearBoundary = evaluateExternalForceAtPosition({
       formula,
       position: new Vector2(0, 3),
       basalGeometry: geometry,
       t: 0,
+      cellContext: { R_soft: 2 },
     }).force;
     const pastThreshold = evaluateExternalForceAtPosition({
       formula,
       position: new Vector2(0, 5),
       basalGeometry: geometry,
       t: 0,
+      cellContext: { R_soft: 2 },
     }).force;
 
     expect(nearBoundary.y).toBeCloseTo(0);
-    expect(pastThreshold.y).toBeCloseTo(1);
+    expect(pastThreshold.y).toBeCloseTo(-0.1);
   });
 });

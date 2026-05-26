@@ -196,6 +196,25 @@ describe('calcExternalForces', () => {
     expect(forces[0].f.y).toBeCloseTo(3, 5);
   });
 
+  it('exposes cell age, radii, and phase flags in formula scope', () => {
+    const params = createDefaultEHTParams();
+    params.cell_types.control.external_forces = ['(age + R_soft + R_hard + G2 + Mitosis) * N'];
+
+    const cell = makeCell(0, -5, 'control');
+    cell.birth_time = 1;
+    cell.R_soft = 1.2;
+    cell.R_hard = 0.4;
+    cell.phase = CellPhase.G2;
+    const state = makeState([cell]);
+    state.t = 3;
+    const forces: CellForces[] = [zeroForces()];
+
+    calcExternalForces(state, params, forces);
+
+    expect(forces[0].f.x).toBeCloseTo(0, 5);
+    expect(forces[0].f.y).toBeCloseTo(4.6, 5);
+  });
+
   it('matches the shared evaluator on elliptical geometry', () => {
     const params = createDefaultEHTParams();
     params.cell_types.control.external_forces = ['5 * T + 3 * N + t * matrix([0.25, -0.5])'];

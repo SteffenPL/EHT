@@ -174,13 +174,13 @@ function PresetPanel({
   quickPresets,
   selectedPresetKey,
   onPresetChange,
-  onQuickPresetInsert,
+  onQuickPresetUse,
 }: {
   onInsert: (text: string) => void;
   quickPresets: FormulaQuickPreset[];
   selectedPresetKey: string;
   onPresetChange: (key: string) => void;
-  onQuickPresetInsert: () => void;
+  onQuickPresetUse: () => void;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [paramValues, setParamValues] = useState<Record<string, number[]>>({});
@@ -214,10 +214,10 @@ function PresetPanel({
           variant="outline"
           size="sm"
           className="h-7 shrink-0 px-2 text-xs"
-          onClick={onQuickPresetInsert}
+          onClick={onQuickPresetUse}
           disabled={!selectedPreset}
         >
-          Insert
+          Use preset
         </Button>
       </div>
       {FORMULA_PRESETS.map(preset => (
@@ -421,11 +421,16 @@ export function FormulaEditorDialog({
     });
   }, [formula]);
 
-  const insertSelectedPreset = useCallback(() => {
+  const useSelectedPreset = useCallback(() => {
     const preset = quickPresets.find(candidate => candidate.key === selectedPresetKey);
     if (!preset) return;
-    insertAtCursor(preset.generate({ softRadius }), { implicitMultiply: true });
-  }, [insertAtCursor, quickPresets, selectedPresetKey, softRadius]);
+    const nextFormula = preset.generate();
+    setFormula(nextFormula);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.setSelectionRange(nextFormula.length, nextFormula.length);
+    });
+  }, [quickPresets, selectedPresetKey]);
 
   const formulaError = useMemo(() => {
     if (!formula.trim()) return null;
@@ -441,6 +446,13 @@ export function FormulaEditorDialog({
           basalGeometry: createBasalGeometry(curvature_1, curvature_2, 360),
           t: 0,
           constants,
+          cellContext: {
+            age: 0,
+            R_soft: softRadius ?? 1,
+            R_hard: softRadius ?? 1,
+            G2: 0,
+            Mitosis: 0,
+          },
         });
         return null;
       }
@@ -464,7 +476,7 @@ export function FormulaEditorDialog({
     } catch (e) {
       return e instanceof Error ? e.message : String(e);
     }
-  }, [formula, context, effectiveInitialValue, constants, tEnd, initialPerimeter, initialAspectRatio]);
+  }, [formula, context, effectiveInitialValue, constants, tEnd, initialPerimeter, initialAspectRatio, softRadius]);
 
   const effectiveFormula = useMemo(() => {
     if (context !== 'external_force') return null;
@@ -590,7 +602,7 @@ export function FormulaEditorDialog({
                     quickPresets={quickPresets}
                     selectedPresetKey={selectedPresetKey}
                     onPresetChange={setSelectedPresetKey}
-                    onQuickPresetInsert={insertSelectedPreset}
+                    onQuickPresetUse={useSelectedPreset}
                   />
                   <FunctionsPanel onInsert={(text) => insertAtCursor(text, { implicitMultiply: true })} />
                 </aside>

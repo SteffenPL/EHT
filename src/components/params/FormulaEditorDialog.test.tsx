@@ -98,7 +98,33 @@ describe('FormulaEditorDialog', () => {
 
     expect(within(dialog).getByText('Preset builders')).toBeInTheDocument();
     expect(within(dialog).getByRole('combobox')).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Insert' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Use preset' })).toBeInTheDocument();
     expect(within(dialog).getByText('10% heartbeat')).toBeInTheDocument();
+  });
+
+  it('uses the selected preset by replacing the current formula', () => {
+    render(
+      <FormulaEditorDialog
+        open
+        onOpenChange={vi.fn()}
+        fieldName="perimeter"
+        label="Perimeter (um)"
+        formula="init_value + 1"
+        currentNumericValue={100}
+        tEnd={48}
+        constants={{ heartbeat: 10 }}
+        context="general"
+        onSave={vi.fn()}
+        onClear={vi.fn()}
+      />
+    );
+
+    const dialog = screen.getByRole('dialog');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Use preset' }));
+
+    expect(within(dialog).getByLabelText('Formula')).toHaveValue(
+      'sinwave(t, period=heartbeat, from=init_value, to=init_value * 1.1)'
+    );
   });
 });
