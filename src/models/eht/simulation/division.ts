@@ -120,6 +120,12 @@ export function updateApicalLinksAfterDivision(
   originalIndex: number,
   newIndex: number
 ): void {
+  const originalCell = state.cells[originalIndex];
+  const newCell = state.cells[newIndex];
+  if (!originalCell.has_A || !newCell.has_A) {
+    return;
+  }
+
   // Transfer right-side connections to the new cell
   for (const link of state.ap_links) {
     if (link.l === originalIndex) {
@@ -148,6 +154,12 @@ export function updateBasalLinksAfterDivision(
   originalIndex: number,
   newIndex: number
 ): void {
+  const originalCell = state.cells[originalIndex];
+  const newCell = state.cells[newIndex];
+  if (!originalCell.has_B || !newCell.has_B) {
+    return;
+  }
+
   // Transfer right-side connections to the new cell
   for (const link of state.ba_links) {
     if (link.l === originalIndex) {

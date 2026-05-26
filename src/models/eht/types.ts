@@ -22,6 +22,8 @@ export interface CellEventState {
     event_id: string;
     /** Sampled trigger time (between event start/end, Infinity if skipped) */
     trigger_time: number;
+    /** True when a dependent event waits for its prerequisite to fire before sampling */
+    pending_dependency?: boolean;
     /** Whether the event has fired at least once */
     has_fired: boolean;
     /** Time of last fire (for periodic events) */
@@ -82,13 +84,6 @@ export interface CellState {
 
     // INM (interkinetic nuclear migration)
     has_inm: boolean;
-
-    // EMT event times (sampled at cell creation) - legacy v1.0.0
-    time_A: number;
-    time_B: number;
-    time_S: number;
-    time_P: number;
-    time_AC: number;
 
     // Stiffness values (can change dynamically)
     stiffness_apical_apical: number;

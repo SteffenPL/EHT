@@ -77,6 +77,15 @@ export {
   micronParamsToLegacy,
 } from './unit-conversion';
 
+export {
+  analyzeEventDependencies,
+  getEventDependencyIssues,
+  type EventDependencyAnalysis,
+  type EventDependencyIssue,
+  type EventDependencyIssueSeverity,
+  type EventDependencyIssueType,
+} from './event-dependencies';
+
 // Geometry utilities
 export {
   type EllipseGeometry,

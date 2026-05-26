@@ -8,9 +8,10 @@ import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
 import type { EHTSimulationState, ApicalLink, BasalLink, CellState, CellEventState } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, ParameterChangeEvent, SpecialEvent, SpecialEventName } from '../params/types';
-import { createCell, getCellType, getEffectiveEvents, inheritEventStates, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
+import { createCell, evaluateProbabilityFormula, getCellType, getEffectiveEvents, inheritEventStates, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
 import { divideSingleCell } from './division';
 import { evaluateUnitAwareFormula } from '../compat/formula-units';
+import { analyzeEventDependencies } from '../params/event-dependencies';
 
 /**
  * Resolve event period to a number. Handles 'dt' as a special value.
@@ -131,7 +132,7 @@ export function processStartRunning(
  * Cuts apical links between constricting cells and other cell types.
  * Connects neighboring non-constricting cells across constricting clusters.
  *
- * This should be called once when time_AC is reached for cells of a specific type.
+ * This should be called once when apical constriction is reached for cells of a specific type.
  * It processes all cells of that type at once to handle the graph restructuring.
  *
  * Algorithm:
@@ -418,6 +419,48 @@ function prereqSatisfied(
   return prereqState?.has_fired === true;
 }
 
+function schedulePendingDependentEvent(
+  eventState: CellEventState,
+  eventDef: EventDefinition,
+  cell: CellState,
+  rng: SeededRandom,
+  generalParams?: import('../params/types').EHTGeneralParams,
+  cellTypeParams?: EHTCellTypeParams,
+  constants?: Record<string, number>
+): void {
+  if (!eventState.pending_dependency || !eventDef.prereq) {
+    return;
+  }
+
+  const prereqState = cell.event_states?.[eventDef.prereq];
+  if (!prereqState?.has_fired) {
+    return;
+  }
+
+  const start = prereqState.last_fire_time;
+  if (eventDef.end === -1 || (isFinite(eventDef.end) && start > eventDef.end)) {
+    eventState.pending_dependency = false;
+    eventState.trigger_time = Infinity;
+    return;
+  }
+
+  const prob = evaluateProbabilityFormula(eventDef.probability, generalParams, cellTypeParams, constants);
+  if (rng.random() > prob) {
+    eventState.pending_dependency = false;
+    eventState.trigger_time = Infinity;
+    return;
+  }
+
+  eventState.pending_dependency = false;
+  if (eventDef.period !== 0) {
+    eventState.trigger_time = start;
+  } else if (isFinite(eventDef.end)) {
+    eventState.trigger_time = rng.random(start, eventDef.end);
+  } else {
+    eventState.trigger_time = start;
+  }
+}
+
 /**
  * Check if an event should fire for a cell at the current time.
  */
@@ -439,7 +482,7 @@ function shouldEventFire(
   }
 
   // Check if event was skipped (trigger_time is Infinity)
-  if (!isFinite(eventState.trigger_time)) {
+  if (!isFinite(eventState.trigger_time) || eventState.pending_dependency) {
     return false;
   }
 
@@ -456,7 +499,8 @@ function shouldEventFire(
   const effectivePeriod = resolveEffectivePeriod(eventDef.period, dt);
 
   // Active window check
-  if (t < eventDef.start) return false;
+  const activeStart = eventDef.prereq ? eventState.trigger_time : eventDef.start;
+  if (t < activeStart) return false;
   if (eventDef.end !== -1 && isFinite(eventDef.end) && t > eventDef.end) return false;
 
   // First fire in this cycle
@@ -566,7 +610,10 @@ export function processV2Events(
     const cellType = effectiveParams.cell_types[cell.typeIndex] as EHTCellTypeParams;
 
     // Get effective events (merged default + per-type)
-    const effectiveEvents = getEffectiveEvents(effectiveParams.general, cellType);
+    const { orderedEvents, hasErrors } = analyzeEventDependencies(getEffectiveEvents(effectiveParams.general, cellType));
+    const effectiveEvents = hasErrors
+      ? getEffectiveEvents(effectiveParams.general, cellType)
+      : orderedEvents;
 
     // Skip if no events
     if (effectiveEvents.length === 0 || !cell.event_states) {
@@ -585,6 +632,16 @@ export function processV2Events(
       if (!eventState) {
         continue;
       }
+
+      schedulePendingDependentEvent(
+        eventState,
+        eventDef,
+        cell,
+        rng,
+        effectiveParams.general,
+        cellType,
+        effectiveParams.constants
+      );
 
       if (shouldEventFire(eventState, eventDef, cell, t, dt)) {
         if (eventDef.type === 'parameter_change') {
@@ -674,19 +731,23 @@ function processCellCycleReset(
   // Preserve the cell's ID
   newCell.id = cell.id;
 
-  // Reset all properties to cell type defaults (createCell inherits from parent)
+  // Reset cycle-scoped properties while preserving already-lost adhesions.
   const h = params.general.h_init;
   newCell.R_hard = cellType.R_hard;
   newCell.eta_A = h / 2;
   newCell.eta_B = h / 2;
-  newCell.has_A = true;
-  newCell.has_B = true;
+  newCell.has_A = cell.has_A;
+  newCell.has_B = cell.has_B;
   newCell.is_running = false;
-  newCell.running_mode = cellType.running_mode;
+  newCell.running_mode = cell.running_mode;
   newCell.stiffness_apical_apical = cellType.stiffness_apical_apical;
-  newCell.stiffness_straightness = cellType.stiffness_straightness;
-  newCell.stiffness_nuclei_apical = cellType.stiffness_nuclei_apical;
-  newCell.stiffness_nuclei_basal = cellType.stiffness_nuclei_basal;
+  newCell.stiffness_straightness = cell.stiffness_straightness;
+  newCell.stiffness_nuclei_apical = cell.has_A
+    ? cellType.stiffness_nuclei_apical
+    : cell.stiffness_nuclei_apical;
+  newCell.stiffness_nuclei_basal = cell.has_B
+    ? cellType.stiffness_nuclei_basal
+    : cell.stiffness_nuclei_basal;
   newCell.k_apical_junction = cellType.k_apical_junction;
 
   // Inherit periodic event participation, re-sample one-time events

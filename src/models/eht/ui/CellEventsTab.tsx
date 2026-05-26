@@ -41,6 +41,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { EventEditor } from './EventsEditor';
 import { getParameterDescription } from '../params/descriptions';
+import { analyzeEventDependencies, getEventDependencyIssues } from '../params/event-dependencies';
 
 // =============================================================================
 // Compact Event Card (wide horizontal layout)
@@ -64,7 +65,7 @@ function CompactEventCard({
   event,
   index,
   totalCount,
-  allEvents: _allEvents,
+  allEvents,
   onEventChange,
   onEdit,
   onDelete,
@@ -74,6 +75,10 @@ function CompactEventCard({
   disabled,
 }: CompactEventCardProps) {
   const isActive = event.end !== -1;
+  const analysis = analyzeEventDependencies(allEvents);
+  const eventIssues = getEventDependencyIssues(analysis, event.id);
+  const hasError = eventIssues.some(issue => issue.severity === 'error');
+  const hasWarning = eventIssues.some(issue => issue.severity === 'warning');
 
   const handleActiveToggle = (checked: boolean) => {
     if (checked) {
@@ -89,7 +94,13 @@ function CompactEventCard({
 
   return (
     <div
-      className={`border rounded-md px-2 py-1 text-xs items-center gap-x-1.5 ${isActive ? 'bg-card' : 'bg-muted/40 opacity-60'}`}
+      className={`border rounded-md px-2 py-1 text-xs items-center gap-x-1.5 ${
+        hasError
+          ? 'border-destructive bg-destructive/10'
+          : hasWarning
+            ? 'border-yellow-500/50 bg-yellow-500/10'
+            : isActive ? 'bg-card' : 'bg-muted/40 opacity-60'
+      }`}
       style={{
         display: 'grid',
         gridTemplateColumns: '20px minmax(0, 200px) 80px 110px 1fr',
@@ -135,7 +146,7 @@ function CompactEventCard({
         <NumericTextInput
           value={event.start}
           onChange={(v) => onEventChange({ ...event, start: v })}
-          disabled={disabled || !isActive}
+          disabled={disabled || !isActive || !!event.prereq}
           min={0}
           className="h-5 text-xs w-full px-1"
         />
@@ -151,6 +162,19 @@ function CompactEventCard({
 
       {/* Action buttons */}
       <div className="flex items-center gap-0 justify-end">
+        {event.prereq && (
+          <span className="mr-1 rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:text-blue-300" title={`Sampled after ${event.prereq}`}>
+            Dep
+          </span>
+        )}
+        {eventIssues.length > 0 && (
+          <span
+            className={`mr-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${hasError ? 'bg-destructive/15 text-destructive' : 'bg-yellow-500/15 text-yellow-700 dark:text-yellow-300'}`}
+            title={eventIssues.map(issue => issue.message).join('\n')}
+          >
+            {hasError ? 'Invalid' : 'Check'}
+          </span>
+        )}
         <Button variant="ghost" size="icon" onClick={onMoveUp} disabled={disabled || index === 0} className="h-5 w-5" title="Move up">
           <ChevronUp className="h-3 w-3" />
         </Button>
@@ -233,7 +257,10 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
   }, [defaultEvents, updateDefaultEvents]);
 
   const deleteDefaultEvent = useCallback((index: number) => {
-    updateDefaultEvents(defaultEvents.filter((_, i) => i !== index));
+    const deletedId = defaultEvents[index]?.id;
+    updateDefaultEvents(defaultEvents
+      .filter((_, i) => i !== index)
+      .map(event => event.prereq === deletedId ? { ...event, prereq: null } : event));
   }, [defaultEvents, updateDefaultEvents]);
 
   const moveDefaultEvent = useCallback((index: number, direction: 'up' | 'down') => {
@@ -290,7 +317,11 @@ export function EHTCellEventsTab({ params, onChange, disabled }: ModelUITabProps
   }, [params, updateEvents]);
 
   const deleteEvent = useCallback((cellTypeKey: string, index: number) => {
-    const events = getEvents(cellTypeKey).filter((_, i) => i !== index);
+    const currentEvents = getEvents(cellTypeKey);
+    const deletedId = currentEvents[index]?.id;
+    const events = currentEvents
+      .filter((_, i) => i !== index)
+      .map(event => event.prereq === deletedId ? { ...event, prereq: null } : event);
     updateEvents(cellTypeKey, events);
   }, [params, updateEvents]);
 

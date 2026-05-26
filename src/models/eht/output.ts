@@ -66,17 +66,13 @@ export function getSnapshot(state: EHTSimulationState): Record<string, any>[] {
             eta_B: cell.eta_B,
             R_soft: cell.R_soft,
             R_hard: cell.R_hard,
+            stiffness_straightness: cell.stiffness_straightness,
+            stiffness_nuclei_apical: cell.stiffness_nuclei_apical,
+            stiffness_nuclei_basal: cell.stiffness_nuclei_basal,
 
             // Strain
             apical_cytos_strain: cell.apical_cytos_strain,
             basal_cytos_strain: cell.basal_cytos_strain,
-
-            // Events
-            time_A: cell.time_A,
-            time_B: cell.time_B,
-            time_S: cell.time_S,
-            time_P: cell.time_P,
-            time_AC: cell.time_AC,
 
             // Network
             apical_neighbors: getNeighborIds(i, state.ap_links, state.cells),
@@ -162,19 +158,10 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
             R_soft: Number(row.R_soft),
             R_hard: Number(row.R_hard),
 
-            time_A: Number(row.time_A),
-            time_B: Number(row.time_B),
-            time_S: Number(row.time_S),
-            time_P: Number(row.time_P),
-            time_AC: Number(row.time_AC ?? Infinity),
-
-            // Stiffness constants - load from params (approximate for restart) 
-            // or we'd need to save them all.
-            // Since they are mostly constant per cell type (except dynamic changes), 
-            // we'll reload initial from params for simplicity, 
-            // BUT if stiffness changes (e.g. lose straightness), we need to handle that.
+            // Current snapshots save dynamic stiffness values. Older snapshots
+            // fall back to parameter defaults with adhesion-loss modifiers below.
             stiffness_apical_apical: 1.0, // Default
-            stiffness_straightness: Number(row.time_S) < t ? 1.0 : 100.0, // Approximation based on event time
+            stiffness_straightness: Number(row.stiffness_straightness),
             stiffness_nuclei_apical: !Boolean(row.has_A) ? 0.1 : 1.0,  // Approximation
             stiffness_nuclei_basal: !Boolean(row.has_B) ? 0.1 : 1.0,
             k_apical_junction: 0,
@@ -190,8 +177,9 @@ export function loadSnapshot(rows: Record<string, any>[], params: EHTParams): EH
         if (Boolean(row.has_B) === false) cell.stiffness_nuclei_basal = cellType.stiffness_nuclei_basal * 0.1;
         else cell.stiffness_nuclei_basal = cellType.stiffness_nuclei_basal;
 
-        if (cell.time_S && t > cell.time_S) cell.stiffness_straightness = 1.0;
-        else cell.stiffness_straightness = cellType.stiffness_straightness;
+        cell.stiffness_straightness = Number.isFinite(cell.stiffness_straightness)
+            ? cell.stiffness_straightness
+            : cellType.stiffness_straightness;
 
         cell.k_apical_junction = cellType.k_apical_junction;
 

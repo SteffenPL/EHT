@@ -86,15 +86,16 @@ trigger check:  t <= trigger_time && t + dt > trigger_time
 ### TypeScript v1.1.0
 
 ```
-start, end       →  range for sampling trigger_time
-probability      →  chance event is active (checked at initialization)
+start, end       →  range for independent events; dependent start is time(prereq)
+probability      →  chance event participates; conditional when prereq is set
 period           →  0 = one-shot, >0 = repeat every `period` units
-prereq           →  event ID that must have fired first
+prereq           →  event ID that controls dependent scheduling
 cell_cycle_phase →  required cell cycle phase
 ```
 
-- `initializeEventStates()` samples `trigger_time` from `[start, end]` with probability gating.
-- `shouldEventFire()` checks: cell cycle phase, prerequisites, finite trigger time, then time crossing.
+- Independent one-shot events sample `trigger_time` from `[start, end]` with probability gating.
+- Dependent events wait for their prerequisite to participate and fire, then sample from the prerequisite fire time to their own `end`.
+- `shouldEventFire()` checks: cell cycle phase, finite or pending trigger state, dependency fire state, then time crossing or periodic cadence.
 - Periodic events re-fire when `timeSinceLastFire >= period`.
 
 ### Comparison Table
@@ -106,7 +107,7 @@ cell_cycle_phase →  required cell cycle phase
 | Cell-relative timing | `cell_time_start` offset from ref point | No (absolute times) | `cell_cycle_phase` requirement |
 | Stochastic trigger | No (deterministic) | Yes (uniform sampling + 30% skip) | Yes (uniform sampling + probability) |
 | Periodic events | No | No | Yes (`period > 0`) |
-| Prerequisites | No | No | Yes (`prereq` field) |
+| Dependencies | No | No | Yes (`prereq` controls downstream timing) |
 | Per-cell state tracking | No (stateless, re-check each step) | Implicit (time fields on cell) | Explicit (`CellEventState` with `has_fired`, `fire_count`, etc.) |
 
 ---
@@ -198,7 +199,7 @@ Both implementations handle apical and basal link removal similarly:
 4. **Cell division**: Fully implemented in Julia; absent in TS.
 5. **Periodic events**: Only in TS v1.1.0.
 6. **Prerequisites**: Only in TS v1.1.0.
-7. **Probability gating**: TS has per-event probability; Julia has no stochastic event activation.
+7. **Probability gating**: TS has per-event probability; Julia has no stochastic event activation. For dependent TS events, probability is conditional on the prerequisite event participating.
 8. **Cell cycle reference**: Julia has 4 reference points (birth/G2/mitosis/division); TS v1.1.0 has phase requirements but not offset-based timing.
-9. **Stateful tracking**: TS v1.1.0 tracks `has_fired`, `fire_count`, `last_fire_time`; Julia events are stateless (re-evaluated each step).
+9. **Stateful tracking**: TS v1.1.0 tracks `has_fired`, `fire_count`, `last_fire_time`, and dependency-pending state; Julia events are stateless (re-evaluated each step).
 10. **Running state**: TS includes geometry-based running checks in the event loop; Julia handles running elsewhere.
