@@ -279,23 +279,6 @@ export function createCell(
     // New cell (not from division)
     const birthTime = state.t - rng.random(0, maxAge);
 
-    // Sample EMT event times (legacy v1.0.0 system)
-    let time_A = rng.random(cellType.events.time_A_start, cellType.events.time_A_end);
-    let time_B = rng.random(cellType.events.time_B_start, cellType.events.time_B_end);
-    let time_S = rng.random(cellType.events.time_S_start, cellType.events.time_S_end);
-    let time_AC = rng.random(cellType.events.time_AC_start, cellType.events.time_AC_end);
-    const time_P = rng.random() <= cellType.run
-      ? time_B
-      : Infinity;
-
-    // Heterogeneous EMT behavior (legacy)
-    if (cellType.hetero && !useV2Events) {
-      if (rng.random() > 0.7) time_A = Infinity;
-      if (rng.random() > 0.7) time_B = Infinity;
-      if (rng.random() > 0.7) time_S = Infinity;
-      if (rng.random() > 0.7) time_AC = Infinity;
-    }
-
     // Initialize v1.1.0+ event states if available (using effective events)
     const event_states = useV2Events
       ? initializeEventStates(effectiveEvents, rng, params.general, cellType, params.constants)
@@ -321,11 +304,6 @@ export function createCell(
       is_running: false,
       running_mode: cellType.running_mode,
       has_inm: rng.random() <= cellType.INM,
-      time_A,
-      time_B,
-      time_S,
-      time_P,
-      time_AC,
       stiffness_apical_apical: cellType.stiffness_apical_apical,
       stiffness_straightness: cellType.stiffness_straightness,
       stiffness_nuclei_apical: cellType.stiffness_nuclei_apical,
@@ -358,11 +336,6 @@ export function createCell(
       is_running: parent.is_running,
       running_mode: parent.running_mode,
       has_inm: parent.has_inm,
-      time_A: parent.time_A,
-      time_B: parent.time_B,
-      time_S: parent.time_S,
-      time_P: parent.time_P,
-      time_AC: parent.time_AC,
       stiffness_apical_apical: cellType.stiffness_apical_apical,
       stiffness_straightness: parent.stiffness_straightness,
       stiffness_nuclei_apical: parent.stiffness_nuclei_apical,

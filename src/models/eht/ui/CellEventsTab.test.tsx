@@ -24,7 +24,7 @@ function makeEvent(id: string, overrides: Partial<EventDefinition> = {}): EventD
 }
 
 describe('EHTCellEventsTab dependency display', () => {
-  it('shows dependent event start as dependency-controlled in compact cards', () => {
+  it('shows dependency badge while keeping the compact start input footprint', () => {
     const params = cloneDeep(DEFAULT_EHT_PARAMS);
     params.general.default_events = [];
     params.cell_types.control.events_v2 = [
@@ -34,8 +34,8 @@ describe('EHTCellEventsTab dependency display', () => {
 
     render(<EHTCellEventsTab params={params} onChange={vi.fn()} />);
 
-    expect(screen.getByText('time(upstream)')).toBeInTheDocument();
     expect(screen.getByText('Dep')).toBeInTheDocument();
+    expect(screen.getAllByDisplayValue('0').some(input => input.hasAttribute('disabled'))).toBe(true);
   });
 
   it('marks invalid dependency cards visibly', () => {

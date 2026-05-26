@@ -28,11 +28,6 @@ function makeCell(overrides: Partial<CellState> = {}): CellState {
     is_running: false,
     running_mode: 0,
     has_inm: false,
-    time_A: Infinity,
-    time_B: Infinity,
-    time_S: Infinity,
-    time_P: Infinity,
-    time_AC: Infinity,
     stiffness_apical_apical: 1,
     stiffness_straightness: 1,
     stiffness_nuclei_apical: 1,
@@ -72,6 +67,9 @@ describe('adhesion inheritance', () => {
     const cell = makeCell({
       has_A: false,
       has_B: false,
+      running_mode: 3,
+      has_inm: true,
+      stiffness_straightness: 0.42,
       stiffness_nuclei_apical: 0.1,
       stiffness_nuclei_basal: 0.1,
     });
@@ -82,6 +80,9 @@ describe('adhesion inheritance', () => {
     expect(state.cells).toHaveLength(2);
     expect(state.cells.every(daughter => daughter.has_A === false)).toBe(true);
     expect(state.cells.every(daughter => daughter.has_B === false)).toBe(true);
+    expect(state.cells.every(daughter => daughter.running_mode === 3)).toBe(true);
+    expect(state.cells.every(daughter => daughter.has_inm)).toBe(true);
+    expect(state.cells.every(daughter => daughter.stiffness_straightness === 0.42)).toBe(true);
     expect(state.ap_links).toHaveLength(0);
     expect(state.ba_links).toHaveLength(0);
   });
@@ -117,6 +118,9 @@ describe('adhesion inheritance', () => {
     const cell = makeCell({
       has_A: false,
       has_B: false,
+      running_mode: 3,
+      has_inm: true,
+      stiffness_straightness: 0.42,
       stiffness_nuclei_apical: 0.25,
       stiffness_nuclei_basal: 0.35,
       event_states: {
@@ -137,6 +141,9 @@ describe('adhesion inheritance', () => {
     expect(state.cells).toHaveLength(1);
     expect(state.cells[0].has_A).toBe(false);
     expect(state.cells[0].has_B).toBe(false);
+    expect(state.cells[0].running_mode).toBe(3);
+    expect(state.cells[0].has_inm).toBe(true);
+    expect(state.cells[0].stiffness_straightness).toBe(0.42);
     expect(state.cells[0].stiffness_nuclei_apical).toBe(0.25);
     expect(state.cells[0].stiffness_nuclei_basal).toBe(0.35);
   });

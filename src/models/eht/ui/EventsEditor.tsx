@@ -126,10 +126,10 @@ interface TimeRangeInputProps {
   onChangeEnd: (value: number) => void;
   disabled?: boolean;
   startDisabled?: boolean;
-  derivedStartLabel?: string;
+  startDisabledTitle?: string;
 }
 
-function TimeRangeInput({ start, end, onChangeStart, onChangeEnd, disabled, startDisabled, derivedStartLabel }: TimeRangeInputProps) {
+function TimeRangeInput({ start, end, onChangeStart, onChangeEnd, disabled, startDisabled, startDisabledTitle }: TimeRangeInputProps) {
   const isActive = end !== -1;
 
   const handleActiveToggle = (checked: boolean) => {
@@ -148,17 +148,7 @@ function TimeRangeInput({ start, end, onChangeStart, onChangeEnd, disabled, star
         disabled={disabled}
         title="Active"
       />
-      {derivedStartLabel ? (
-        <div className="flex w-24 flex-col gap-1">
-          <label className="text-xs text-muted-foreground">Start</label>
-          <div
-            className="flex h-7 items-center rounded-md border border-input bg-muted px-2 text-xs text-muted-foreground"
-            title={derivedStartLabel}
-          >
-            {derivedStartLabel}
-          </div>
-        </div>
-      ) : (
+      <div title={startDisabledTitle}>
         <NumberInput
           value={start}
           onChange={onChangeStart}
@@ -168,7 +158,7 @@ function TimeRangeInput({ start, end, onChangeStart, onChangeEnd, disabled, star
           label="Start"
           className="w-20"
         />
-      )}
+      </div>
       <span className="text-muted-foreground">-</span>
       <NumberInput
         value={end}
@@ -203,7 +193,7 @@ export function EventEditor({
     .filter(e => e.id !== event.id)
     .map(e => ({ value: e.id, label: e.id }));
   const prereqMissing = event.prereq && !prereqOptions.some(opt => opt.value === event.prereq);
-  const derivedStartLabel = event.prereq ? `time(${event.prereq})` : undefined;
+  const derivedStartTitle = event.prereq ? `Start is controlled by time(${event.prereq})` : undefined;
 
   const handleBaseFieldChange = <K extends keyof EventDefinition>(
     field: K,
@@ -370,7 +360,7 @@ export function EventEditor({
           onChangeStart={(v) => handleBaseFieldChange('start', v)}
           onChangeEnd={(v) => handleBaseFieldChange('end', v)}
           startDisabled={!!event.prereq}
-          derivedStartLabel={derivedStartLabel}
+          startDisabledTitle={derivedStartTitle}
           disabled={disabled}
         />
         <div className="flex flex-col gap-1">

@@ -85,13 +85,6 @@ export interface CellState {
     // INM (interkinetic nuclear migration)
     has_inm: boolean;
 
-    // EMT event times (sampled at cell creation) - legacy v1.0.0
-    time_A: number;
-    time_B: number;
-    time_S: number;
-    time_P: number;
-    time_AC: number;
-
     // Stiffness values (can change dynamically)
     stiffness_apical_apical: number;
     stiffness_straightness: number;

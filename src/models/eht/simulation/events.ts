@@ -132,7 +132,7 @@ export function processStartRunning(
  * Cuts apical links between constricting cells and other cell types.
  * Connects neighboring non-constricting cells across constricting clusters.
  *
- * This should be called once when time_AC is reached for cells of a specific type.
+ * This should be called once when apical constriction is reached for cells of a specific type.
  * It processes all cells of that type at once to handle the graph restructuring.
  *
  * Algorithm:
@@ -739,9 +739,9 @@ function processCellCycleReset(
   newCell.has_A = cell.has_A;
   newCell.has_B = cell.has_B;
   newCell.is_running = false;
-  newCell.running_mode = cellType.running_mode;
+  newCell.running_mode = cell.running_mode;
   newCell.stiffness_apical_apical = cellType.stiffness_apical_apical;
-  newCell.stiffness_straightness = cellType.stiffness_straightness;
+  newCell.stiffness_straightness = cell.stiffness_straightness;
   newCell.stiffness_nuclei_apical = cell.has_A
     ? cellType.stiffness_nuclei_apical
     : cell.stiffness_nuclei_apical;

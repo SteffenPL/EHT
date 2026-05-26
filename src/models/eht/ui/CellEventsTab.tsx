@@ -143,22 +143,13 @@ function CompactEventCard({
       {/* Time range */}
       <div className="flex items-center gap-0.5">
         <span className="text-muted-foreground text-[10px]">t:</span>
-        {event.prereq ? (
-          <div
-            className="flex h-5 min-w-0 flex-1 items-center rounded border border-input bg-muted px-1 text-[10px] text-muted-foreground"
-            title={`Start is controlled by time(${event.prereq})`}
-          >
-            time({event.prereq})
-          </div>
-        ) : (
-          <NumericTextInput
-            value={event.start}
-            onChange={(v) => onEventChange({ ...event, start: v })}
-            disabled={disabled || !isActive}
-            min={0}
-            className="h-5 text-xs w-full px-1"
-          />
-        )}
+        <NumericTextInput
+          value={event.start}
+          onChange={(v) => onEventChange({ ...event, start: v })}
+          disabled={disabled || !isActive || !!event.prereq}
+          min={0}
+          className="h-5 text-xs w-full px-1"
+        />
         <span className="text-muted-foreground">-</span>
         <NumericTextInput
           value={event.end}

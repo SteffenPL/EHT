@@ -23,7 +23,7 @@ function makeEvent(id: string, overrides: Partial<EventDefinition> = {}): EventD
 }
 
 describe('EventEditor dependency timing UI', () => {
-  it('shows dependency-controlled start time and keeps end editable', () => {
+  it('keeps the start input disabled and keeps end editable when dependency-controlled', () => {
     const upstream = makeEvent('upstream', { start: 6, end: 12 });
     const downstream = makeEvent('downstream', { prereq: 'upstream', start: 0, end: 12 });
 
@@ -36,8 +36,11 @@ describe('EventEditor dependency timing UI', () => {
       />
     );
 
-    expect(screen.getByText('time(upstream)')).toBeInTheDocument();
     expect(screen.getByText(/sampled after that event fires/i)).toBeInTheDocument();
+
+    const startField = within(screen.getByText('Start').parentElement!).getByRole('textbox');
+    expect(startField).toBeDisabled();
+    expect(startField).toHaveValue('0');
 
     const endField = within(screen.getByText('End').parentElement!).getByRole('textbox');
     expect(endField).not.toBeDisabled();
