@@ -63,6 +63,8 @@ If an external force formula does not mention `N` or `T`, the simulator treats i
 -(scalar) * sign(alpha) * T
 ```
 
+Cell types can define multiple external force rows. The simulator evaluates each nonzero row and adds the resulting vectors into the same nucleus force term.
+
 The formula editor preview uses the same external-force evaluator as the simulation. Its blue vector field samples the formula at multiple positions around the current preview geometry, which is useful for spotting how a force changes with `x`, `y`, `alpha`, `delta`, `T`, or `N`.
 
 Examples:

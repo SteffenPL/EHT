@@ -13,6 +13,7 @@ import {
   isRuntimeCellLengthTarget,
   legacyParamsToMicrons,
 } from './unit-conversion';
+import { normalizeExternalForces } from './external-forces';
 
 function appendUnique(existing: string[] | undefined, values: string[]): string[] {
   return Array.from(new Set([...(existing ?? []), ...values]));
@@ -48,8 +49,8 @@ function collectFormulaCurationWarnings(params: EHTParams): string[] {
       }
     }
 
-    if (cellType.external_force.trim() !== '0') {
-      warnings.push(`Review external_force for cell_types.${typeName}; spatial variables may need manual unit curation.`);
+    if (normalizeExternalForces(cellType).some((formula) => formula.trim() !== '0')) {
+      warnings.push(`Review external_forces for cell_types.${typeName}; spatial variables may need manual unit curation.`);
     }
 
     for (const event of cellType.events_v2 ?? []) {

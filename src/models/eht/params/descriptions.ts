@@ -86,13 +86,16 @@ $$d\\mathbf{x} = \\sqrt{2D}\\, d\\mathbf{W}$$`,
 
   'cell_types.cytos_init': `Initial cytoskeleton length $L_{cytos}$ in microns (distance from basal to apical point).`,
 
-  'cell_types.basal_membrane_repulsion': `Repulsion strength keeping nuclei inside the basal membrane boundary.`,
+  'cell_types.basal_membrane_repulsion': `Repulsion strength keeping nuclei inside the basal membrane boundary. The equivalent external-force style expression is:
+$$F_{basal} = k_{basal}\\,\\max(0, -\\delta)\\,\\mathbf{N}$$
+For an external force formula, use a concrete value for $k_{basal}$, for example:
+\`0.1 * max(0, -delta) * N\``,
 
   'cell_types.apical_junction_init': `Initial rest length in microns for apical junctions between neighboring cells.`,
 
   'cell_types.max_cytoskeleton_length': `Maximum allowed cytoskeleton length in microns. Prevents cells from stretching too far.`,
 
-  'cell_types.external_force': `External force formula applied to cell nuclei. A **math.js** expression evaluated per cell per substep.
+  'cell_types.external_forces': `External force formulas applied to cell nuclei. Each **math.js** expression is evaluated per cell per substep, and all external force rows are added to the nucleus force term.
 
 **Available variables:**
 - \`x\`, \`y\`: Cartesian position relative to geometry center
@@ -110,6 +113,8 @@ $$d\\mathbf{x} = \\sqrt{2D}\\, d\\mathbf{W}$$`,
 - \`5 * T + 3 * N\` → tangential + radial force (used as-is)
 - \`10 * sin(t)\` → time-varying tangential flow
 - \`delta * N\` → push cells away from basal surface proportional to distance`,
+
+  'cell_types.external_force': `Deprecated single external force formula. Use external force rows instead.`,
 
   // === Running Behavior ===
   'cell_types.run': `Probability that an extruded cell becomes a "running" cell (migrating along the basal membrane). Value between 0 and 1.`,

@@ -35,10 +35,10 @@ const SECTIONS: SectionDefinition[] = [
   { key: 'initial', label: 'Initial Setup', fields: ['N_init', 'location'] },
   { key: 'geometry', label: 'Geometry', fields: ['R_hard', 'R_hard_div', 'R_soft'] },
   { key: 'appearance', label: 'Appearance', fields: ['color'] },
-  { key: 'stiffness', label: 'Stiffness', fields: ['k_apical_junction', 'k_cytos', 'stiffness_apical_apical', 'stiffness_apical_apical_div', 'stiffness_nuclei_apical', 'stiffness_nuclei_basal', 'stiffness_repulsion', 'stiffness_straightness', 'external_force'] },
+  { key: 'stiffness', label: 'Stiffness', fields: ['k_apical_junction', 'k_cytos', 'stiffness_apical_apical', 'stiffness_apical_apical_div', 'stiffness_nuclei_apical', 'stiffness_nuclei_basal', 'stiffness_repulsion', 'stiffness_straightness', 'basal_membrane_repulsion', 'external_forces'] },
   { key: 'strain', label: 'Cytoskeleton Strain', fields: ['apical_cytos_strain_init', 'basal_cytos_strain_init'] },
   { key: 'division', label: 'Division & Lifecycle', fields: ['lifespan_start', 'lifespan_end', 'dur_G2', 'dur_mitosis', 'INM'] },
-  { key: 'cellTypeProps', label: 'Cell-Type Properties', fields: ['diffusion', 'basal_damping_ratio', 'max_basal_junction_dist', 'cytos_init', 'basal_membrane_repulsion', 'apical_junction_init', 'max_cytoskeleton_length'] },
+  { key: 'cellTypeProps', label: 'Cell-Type Properties', fields: ['diffusion', 'basal_damping_ratio', 'max_basal_junction_dist', 'cytos_init', 'apical_junction_init', 'max_cytoskeleton_length'] },
   { key: 'running', label: 'Running Behavior', fields: ['run', 'running_speed', 'running_mode'] },
 ];
 
@@ -46,16 +46,18 @@ interface CellTypeRowProps {
   label: string;
   tooltip?: string;
   description?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }
 
-function CellTypeRow({ label, tooltip, description, children }: CellTypeRowProps) {
+function CellTypeRow({ label, tooltip, description, action, children }: CellTypeRowProps) {
   return (
     <tr className="border-b border-border/50 hover:bg-muted/30">
       <td className="py-1.5 px-2 text-xs font-medium w-36" title={tooltip}>
         <div className="flex items-center gap-1">
           <span>{label}</span>
           {description && <HelpPopover content={description} />}
+          {action}
         </div>
       </td>
       {children}
@@ -174,6 +176,7 @@ function ExternalForceCell({
   onChange,
   disabled,
   label,
+  fieldName,
   tEnd,
   constants,
   initialPerimeter,
@@ -185,6 +188,7 @@ function ExternalForceCell({
   onChange: (value: string) => void;
   disabled?: boolean;
   label: string;
+  fieldName: string;
   tEnd: number;
   constants: Record<string, number>;
   initialPerimeter: number;
@@ -223,7 +227,7 @@ function ExternalForceCell({
       <FormulaEditorDialog
         open={editorOpen}
         onOpenChange={setEditorOpen}
-        fieldName="external_force"
+        fieldName={fieldName}
         label={label}
         formula={value || '0'}
         currentNumericValue={0}
@@ -496,6 +500,9 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
   // Get cell type keys as strings
   const cellTypeKeys = Object.keys(params.cell_types);
 
+  // Helper to get cell type params
+  const getCellType = (key: string): EHTCellTypeParams => params.cell_types[key] as EHTCellTypeParams;
+
   const updateCellType = <K extends keyof EHTCellTypeParams>(
     cellType: string,
     key: K,
@@ -503,6 +510,48 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
   ) => {
     const newParams = structuredClone(params);
     (newParams.cell_types[cellType] as EHTCellTypeParams)[key] = value;
+    onChange(newParams);
+  };
+
+  const externalForceCount = Math.max(
+    1,
+    ...cellTypeKeys.map((key) => getCellType(key).external_forces?.length ?? 0)
+  );
+
+  const getExternalForceFormula = (cellType: string, index: number): string => {
+    return getCellType(cellType).external_forces?.[index] ?? '0';
+  };
+
+  const updateExternalForce = (cellType: string, index: number, value: string) => {
+    const newParams = structuredClone(params);
+    const formulas = [
+      ...((newParams.cell_types[cellType] as EHTCellTypeParams).external_forces ?? []),
+    ];
+    while (formulas.length <= index) {
+      formulas.push('0');
+    }
+    formulas[index] = value;
+    (newParams.cell_types[cellType] as EHTCellTypeParams).external_forces = formulas;
+    onChange(newParams);
+  };
+
+  const addExternalForce = () => {
+    const newParams = structuredClone(params);
+    for (const cellType of Object.values(newParams.cell_types)) {
+      const formulas = (cellType as EHTCellTypeParams).external_forces ?? [];
+      (cellType as EHTCellTypeParams).external_forces = [...formulas, '0'];
+    }
+    onChange(newParams);
+  };
+
+  const removeExternalForce = (index: number) => {
+    if (externalForceCount <= 1) return;
+    const newParams = structuredClone(params);
+    for (const cellType of Object.values(newParams.cell_types)) {
+      const formulas = [...((cellType as EHTCellTypeParams).external_forces ?? [])];
+      formulas.splice(index, 1);
+      (cellType as EHTCellTypeParams).external_forces = formulas.length > 0 ? formulas : ['0'];
+    }
     onChange(newParams);
   };
 
@@ -576,9 +625,6 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     delete newParams.cell_types[oldKey];
     onChange(newParams);
   };
-
-  // Helper to get cell type params
-  const getCellType = (key: string): EHTCellTypeParams => params.cell_types[key] as EHTCellTypeParams;
 
   // Helper to get description for a cell type parameter
   const desc = (key: string) => getParameterDescription(`cell_types.${key}`);
@@ -850,27 +896,72 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
               />
             ))}
           </CellTypeRow>
-          <CellTypeRow label="External Force" description={desc('external_force')}>
-            {cellTypeKeys.map((key) => {
-              const formula = getCellType(key).external_force;
-              const error = getExternalForceError(formula);
-              return (
-                <ExternalForceCell
-                  key={key}
-                  value={formula}
-                  onChange={(value) => updateCellType(key, 'external_force', value)}
-                  disabled={disabled}
-                  label={`External Force (${key})`}
-                  tEnd={params.general.t_end}
-                  constants={params.constants ?? {}}
-                  initialPerimeter={params.general.perimeter}
-                  initialAspectRatio={params.general.aspect_ratio}
-                  softRadius={getCellType(key).R_soft}
-                  error={error}
-                />
-              );
-            })}
+          <CellTypeRow label="Basal Repulsion" description={desc('basal_membrane_repulsion')}>
+            {cellTypeKeys.map((key) => (
+              <NumberCell
+                key={key}
+                value={getCellType(key).basal_membrane_repulsion}
+                onChange={(v) => updateCellType(key, 'basal_membrane_repulsion', v)}
+                disabled={disabled}
+                min={0}
+              />
+            ))}
           </CellTypeRow>
+          {Array.from({ length: externalForceCount }, (_, index) => (
+            <CellTypeRow
+              key={index}
+              label={`External Force (${index + 1})`}
+              description={index === 0 ? desc('external_forces') : undefined}
+              action={(
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeExternalForce(index)}
+                  disabled={disabled || externalForceCount <= 1}
+                  className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                  title={`Remove external force ${index + 1}`}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
+            >
+              {cellTypeKeys.map((key) => {
+                const formula = getExternalForceFormula(key, index);
+                const error = getExternalForceError(formula);
+                return (
+                  <ExternalForceCell
+                    key={key}
+                    value={formula}
+                    onChange={(value) => updateExternalForce(key, index, value)}
+                    disabled={disabled}
+                    label={`External Force ${index + 1} (${key})`}
+                    fieldName={`external_forces.${index}`}
+                    tEnd={params.general.t_end}
+                    constants={params.constants ?? {}}
+                    initialPerimeter={params.general.perimeter}
+                    initialAspectRatio={params.general.aspect_ratio}
+                    softRadius={getCellType(key).R_soft}
+                    error={error}
+                  />
+                );
+              })}
+            </CellTypeRow>
+          ))}
+          <tr className="border-b border-border/50">
+            <td className="py-1.5 px-2" />
+            <td className="py-1 px-1" colSpan={cellTypeKeys.length}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={addExternalForce}
+                disabled={disabled}
+                className="h-7 gap-1 px-2 text-xs"
+              >
+                <Plus className="h-3 w-3" />
+                Add external force
+              </Button>
+            </td>
+          </tr>
 
           {/* Cytoskeleton Strain */}
           <SectionHeader section={SECTIONS[4]} cellTypeKeys={cellTypeKeys} disabled={disabled} params={params} onChange={onChange} />
@@ -1001,17 +1092,6 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 key={key}
                 value={getCellType(key).cytos_init}
                 onChange={(v) => updateCellType(key, 'cytos_init', v)}
-                disabled={disabled}
-                min={0}
-              />
-            ))}
-          </CellTypeRow>
-          <CellTypeRow label="Basal Repulsion" description={desc('basal_membrane_repulsion')}>
-            {cellTypeKeys.map((key) => (
-              <NumberCell
-                key={key}
-                value={getCellType(key).basal_membrane_repulsion}
-                onChange={(v) => updateCellType(key, 'basal_membrane_repulsion', v)}
                 disabled={disabled}
                 min={0}
               />
