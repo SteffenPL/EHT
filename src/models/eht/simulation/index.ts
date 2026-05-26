@@ -21,6 +21,7 @@ export {
   calcBasalNucleiForces,
   calcStraightnessForces,
   calcApicalJunctionForces,
+  calcBasalMembraneRepulsionForces,
   calcAllForces,
 } from './forces';
 

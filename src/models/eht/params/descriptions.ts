@@ -86,21 +86,24 @@ $$d\\mathbf{x} = \\sqrt{2D}\\, d\\mathbf{W}$$`,
 
   'cell_types.cytos_init': `Initial cytoskeleton length $L_{cytos}$ in microns (distance from basal to apical point).`,
 
-  'cell_types.basal_membrane_repulsion': `Repulsion strength keeping nuclei inside the basal membrane boundary. In external-force formulas, $\\delta$ is measured from the basal curve to the **nucleus center** along $\\mathbf{N}$; it does not include $R_{soft}$ or $R_{hard}$ automatically.
+  'cell_types.basal_membrane_repulsion': `Repulsion strength keeping nuclei inside the basal membrane boundary. The built-in basal membrane force is radius-normalized:
+$$F_{basal} = k\\,\\frac{\\max(0, R_{soft} - \\delta)}{R_{soft}^2}\\,\\mathbf{N}$$
+
+Here $\\delta$ is measured from the basal curve to the **nucleus center** along $\\mathbf{N}$; it does not include $R_{soft}$ or $R_{hard}$ automatically.
 
 Center-only repulsion starts after the nucleus center crosses outside the basal curve:
 $$F_{center} = k\\,\\max(0, -\\delta)\\,\\mathbf{N}$$
-\`0.1 * max(0, -delta) * N\`
+\`0.1 * max(0, -delta / R_soft) * N\`
 
 Radius-aware repulsion starts when the nucleus edge reaches the boundary:
-$$F_{radius} = k\\,\\max(0, R - \\delta)\\,\\mathbf{N}$$
-\`0.1 * max(0, 2 - delta) * N\``,
+$$F_{radius} = k\\,\\frac{\\max(0, R_{soft} - \\delta)}{R_{soft}^2}\\,\\mathbf{N}$$
+\`0.1 * max(0, 1 - delta / R_soft) * N\` as an external force, which is additionally normalized by \`R_soft\`.`,
 
   'cell_types.apical_junction_init': `Initial rest length in microns for apical junctions between neighboring cells.`,
 
   'cell_types.max_cytoskeleton_length': `Maximum allowed cytoskeleton length in microns. Prevents cells from stretching too far.`,
 
-  'cell_types.external_forces': `External force formulas applied to cell nuclei. Each **math.js** expression is evaluated per cell per substep, and all external force rows are added to the nucleus force term.
+  'cell_types.external_forces': `External force formulas applied to cell nuclei. Each **math.js** expression is evaluated per cell per substep, normalized by the current cell \`R_soft\`, and all external force rows are added to the nucleus force term. Write formulas as order-one numerators; include explicit radius factors when you want different scaling.
 
 **Available variables:**
 - \`x\`, \`y\`: Cartesian position relative to geometry center
@@ -120,8 +123,8 @@ $$F_{radius} = k\\,\\max(0, R - \\delta)\\,\\mathbf{N}$$
 - \`10\` → magnitude-10 tangential flow toward bottom
 - \`5 * T + 3 * N\` → tangential + radial force (used as-is)
 - \`10 * sin(t)\` → time-varying tangential flow
-- \`0.1 * max(0, R_soft - delta) * N\` → basal repulsion based on the nucleus center and soft radius
-- \`-0.1 * max(0, delta - 2 * R_soft) * N\` → fluid pressure active once \`delta > 2 * R_soft\`
+- \`0.1 * max(0, 1 - delta / R_soft) * N\` → basal repulsion based on the nucleus center and soft radius
+- \`-0.1 * max(0, delta / R_soft - 2) * N\` → fluid pressure active once \`delta > 2 * R_soft\`
 - \`age > 4 ? 5 * N : 0\` → age-gated external force
 - \`G2 * 5 * N\` → phase-gated external force active only during G2`,
 

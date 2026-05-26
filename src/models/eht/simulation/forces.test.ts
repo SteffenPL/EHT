@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { calcExternalForces, zeroForces, CellForces } from './forces';
+import { calcBasalMembraneRepulsionForces, calcExternalForces, zeroForces, CellForces } from './forces';
 import { evaluateExternalForceAtPosition } from './external-force-formula';
 import { createDefaultEHTParams } from '../params/defaults';
 import { StraightLineGeometry, CircularGeometry, EllipticalGeometry } from '@/core/math/basal-geometry';
@@ -86,12 +86,12 @@ describe('calcExternalForces', () => {
     calcExternalForces(state, params, forces);
 
     // Cell at right side: geometry N=(-1,0), T=(0,-1)
-    // Auto-wrap: -(10)*sign(pi/2)*T = -10*(0,-1) = (0, 10)
+    // Auto-wrap: -(10)*sign(pi/2)*T = -10*(0,-1), then normalize by R_soft.
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(10, 5);
+    expect(forces[0].f.y).toBeCloseTo(10 / cell.R_soft, 5);
   });
 
-  it('uses vector formula as-is when T or N present', () => {
+  it('uses vector formula direction as-is when T or N present', () => {
     const params = createDefaultEHTParams();
     params.cell_types.control.external_forces = ['5 * N'];
 
@@ -102,9 +102,9 @@ describe('calcExternalForces', () => {
 
     calcExternalForces(state, params, forces);
 
-    // At alpha=0: N=(-sin(0), cos(0)) = (0, 1), so 5*N = (0, 5)
+    // At alpha=0: N=(-sin(0), cos(0)) = (0, 1), so 5*N is normalized by R_soft.
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(5, 5);
+    expect(forces[0].f.y).toBeCloseTo(5 / cell.R_soft, 5);
   });
 
   it('produces zero force at alpha=0 with auto-wrapped scalar (sign(0)=0)', () => {
@@ -169,10 +169,10 @@ describe('calcExternalForces', () => {
     calcExternalForces(state, params, forces);
 
     // Cell at left side: geometry N=(1,0), T=(0,1)
-    // Auto-wrap: -(10)*sign(-pi/2)*T = -(10)*(-1)*(0,1) = (0, 10)
+    // Auto-wrap: -(10)*sign(-pi/2)*T = -(10)*(-1)*(0,1), then normalize by R_soft.
     // Both sides converge upward toward top of circle
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(10, 5);
+    expect(forces[0].f.y).toBeCloseTo(10 / cell.R_soft, 5);
   });
 
   it('exposes time variable t in formula scope', () => {
@@ -186,9 +186,9 @@ describe('calcExternalForces', () => {
 
     calcExternalForces(state, params, forces);
 
-    // At alpha=0: N=(0,1), t=3, so force = 3*(0,1) = (0,3)
+    // At alpha=0: N=(0,1), t=3, so force = 3*(0,1) normalized by R_soft.
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(3, 5);
+    expect(forces[0].f.y).toBeCloseTo(3 / cell.R_soft, 5);
   });
 
   it('exposes cell age, radii, and phase flags in formula scope', () => {
@@ -207,7 +207,7 @@ describe('calcExternalForces', () => {
     calcExternalForces(state, params, forces);
 
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(4.6, 5);
+    expect(forces[0].f.y).toBeCloseTo(4.6 / cell.R_soft, 5);
   });
 
   it('matches the shared evaluator on elliptical geometry', () => {
@@ -227,6 +227,7 @@ describe('calcExternalForces', () => {
       basalGeometry: state.basalGeometry,
       t: state.t,
       constants: params.constants,
+      cellContext: { R_soft: cell.R_soft },
     }).force;
 
     calcExternalForces(state, params, forces);
@@ -246,6 +247,38 @@ describe('calcExternalForces', () => {
     calcExternalForces(state, params, forces);
 
     expect(forces[0].f.x).toBeCloseTo(0, 5);
-    expect(forces[0].f.y).toBeCloseTo(5, 5);
+    expect(forces[0].f.y).toBeCloseTo(5 / cell.R_soft, 5);
+  });
+});
+
+describe('calcBasalMembraneRepulsionForces', () => {
+  it('applies radius-normalized basal membrane repulsion to nuclei', () => {
+    const params = createDefaultEHTParams();
+    params.cell_types.control.basal_membrane_repulsion = 0.1;
+
+    const cell = makeCell(0, -1, 'control');
+    cell.R_soft = 2;
+    const state = makeState([cell], 'line');
+    const forces: CellForces[] = [zeroForces()];
+
+    calcBasalMembraneRepulsionForces(state, params, forces);
+
+    expect(forces[0].f.x).toBeCloseTo(0);
+    expect(forces[0].f.y).toBeCloseTo(0.1 * (2 - (-1)) / (2 * 2));
+  });
+
+  it('does not apply basal membrane repulsion when the nucleus is more than R_soft inside', () => {
+    const params = createDefaultEHTParams();
+    params.cell_types.control.basal_membrane_repulsion = 0.1;
+
+    const cell = makeCell(0, 3, 'control');
+    cell.R_soft = 2;
+    const state = makeState([cell], 'line');
+    const forces: CellForces[] = [zeroForces()];
+
+    calcBasalMembraneRepulsionForces(state, params, forces);
+
+    expect(forces[0].f.x).toBe(0);
+    expect(forces[0].f.y).toBe(0);
   });
 });

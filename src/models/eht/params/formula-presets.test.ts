@@ -75,7 +75,7 @@ describe('FORMULA_PRESETS', () => {
     }).force;
 
     expect(outside.x).toBeCloseTo(0);
-    expect(outside.y).toBeCloseTo(0.3);
+    expect(outside.y).toBeCloseTo(0.075);
     expect(insideBeyondRadius.x).toBeCloseTo(0);
     expect(insideBeyondRadius.y).toBeCloseTo(0);
   });
@@ -103,6 +103,6 @@ describe('FORMULA_PRESETS', () => {
     }).force;
 
     expect(nearBoundary.y).toBeCloseTo(0);
-    expect(pastThreshold.y).toBeCloseTo(-0.1);
+    expect(pastThreshold.y).toBeCloseTo(-0.025);
   });
 });

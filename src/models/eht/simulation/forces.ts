@@ -9,6 +9,8 @@ import type { EHTParams } from '../params/types';
 import { normalizeExternalForces } from '../params/external-forces';
 import { evaluateExternalForceAtPosition } from './external-force-formula';
 
+const MIN_RADIUS = 1e-12;
+
 /** Mutable 2D force vector used in hot simulation loops. */
 export interface ForceVector {
   x: number;
@@ -240,6 +242,40 @@ export function calcApicalJunctionForces(
   }
 }
 
+/**
+ * Calculate basal membrane repulsion forces.
+ * Pushes nuclei inward once their soft-radius envelope overlaps the basal curve.
+ */
+export function calcBasalMembraneRepulsionForces(
+  state: EHTSimulationState,
+  params: EHTParams,
+  forces: CellForces[]
+): void {
+  const cells = state.cells;
+  const cellTypes = params.cell_types;
+  const fallbackType = cellTypes.control;
+
+  for (let i = 0; i < cells.length; i++) {
+    const ci = cells[i];
+    const cellType = cellTypes[ci.typeIndex] ?? fallbackType;
+    const strength = cellType.basal_membrane_repulsion;
+    if (strength === 0) continue;
+
+    const position = Vector2.from(ci.pos);
+    const projectedPoint = state.basalGeometry.projectPoint(position);
+    const normal = state.basalGeometry.getNormal(projectedPoint);
+    const delta = normal.x * (position.x - projectedPoint.x)
+      + normal.y * (position.y - projectedPoint.y);
+    const radius = Math.max(ci.R_soft, MIN_RADIUS);
+    const overlap = Math.max(0, radius - delta);
+    if (overlap === 0) continue;
+
+    const forceMag = strength * overlap / (radius * radius);
+    forces[i].f.x += forceMag * normal.x;
+    forces[i].f.y += forceMag * normal.y;
+  }
+}
+
 /** Cache of formulas that failed to evaluate — only warn once per formula */
 const failedFormulas = new Map<string, string>();
 
@@ -321,6 +357,7 @@ export function calcAllForces(
   calcBasalNucleiForces(state, params, forces);
   calcStraightnessForces(state, params, forces);
   calcApicalJunctionForces(state, params, forces);
+  calcBasalMembraneRepulsionForces(state, params, forces);
   calcExternalForces(state, params, forces);
 
   return forces;

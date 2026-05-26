@@ -63,7 +63,7 @@ If an external force formula does not mention `N` or `T`, the simulator treats i
 -(scalar) * sign(alpha) * T
 ```
 
-Cell types can define multiple external force rows. The simulator evaluates each nonzero row and adds the resulting vectors into the same nucleus force term.
+Cell types can define multiple external force rows. The simulator evaluates each nonzero row, normalizes the resulting vector by the current cell `R_soft`, and adds the vectors into the same nucleus force term. Write formulas as order-one numerators unless you intentionally want a different radius scaling.
 
 The formula editor preview uses the same external-force evaluator as the simulation. Its blue vector field samples the formula at multiple positions around the current preview geometry, which is useful for spotting how a force changes with `x`, `y`, `alpha`, `delta`, `T`, or `N`.
 
@@ -75,6 +75,7 @@ Examples:
 | `10 * sin(t)` | target output units (time-varying) | Time-varying tangential flow. |
 | `3 * N` | target output units | Normal push into the tissue. |
 | `delta * N` | target output units | Normal force proportional to distance from the basal curve. |
+| `0.1 * max(0, 1 - delta / R_soft) * N` | target output units | Radius-aware basal repulsion. |
 | `5 * T + 3 * N` | target output units | Tangential plus normal force. |
 
 ## Constants

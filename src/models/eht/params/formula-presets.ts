@@ -116,13 +116,13 @@ export const FORMULA_QUICK_PRESETS: FormulaQuickPreset[] = [
     name: 'Basal repulsion',
     context: 'external_force',
     description: 'Radius-aware basal-boundary repulsion using the current cell R_soft',
-    generate: () => '0.1 * max(0, R_soft - delta) * N',
+    generate: () => '0.1 * max(0, 1 - delta / R_soft) * N',
   },
   {
     key: 'fluid_pressure',
     name: 'Fluid pressure',
     context: 'external_force',
     description: 'Pressure force active after the nucleus center is more than 2 * R_soft inside the tissue',
-    generate: () => '-0.1 * max(0, delta - 2 * R_soft) * N',
+    generate: () => '-0.1 * max(0, delta / R_soft - 2) * N',
   },
 ];

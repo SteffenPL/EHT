@@ -3,6 +3,8 @@ import { Vector2 } from '@/core/math/vector2';
 import { evaluate, matrix } from 'mathjs';
 import { formulaFunctions } from './formula-functions';
 
+const MIN_RADIUS = 1e-12;
+
 /** Regex to detect vector variables T or N in formula */
 export const VECTOR_VAR_REGEX = /\bT\b|\bN\b/;
 
@@ -121,10 +123,11 @@ export function evaluateExternalForceAtPosition({
   const spatial = buildExternalForceScope(position, basalGeometry, t, constants, cellContext);
   const { effectiveFormula, isScalarFormula } = getExternalForceEffectiveFormula(formula);
   const result = evaluate(effectiveFormula, spatial.scope);
+  const radius = Math.max(cellContext?.R_soft ?? 1, MIN_RADIUS);
 
   return {
     ...spatial,
-    force: externalForceResultToVector2(result),
+    force: externalForceResultToVector2(result).div(radius),
     effectiveFormula,
     isScalarFormula,
   };
