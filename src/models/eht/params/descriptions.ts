@@ -86,10 +86,15 @@ $$d\\mathbf{x} = \\sqrt{2D}\\, d\\mathbf{W}$$`,
 
   'cell_types.cytos_init': `Initial cytoskeleton length $L_{cytos}$ in microns (distance from basal to apical point).`,
 
-  'cell_types.basal_membrane_repulsion': `Repulsion strength keeping nuclei inside the basal membrane boundary. The equivalent external-force style expression is:
-$$F_{basal} = k_{basal}\\,\\max(0, -\\delta)\\,\\mathbf{N}$$
-For an external force formula, use a concrete value for $k_{basal}$, for example:
-\`0.1 * max(0, -delta) * N\``,
+  'cell_types.basal_membrane_repulsion': `Repulsion strength keeping nuclei inside the basal membrane boundary. In external-force formulas, $\\delta$ is measured from the basal curve to the **nucleus center** along $\\mathbf{N}$; it does not include $R_{soft}$ or $R_{hard}$ automatically.
+
+Center-only repulsion starts after the nucleus center crosses outside the basal curve:
+$$F_{center} = k\\,\\max(0, -\\delta)\\,\\mathbf{N}$$
+\`0.1 * max(0, -delta) * N\`
+
+Radius-aware repulsion starts when the nucleus edge reaches the boundary:
+$$F_{radius} = k\\,\\max(0, R - \\delta)\\,\\mathbf{N}$$
+\`0.1 * max(0, 2 - delta) * N\``,
 
   'cell_types.apical_junction_init': `Initial rest length in microns for apical junctions between neighboring cells.`,
 
@@ -104,7 +109,7 @@ For an external force formula, use a concrete value for $k_{basal}$, for example
 - \`t\`: Simulation time (hours)
 - \`N\`: Unit inward normal from basal geometry (into tissue, toward center). Computed from the basal curve at the cell's projected position. Points in the same direction as \`delta\`.
 - \`T\`: Unit tangent vector, perpendicular to \`N\` (counter-clockwise: $T = (-N_y, N_x)$).
-- \`delta\`: Signed distance from basal curve ($\\langle \\mathbf{N}, \\mathbf{X} - \\mathbf{a} \\rangle$ where $\\mathbf{N}$ is the inward normal, $\\mathbf{a}$ the projection onto the curve). Positive above, zero on, negative below the basal line. $\\mathbf{N} \\approx \\nabla \\delta$.
+- \`delta\`: Signed distance from basal curve to the nucleus center ($\\langle \\mathbf{N}, \\mathbf{X} - \\mathbf{a} \\rangle$ where $\\mathbf{N}$ is the inward normal, $\\mathbf{a}$ the projection onto the curve). Positive above, zero on, negative below the basal line. $\\mathbf{N} \\approx \\nabla \\delta$. Nucleus radii are not included automatically.
 
 **Auto-wrapping:** If the formula does not contain \`T\` or \`N\`, it is treated as a scalar and wrapped as \`-(scalar) * sign(alpha) * T\`, producing tangential flow converging at the bottom ($\\alpha = 0$).
 

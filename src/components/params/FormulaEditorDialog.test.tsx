@@ -76,4 +76,29 @@ describe('FormulaEditorDialog', () => {
     expect(within(dialog).getByText('Must be at least 0')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'OK' })).toBeDisabled();
   });
+
+  it('shows a slim preset selector in the preset builders panel', () => {
+    render(
+      <FormulaEditorDialog
+        open
+        onOpenChange={vi.fn()}
+        fieldName="perimeter"
+        label="Perimeter (um)"
+        formula="init_value"
+        currentNumericValue={100}
+        tEnd={48}
+        constants={{ heartbeat: 10 }}
+        context="general"
+        onSave={vi.fn()}
+        onClear={vi.fn()}
+      />
+    );
+
+    const dialog = screen.getByRole('dialog');
+
+    expect(within(dialog).getByText('Preset builders')).toBeInTheDocument();
+    expect(within(dialog).getByRole('combobox')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Insert' })).toBeInTheDocument();
+    expect(within(dialog).getByText('10% heartbeat')).toBeInTheDocument();
+  });
 });
