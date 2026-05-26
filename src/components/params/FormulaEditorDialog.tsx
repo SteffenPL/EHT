@@ -11,9 +11,21 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { createBasalGeometry } from '@/core/math/basal-geometry';
 import { Vector2 } from '@/core/math/vector2';
-import { FORMULA_PRESETS, type FormulaPreset } from '@/models/eht/params/formula-presets';
+import {
+  FORMULA_PRESETS,
+  FORMULA_QUICK_PRESETS,
+  type FormulaPreset,
+  type FormulaQuickPreset,
+} from '@/models/eht/params/formula-presets';
 import { computeEllipseFromPerimeter } from '@/models/eht/params/geometry';
 import { formulaFunctions } from '@/models/eht/simulation/formula-functions';
 import {
@@ -159,11 +171,20 @@ function GraphPreview({
 
 function PresetPanel({
   onInsert,
+  quickPresets,
+  selectedPresetKey,
+  onPresetChange,
+  onQuickPresetUse,
 }: {
   onInsert: (text: string) => void;
+  quickPresets: FormulaQuickPreset[];
+  selectedPresetKey: string;
+  onPresetChange: (key: string) => void;
+  onQuickPresetUse: () => void;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [paramValues, setParamValues] = useState<Record<string, number[]>>({});
+  const selectedPreset = quickPresets.find(preset => preset.key === selectedPresetKey);
 
   const getValues = (preset: FormulaPreset): number[] =>
     paramValues[preset.name] ?? preset.params.map(p => p.defaultValue);
@@ -174,7 +195,31 @@ function PresetPanel({
 
   return (
     <div className="space-y-1">
-      <Label className="text-xs font-medium text-muted-foreground">Presets</Label>
+      <Label className="text-xs font-medium text-muted-foreground">Preset builders</Label>
+      <div className="flex gap-1">
+        <Select value={selectedPresetKey} onValueChange={onPresetChange}>
+          <SelectTrigger className="h-7 min-w-0 flex-1 px-2 text-xs">
+            <SelectValue placeholder="Preset" />
+          </SelectTrigger>
+          <SelectContent>
+            {quickPresets.map(preset => (
+              <SelectItem key={preset.key} value={preset.key} className="text-xs">
+                {preset.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 shrink-0 px-2 text-xs"
+          onClick={onQuickPresetUse}
+          disabled={!selectedPreset}
+        >
+          Use preset
+        </Button>
+      </div>
       {FORMULA_PRESETS.map(preset => (
         <div key={preset.name} className="border rounded">
           <button
@@ -323,18 +368,25 @@ export function FormulaEditorDialog({
 }: FormulaEditorDialogProps) {
   const [formula, setFormula] = useState(initialFormula);
   const [initialValueText, setInitialValueText] = useState(String(currentNumericValue));
+  const [selectedPresetKey, setSelectedPresetKey] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const formulaInputId = useId();
   const initialValueInputId = useId();
   const usesInitialValue = context !== 'external_force';
+  const presetContext = context === 'external_force' ? 'external_force' : 'time';
+  const quickPresets = useMemo(
+    () => FORMULA_QUICK_PRESETS.filter(preset => preset.context === presetContext),
+    [presetContext]
+  );
 
   // Reset local state when dialog opens
   useEffect(() => {
     if (open) {
       setFormula(initialFormula || String(currentNumericValue));
       setInitialValueText(String(currentNumericValue));
+      setSelectedPresetKey(quickPresets[0]?.key ?? '');
     }
-  }, [open, initialFormula, currentNumericValue]);
+  }, [open, initialFormula, currentNumericValue, quickPresets]);
 
   const parsedInitialValue = useMemo(() => {
     if (!initialValueText.trim()) return null;
@@ -369,6 +421,17 @@ export function FormulaEditorDialog({
     });
   }, [formula]);
 
+  const useSelectedPreset = useCallback(() => {
+    const preset = quickPresets.find(candidate => candidate.key === selectedPresetKey);
+    if (!preset) return;
+    const nextFormula = preset.generate();
+    setFormula(nextFormula);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.setSelectionRange(nextFormula.length, nextFormula.length);
+    });
+  }, [quickPresets, selectedPresetKey]);
+
   const formulaError = useMemo(() => {
     if (!formula.trim()) return null;
     try {
@@ -383,6 +446,13 @@ export function FormulaEditorDialog({
           basalGeometry: createBasalGeometry(curvature_1, curvature_2, 360),
           t: 0,
           constants,
+          cellContext: {
+            age: 0,
+            R_soft: softRadius ?? 1,
+            R_hard: softRadius ?? 1,
+            G2: 0,
+            Mitosis: 0,
+          },
         });
         return null;
       }
@@ -406,7 +476,7 @@ export function FormulaEditorDialog({
     } catch (e) {
       return e instanceof Error ? e.message : String(e);
     }
-  }, [formula, context, effectiveInitialValue, constants, tEnd, initialPerimeter, initialAspectRatio]);
+  }, [formula, context, effectiveInitialValue, constants, tEnd, initialPerimeter, initialAspectRatio, softRadius]);
 
   const effectiveFormula = useMemo(() => {
     if (context !== 'external_force') return null;
@@ -527,7 +597,13 @@ export function FormulaEditorDialog({
                 </main>
 
                 <aside className="min-w-0 space-y-4">
-                  <PresetPanel onInsert={(text) => insertAtCursor(text, { implicitMultiply: true })} />
+                  <PresetPanel
+                    onInsert={(text) => insertAtCursor(text, { implicitMultiply: true })}
+                    quickPresets={quickPresets}
+                    selectedPresetKey={selectedPresetKey}
+                    onPresetChange={setSelectedPresetKey}
+                    onQuickPresetUse={useSelectedPreset}
+                  />
                   <FunctionsPanel onInsert={(text) => insertAtCursor(text, { implicitMultiply: true })} />
                 </aside>
               </div>

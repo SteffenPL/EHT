@@ -19,6 +19,7 @@ import {
   isBeforeParamFormatV2,
   legacyParamsToMicrons,
 } from './unit-conversion';
+import { DEFAULT_EXTERNAL_FORCES, normalizeCellTypeExternalForces } from './external-forces';
 
 // =============================================================================
 // Default Events
@@ -176,7 +177,7 @@ export const LEGACY_DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
   cytos_init: 0.0,
   basal_membrane_repulsion: 0.0,
   apical_junction_init: 0.0,
-  external_force: "0",
+  external_forces: [...DEFAULT_EXTERNAL_FORCES],
   formulas: {},
 };
 
@@ -229,7 +230,7 @@ export const LEGACY_DEFAULT_EMT_CELL: EHTCellTypeParams = {
   cytos_init: 0.0,
   basal_membrane_repulsion: 0.0,
   apical_junction_init: 0.0,
-  external_force: "0",
+  external_forces: [...DEFAULT_EXTERNAL_FORCES],
   formulas: {},
 };
 
@@ -355,12 +356,24 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
           delete (baseType as unknown as Record<string, unknown>).skip_default_events;
         }
         base.cell_types[typeName] = merge(baseType, typeParams);
+        normalizeCellTypeExternalForces(
+          base.cell_types[typeName],
+          typeof typeParams.external_force === 'string' && !Array.isArray(typeParams.external_forces)
+        );
       }
     }
   }
 
+  for (const cellType of Object.values(base.cell_types)) {
+    normalizeCellTypeExternalForces(cellType);
+  }
+
   // Apply migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0 → v1.4.0 → v1.5.0 → v2.0.0
-  return ensureV2_0(ensureV1_5_0(ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(base))))));
+  const migrated = ensureV2_0(ensureV1_5_0(ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(base))))));
+  for (const cellType of Object.values(migrated.cell_types)) {
+    normalizeCellTypeExternalForces(cellType);
+  }
+  return migrated;
 }
 
 function promisedEricPerimeter(relativePath: string): number | undefined {

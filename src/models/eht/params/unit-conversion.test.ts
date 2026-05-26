@@ -81,7 +81,7 @@ function makeParams(): EHTParams {
         cytos_init: 0,
         basal_membrane_repulsion: 0,
         apical_junction_init: 0,
-        external_force: '0',
+        external_forces: ['0', '0', '0'],
         formulas: {},
       },
       custom: {
@@ -130,7 +130,7 @@ function makeParams(): EHTParams {
         cytos_init: 0,
         basal_membrane_repulsion: 0,
         apical_junction_init: 0,
-        external_force: '0',
+        external_forces: ['0', '0', '0'],
         formulas: {},
         skip_default_events: [],
       },

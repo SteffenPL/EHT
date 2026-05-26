@@ -12,6 +12,15 @@ export interface ExternalForceEvaluationInput {
   basalGeometry: BasalGeometry;
   t: number;
   constants?: Record<string, number>;
+  cellContext?: ExternalForceCellContext;
+}
+
+export interface ExternalForceCellContext {
+  age?: number;
+  R_soft?: number;
+  R_hard?: number;
+  G2?: number;
+  Mitosis?: number;
 }
 
 export interface ExternalForceEvaluation {
@@ -46,7 +55,8 @@ export function buildExternalForceScope(
   position: Vector2,
   basalGeometry: BasalGeometry,
   t: number,
-  constants?: Record<string, number>
+  constants?: Record<string, number>,
+  cellContext: ExternalForceCellContext = {}
 ): Omit<ExternalForceEvaluation, 'force' | 'effectiveFormula' | 'isScalarFormula'> {
   const center = basalGeometry.center;
   const x = position.x - center.x;
@@ -68,6 +78,11 @@ export function buildExternalForceScope(
     delta,
     ...formulaFunctions,
     ...(constants ?? {}),
+    age: cellContext.age ?? 0,
+    R_soft: cellContext.R_soft ?? 1,
+    R_hard: cellContext.R_hard ?? cellContext.R_soft ?? 1,
+    G2: cellContext.G2 ?? 0,
+    Mitosis: cellContext.Mitosis ?? 0,
   };
 
   return {
@@ -101,8 +116,9 @@ export function evaluateExternalForceAtPosition({
   basalGeometry,
   t,
   constants,
+  cellContext,
 }: ExternalForceEvaluationInput): ExternalForceEvaluation {
-  const spatial = buildExternalForceScope(position, basalGeometry, t, constants);
+  const spatial = buildExternalForceScope(position, basalGeometry, t, constants, cellContext);
   const { effectiveFormula, isScalarFormula } = getExternalForceEffectiveFormula(formula);
   const result = evaluate(effectiveFormula, spatial.scope);
 

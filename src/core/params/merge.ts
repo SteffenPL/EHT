@@ -19,6 +19,7 @@ import { ensureV1_4_0 } from '@/models/eht/params/migration-v1.4';
 import { ensureV1_5_0 } from '@/models/eht/params/migration-v1.5';
 import { ensureV2_0 } from '@/models/eht/params/migration-v2.0';
 import { compareVersionStrings, isBeforeParamFormatV2 } from '@/models/eht/params/unit-conversion';
+import { normalizeCellTypeExternalForces } from '@/models/eht/params/external-forces';
 
 /**
  * Custom merge function that handles nested objects properly.
@@ -93,6 +94,7 @@ export function mergeWithDefaults(
     // Clear default cell types and replace with imported ones
     result.cell_types = {};
     for (const [typeName, partialType] of Object.entries(partial.cell_types)) {
+      const partialCellType = partialType as Record<string, unknown>;
       // Each imported type is merged over control defaults for completeness
       const newType = structuredClone(isLegacyInput ? LEGACY_DEFAULT_CONTROL_CELL : DEFAULT_CONTROL_CELL);
       // For pre-v1.1.0 files, remove events_v2 from defaults so migration
@@ -102,12 +104,24 @@ export function mergeWithDefaults(
         delete (newType as unknown as Record<string, unknown>).skip_default_events;
       }
       mergeWith(newType, partialType, customMerge);
+      normalizeCellTypeExternalForces(
+        newType,
+        typeof partialCellType.external_force === 'string' && !Array.isArray(partialCellType.external_forces)
+      );
       result.cell_types[typeName] = newType;
     }
   }
 
+  for (const cellType of Object.values(result.cell_types)) {
+    normalizeCellTypeExternalForces(cellType as unknown as Record<string, unknown>);
+  }
+
   // Run EHT migration chain: v1.0.0 → v1.1.0 → v1.2.0 → v1.3.0 → v1.4.0 → v1.5.0 → v2.0.0
-  return ensureV2_0(ensureV1_5_0(ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(result))))));
+  const migrated = ensureV2_0(ensureV1_5_0(ensureV1_4_0(ensureV1_3_0(ensureV1_2_0(ensureV1_1_0(result))))));
+  for (const cellType of Object.values(migrated.cell_types)) {
+    normalizeCellTypeExternalForces(cellType as unknown as Record<string, unknown>);
+  }
+  return migrated;
 }
 
 /**

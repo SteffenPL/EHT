@@ -4,8 +4,9 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
-import type { EHTSimulationState } from '../types';
+import { CellPhase, type EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
+import { normalizeExternalForces } from '../params/external-forces';
 import { evaluateExternalForceAtPosition } from './external-force-formula';
 
 /** Mutable 2D force vector used in hot simulation loops. */
@@ -242,15 +243,15 @@ export function calcApicalJunctionForces(
 /** Cache of formulas that failed to evaluate — only warn once per formula */
 const failedFormulas = new Map<string, string>();
 
-/** Get the parsing error for a given external_force formula, or undefined if valid. */
+/** Get the parsing error for a given external force formula, or undefined if valid. */
 export function getExternalForceError(formula: string): string | undefined {
   return failedFormulas.get(formula);
 }
 
 /**
  * Calculate external forces from user-defined formulas.
- * Each cell type can specify a math.js formula for an external force
- * applied to cell nuclei.
+ * Each cell type can specify multiple math.js formulas for external forces
+ * applied to cell nuclei. Formula results are summed.
  */
 export function calcExternalForces(
   state: EHTSimulationState,
@@ -264,34 +265,43 @@ export function calcExternalForces(
   for (let i = 0; i < cells.length; i++) {
     const ci = cells[i];
     const cellType = cellTypes[ci.typeIndex] ?? fallbackType;
-    const formula = cellType.external_force;
+    const formulas = normalizeExternalForces(cellType);
 
-    // Skip if no external force
-    if (!formula || formula === '0') continue;
+    for (const formula of formulas) {
+      // Skip if no external force
+      if (!formula || formula === '0') continue;
 
-    // Skip formulas already known to be invalid — use NaN force
-    if (failedFormulas.has(formula)) {
-      forces[i].f.x = NaN;
-      forces[i].f.y = NaN;
-      continue;
-    }
+      // Skip formulas already known to be invalid — use NaN force
+      if (failedFormulas.has(formula)) {
+        forces[i].f.x = NaN;
+        forces[i].f.y = NaN;
+        continue;
+      }
 
-    try {
-      const { force } = evaluateExternalForceAtPosition({
-        formula,
-        position: Vector2.from(ci.pos),
-        basalGeometry: state.basalGeometry,
-        t: state.t,
-        constants: params.constants,
-      });
-      forces[i].f.x += force.x;
-      forces[i].f.y += force.y;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      failedFormulas.set(formula, msg);
-      console.warn(`[ExternalForce] Invalid formula "${formula}": ${msg}`);
-      forces[i].f.x = NaN;
-      forces[i].f.y = NaN;
+      try {
+        const { force } = evaluateExternalForceAtPosition({
+          formula,
+          position: Vector2.from(ci.pos),
+          basalGeometry: state.basalGeometry,
+          t: state.t,
+          constants: params.constants,
+          cellContext: {
+            age: state.t - ci.birth_time,
+            R_soft: ci.R_soft,
+            R_hard: ci.R_hard,
+            G2: ci.phase === CellPhase.G2 ? 1 : 0,
+            Mitosis: ci.phase === CellPhase.Mitosis ? 1 : 0,
+          },
+        });
+        forces[i].f.x += force.x;
+        forces[i].f.y += force.y;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        failedFormulas.set(formula, msg);
+        console.warn(`[ExternalForce] Invalid formula "${formula}": ${msg}`);
+        forces[i].f.x = NaN;
+        forces[i].f.y = NaN;
+      }
     }
   }
 }

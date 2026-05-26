@@ -60,9 +60,9 @@ function makeState(cells: CellState[], geometry: 'line' | 'circle' = 'circle'): 
 }
 
 describe('calcExternalForces', () => {
-  it('applies no force when external_force is "0"', () => {
+  it('applies no force when external_forces are "0"', () => {
     const params = createDefaultEHTParams();
-    params.cell_types.control.external_force = '0';
+    params.cell_types.control.external_forces = ['0', '0', '0'];
 
     const cell = makeCell(0, -10, 'control');
     const state = makeState([cell]);
@@ -76,7 +76,7 @@ describe('calcExternalForces', () => {
 
   it('applies auto-wrapped scalar formula as convergent tangential force', () => {
     const params = createDefaultEHTParams();
-    params.cell_types.control.external_force = '10';
+    params.cell_types.control.external_forces = ['10'];
 
     // Cell at alpha = pi/2 (right side of circle, center at origin)
     const cell = makeCell(5, 0, 'control'); // x=5, y=0 → alpha=pi/2
@@ -93,7 +93,7 @@ describe('calcExternalForces', () => {
 
   it('uses vector formula as-is when T or N present', () => {
     const params = createDefaultEHTParams();
-    params.cell_types.control.external_force = '5 * N';
+    params.cell_types.control.external_forces = ['5 * N'];
 
     // Cell directly below center: alpha=0, N=(0,1) pointing into tissue
     const cell = makeCell(0, -5, 'control');
@@ -109,7 +109,7 @@ describe('calcExternalForces', () => {
 
   it('produces zero force at alpha=0 with auto-wrapped scalar (sign(0)=0)', () => {
     const params = createDefaultEHTParams();
-    params.cell_types.control.external_force = '10';
+    params.cell_types.control.external_forces = ['10'];
 
     // Cell directly below center: alpha=0
     const cell = makeCell(0, -5, 'control');
@@ -125,7 +125,7 @@ describe('calcExternalForces', () => {
 
   it('handles invalid formula gracefully (NaN force + warning)', () => {
     const params = createDefaultEHTParams();
-    params.cell_types.control.external_force = 'invalid_func()';
+    params.cell_types.control.external_forces = ['invalid_func()'];
 
     const cell = makeCell(0, 0, 'control');
     const state = makeState([cell]);
@@ -142,7 +142,7 @@ describe('calcExternalForces', () => {
 
   it('handles r=0 (cell at geometry center) with vector formula', () => {
     const params = createDefaultEHTParams();
-    params.cell_types.control.external_force = '5 * N';
+    params.cell_types.control.external_forces = ['5 * N'];
 
     // Cell exactly at geometry center (origin): r=0, alpha=atan2(0,0)=0
     const cell = makeCell(0, 0, 'control');
@@ -159,7 +159,7 @@ describe('calcExternalForces', () => {
 
   it('converges from negative alpha (left side) toward bottom', () => {
     const params = createDefaultEHTParams();
-    params.cell_types.control.external_force = '10';
+    params.cell_types.control.external_forces = ['10'];
 
     // Cell at alpha = -pi/2 (left side): x=-5, y=0
     const cell = makeCell(-5, 0, 'control');
@@ -177,7 +177,7 @@ describe('calcExternalForces', () => {
 
   it('exposes time variable t in formula scope', () => {
     const params = createDefaultEHTParams();
-    params.cell_types.control.external_force = 't * N';
+    params.cell_types.control.external_forces = ['t * N'];
 
     const cell = makeCell(0, -5, 'control');
     const state = makeState([cell]);
@@ -191,9 +191,28 @@ describe('calcExternalForces', () => {
     expect(forces[0].f.y).toBeCloseTo(3, 5);
   });
 
+  it('exposes cell age, radii, and phase flags in formula scope', () => {
+    const params = createDefaultEHTParams();
+    params.cell_types.control.external_forces = ['(age + R_soft + R_hard + G2 + Mitosis) * N'];
+
+    const cell = makeCell(0, -5, 'control');
+    cell.birth_time = 1;
+    cell.R_soft = 1.2;
+    cell.R_hard = 0.4;
+    cell.phase = CellPhase.G2;
+    const state = makeState([cell]);
+    state.t = 3;
+    const forces: CellForces[] = [zeroForces()];
+
+    calcExternalForces(state, params, forces);
+
+    expect(forces[0].f.x).toBeCloseTo(0, 5);
+    expect(forces[0].f.y).toBeCloseTo(4.6, 5);
+  });
+
   it('matches the shared evaluator on elliptical geometry', () => {
     const params = createDefaultEHTParams();
-    params.cell_types.control.external_force = '5 * T + 3 * N + t * matrix([0.25, -0.5])';
+    params.cell_types.control.external_forces = ['5 * T + 3 * N + t * matrix([0.25, -0.5])'];
 
     const cell = makeCell(12, -8, 'control');
     const state = makeState([cell]);
@@ -203,7 +222,7 @@ describe('calcExternalForces', () => {
     const forces: CellForces[] = [zeroForces()];
 
     const expected = evaluateExternalForceAtPosition({
-      formula: params.cell_types.control.external_force,
+      formula: params.cell_types.control.external_forces[0],
       position: Vector2.from(cell.pos),
       basalGeometry: state.basalGeometry,
       t: state.t,
@@ -214,5 +233,19 @@ describe('calcExternalForces', () => {
 
     expect(forces[0].f.x).toBeCloseTo(expected.x, 5);
     expect(forces[0].f.y).toBeCloseTo(expected.y, 5);
+  });
+
+  it('adds multiple external force formulas together', () => {
+    const params = createDefaultEHTParams();
+    params.cell_types.control.external_forces = ['2 * N', '3 * N', '0'];
+
+    const cell = makeCell(0, -5, 'control');
+    const state = makeState([cell]);
+    const forces: CellForces[] = [zeroForces()];
+
+    calcExternalForces(state, params, forces);
+
+    expect(forces[0].f.x).toBeCloseTo(0, 5);
+    expect(forces[0].f.y).toBeCloseTo(5, 5);
   });
 });

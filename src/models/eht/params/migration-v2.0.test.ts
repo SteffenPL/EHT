@@ -101,6 +101,20 @@ steps = 2
     expect(params.metadata.curation_warnings?.join('\n')).toContain('cell_types.control.R_soft');
   });
 
+  it('loads deprecated single external_force as the first external_forces row', () => {
+    const params = mergeWithDefaults({
+      metadata: { model: 'EHT', version: '2.0.0', unit_system: 'microns' },
+      cell_types: {
+        control: {
+          external_force: '5 * N',
+        },
+      },
+    });
+
+    expect(params.cell_types.control.external_forces).toEqual(['5 * N', '0', '0']);
+    expect(params.cell_types.control.external_force).toBeUndefined();
+  });
+
   it('preserves curated Eric micron-profile values', () => {
     const params = mergeWithDefaults({
       metadata: {
