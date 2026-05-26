@@ -168,7 +168,9 @@ Formula: $drl \\times (1 + \\text{strain})$`,
 - \`0\` — set to zero
 - \`sin(t) + 1\` — oscillate over time`,
 
-  'events.time_range': `Time window during which the event can trigger. A random trigger time is sampled uniformly from this range at cell birth.
+  'events.time_range': `Time window during which the event can trigger. For independent one-time events, a random trigger time is sampled uniformly from this range.
+
+If the event has a dependency, the **start** is controlled by the dependency: the event is sampled after the prerequisite event fires and before this event's configured end time.
 
 Uncheck to disable the event entirely.`,
 
@@ -176,7 +178,9 @@ Uncheck to disable the event entirely.`,
 - **0** = one-time event (fires once at trigger time)
 - **> 0** = periodic event (fires at trigger time, then every $period$ hours)`,
 
-  'events.probability': `Probability formula evaluated at cell birth (should return 0\u20131). Can use **math.js** expressions and reference general parameters.
+  'events.probability': `Probability formula that controls whether the event participates for a cell (should return 0\u20131). Can use **math.js** expressions and reference general parameters.
+
+For dependent events, probability is **conditional**: it is evaluated only after the prerequisite event participates and fires. If the prerequisite is skipped, this event is skipped too.
 
 **Examples:**
 - \`1\` \u2014 all cells get this event
@@ -184,9 +188,9 @@ Uncheck to disable the event entirely.`,
 - \`0\` \u2014 event disabled
 - \`p_div_out\` \u2014 use the division-out probability from general params`,
 
-  'events.prereq': `Prerequisite event that must fire first (on the same cell) before this event can trigger.
+  'events.prereq': `Dependency event that must fire first on the same cell. Selecting a dependency automatically controls this event's start time: the dependent event is sampled after the dependency fires.
 
-Use this to create event chains, e.g., "lose basal adhesion" → "start running".`,
+If the dependency is skipped for a cell, this event is skipped for that cell too. Use this to create event chains, e.g., "lose basal adhesion" → "start running".`,
 
   'events.cell_phase': `Cell cycle phase requirement. The event only fires if the cell has reached this phase:
 
@@ -240,7 +244,10 @@ Parameter change events can modify these cell properties via the \`target_parame
 ## Trigger Mechanisms
 
 ### Time-based triggering
-Each event has a **start** and **end** time. At cell birth, a random trigger time $t_{trigger}$ is sampled uniformly from $[\\text{start}, \\text{end}]$. The event fires when the simulation crosses $t_{trigger}$.
+Each event has a **start** and **end** time. Independent one-time events sample a random trigger time $t_{trigger}$ uniformly from $[\\text{start}, \\text{end}]$. The event fires when the simulation crosses $t_{trigger}$.
+
+### Dependency-based triggering
+When an event has a dependency, its start time is controlled by the dependency. The dependent event waits until the prerequisite event fires on the same cell, then samples from that fire time to its own configured end time. If the prerequisite is skipped for a cell, the dependent event is skipped too.
 
 ### Phase-gated triggering
 Events can require a **cell cycle phase** (\`Any\`, \`G1\`, \`G2\`, \`Mitosis\`, \`Division\`). The event only fires once the cell has reached that phase.
@@ -256,7 +263,7 @@ If \`period = 0\`, the event fires exactly once.
 
 ## Probability
 
-The **probability** field is a math.js formula evaluated at cell birth. It determines whether the event is active for that cell. Available variables:
+The **probability** field is a math.js formula. It determines whether the event is active for that cell. Available variables:
 
 - \`p_div_out\` — division-out probability (general param)
 - \`mu\`, \`h_init\`, \`w_init\`, \`t_end\` — general simulation parameters
@@ -265,6 +272,8 @@ The **probability** field is a math.js formula evaluated at cell birth. It deter
 **Examples:** \`1\` (always), \`0.5\` (50%), \`INM\` (use cell type's INM value), \`p_div_out\` (use division probability)
 
 If the probability evaluates to 0, the event is skipped entirely for that cell. If it evaluates to a value less than 1, each cell independently samples whether the event is active.
+
+For dependent events, probability is conditional on the prerequisite. For example, if event B has probability \`0.8\` and event A depends on B with probability \`1\`, then A happens exactly in the cells where B happens, as long as A's derived time window is valid.
 
 ## Formula (Parameter Change Events)
 
@@ -282,11 +291,13 @@ The \`formula\` field is a math.js expression that computes the new parameter va
 - \`-1\` — set to -1 (e.g. for strain = inactive)
 - \`2\` — set to 2
 
-## Prerequisites
+## Dependencies
 
-Events can depend on other events via the \`prereq\` field. A prerequisite event must have fired (on the same cell) before the dependent event can trigger. This creates event chains, e.g.:
+Events can depend on other events via the \`prereq\` field. A dependency must fire on the same cell before the dependent event is sampled. This creates ordered event chains, e.g.:
 
 1. \`lose_apical_adhesion\` fires → 2. \`start_running\` fires (prereq: \`lose_apical\`)
+
+When a dependency is selected, the dependent event's manual start time is ignored and displayed as \`time(dependency)\`. The dependent event keeps its own end time.
 
 ## Default vs Per-Type Events
 

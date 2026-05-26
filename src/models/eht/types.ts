@@ -22,6 +22,8 @@ export interface CellEventState {
     event_id: string;
     /** Sampled trigger time (between event start/end, Infinity if skipped) */
     trigger_time: number;
+    /** True when a dependent event waits for its prerequisite to fire before sampling */
+    pending_dependency?: boolean;
     /** Whether the event has fired at least once */
     has_fired: boolean;
     /** Time of last fire (for periodic events) */

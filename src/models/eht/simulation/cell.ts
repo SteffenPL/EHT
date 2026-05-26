@@ -11,12 +11,13 @@ import { CellPhase } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, EHTGeneralParams } from '../params/types';
 import { formulaFunctions } from './formula-functions';
 import { CellCyclePhase } from '../params/types';
+import { analyzeEventDependencies } from '../params/event-dependencies';
 
 /**
  * Evaluate a probability formula string.
  * Returns a number between 0 and 1. Falls back to parsing as plain number.
  */
-function evaluateProbabilityFormula(
+export function evaluateProbabilityFormula(
   formula: string,
   generalParams?: EHTGeneralParams,
   cellTypeParams?: EHTCellTypeParams,
@@ -44,6 +45,69 @@ function evaluateProbabilityFormula(
     const num = Number(formula);
     return isNaN(num) ? 1 : num;
   }
+}
+
+function eventCanParticipate(
+  state: CellEventState | undefined
+): boolean {
+  return state !== undefined && (state.pending_dependency === true || isFinite(state.trigger_time));
+}
+
+function createSkippedEventState(event: EventDefinition): CellEventState {
+  return {
+    event_id: event.id,
+    trigger_time: Infinity,
+    pending_dependency: false,
+    has_fired: false,
+    last_fire_time: -Infinity,
+    fire_count: 0,
+  };
+}
+
+function createPendingEventState(event: EventDefinition): CellEventState {
+  return {
+    event_id: event.id,
+    trigger_time: Infinity,
+    pending_dependency: true,
+    has_fired: false,
+    last_fire_time: -Infinity,
+    fire_count: 0,
+  };
+}
+
+function sampleIndependentEventState(
+  event: EventDefinition,
+  rng: SeededRandom,
+  generalParams?: EHTGeneralParams,
+  cellTypeParams?: EHTCellTypeParams,
+  constants?: Record<string, number>
+): CellEventState {
+  const prob = evaluateProbabilityFormula(event.probability, generalParams, cellTypeParams, constants);
+  const shouldTrigger = rng.random() <= prob;
+
+  if (!shouldTrigger || event.end === -1) {
+    return createSkippedEventState(event);
+  }
+
+  let triggerTime: number;
+  if (event.period !== 0) {
+    // Periodic event: trigger_time stores the active-window start.
+    triggerTime = event.start;
+  } else if (isFinite(event.end)) {
+    triggerTime = rng.random(event.start, event.end);
+  } else {
+    // Infinite end = always applicable from start time
+    triggerTime = event.start;
+  }
+
+  return {
+    event_id: event.id,
+    trigger_time: triggerTime,
+    pending_dependency: false,
+    has_fired: false,
+    last_fire_time: -Infinity,
+    fire_count: 0,
+  };
 }
 
 /**
@@ -94,38 +158,18 @@ export function initializeEventStates(
     return eventStates;
   }
 
-  for (const event of events) {
-    // Determine if this event should be skipped based on probability formula
-    const prob = evaluateProbabilityFormula(event.probability, generalParams, cellTypeParams, constants);
-    const shouldTrigger = rng.random() <= prob;
+  const { orderedEvents, hasErrors } = analyzeEventDependencies(events);
+  const eventsToInitialize = hasErrors ? events : orderedEvents;
 
-    let triggerTime: number;
-    if (event.period !== 0) {
-      // Periodic event: trigger_time is a participation flag only.
-      // Active window [start, end] is checked at runtime in shouldEventFire.
-      triggerTime = shouldTrigger ? 0 : Infinity;
+  for (const event of eventsToInitialize) {
+    if (event.prereq) {
+      const prereqState = eventStates[event.prereq];
+      eventStates[event.id] = eventCanParticipate(prereqState)
+        ? createPendingEventState(event)
+        : createSkippedEventState(event);
     } else {
-      // One-time event: sample trigger time within [start, end] range
-      if (shouldTrigger && event.end !== -1) {
-        if (isFinite(event.end)) {
-          triggerTime = rng.random(event.start, event.end);
-        } else {
-          // Infinite end = always applicable from start time
-          triggerTime = event.start;
-        }
-      } else {
-        // Event is skipped or inactive (end === -1)
-        triggerTime = Infinity;
-      }
+      eventStates[event.id] = sampleIndependentEventState(event, rng, generalParams, cellTypeParams, constants);
     }
-
-    eventStates[event.id] = {
-      event_id: event.id,
-      trigger_time: triggerTime,
-      has_fired: false,
-      last_fire_time: -Infinity,
-      fire_count: 0,
-    };
   }
 
   return eventStates;
@@ -151,8 +195,9 @@ export function copyEventStates(
 
 /**
  * Inherit event states from a parent cell for division or cell cycle reset.
- * Periodic events: inherit participation (trigger_time), reset firing counters.
- * One-time events: re-sample fresh via probability.
+ * Periodic events without dependencies inherit participation, reset firing counters.
+ * Dependent events wait for their prerequisite to fire before sampling.
+ * Independent one-time events re-sample fresh via probability.
  */
 export function inheritEventStates(
   parentStates: Record<string, CellEventState>,
@@ -164,41 +209,30 @@ export function inheritEventStates(
 ): Record<string, CellEventState> {
   const result: Record<string, CellEventState> = {};
 
-  for (const event of events) {
+  const { orderedEvents, hasErrors } = analyzeEventDependencies(events);
+  const eventsToInitialize = hasErrors ? events : orderedEvents;
+
+  for (const event of eventsToInitialize) {
     const parentState = parentStates[event.id];
 
-    if (event.period !== 0 && parentState) {
+    if (event.prereq) {
+      const prereqState = result[event.prereq] ?? parentStates[event.prereq];
+      result[event.id] = eventCanParticipate(prereqState)
+        ? createPendingEventState(event)
+        : createSkippedEventState(event);
+    } else if (event.period !== 0 && parentState) {
       // Periodic: inherit participation decision, reset counters
       result[event.id] = {
         event_id: event.id,
-        trigger_time: parentState.trigger_time, // 0 (participating) or Infinity (skipped)
+        trigger_time: parentState.trigger_time,
+        pending_dependency: false,
         has_fired: false,
         last_fire_time: -Infinity,
         fire_count: 0,
       };
     } else {
       // One-time or new event without parent state: sample fresh
-      const prob = evaluateProbabilityFormula(event.probability, generalParams, cellTypeParams, constants);
-      const shouldTrigger = rng.random() <= prob;
-
-      let triggerTime: number;
-      if (shouldTrigger && event.end !== -1) {
-        if (isFinite(event.end)) {
-          triggerTime = rng.random(event.start, event.end);
-        } else {
-          triggerTime = event.start;
-        }
-      } else {
-        triggerTime = Infinity;
-      }
-
-      result[event.id] = {
-        event_id: event.id,
-        trigger_time: triggerTime,
-        has_fired: false,
-        last_fire_time: -Infinity,
-        fire_count: 0,
-      };
+      result[event.id] = sampleIndependentEventState(event, rng, generalParams, cellTypeParams, constants);
     }
   }
 

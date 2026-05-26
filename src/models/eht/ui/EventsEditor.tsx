@@ -23,6 +23,7 @@ import {
 import { Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react';
 import { HelpPopover } from '@/components/ui/help-popover';
 import { getParameterDescription } from '../params/descriptions';
+import { analyzeEventDependencies, getEventDependencyIssues } from '../params/event-dependencies';
 import type {
   EventDefinition,
   ParameterChangeEvent,
@@ -124,9 +125,11 @@ interface TimeRangeInputProps {
   onChangeStart: (value: number) => void;
   onChangeEnd: (value: number) => void;
   disabled?: boolean;
+  startDisabled?: boolean;
+  derivedStartLabel?: string;
 }
 
-function TimeRangeInput({ start, end, onChangeStart, onChangeEnd, disabled }: TimeRangeInputProps) {
+function TimeRangeInput({ start, end, onChangeStart, onChangeEnd, disabled, startDisabled, derivedStartLabel }: TimeRangeInputProps) {
   const isActive = end !== -1;
 
   const handleActiveToggle = (checked: boolean) => {
@@ -145,15 +148,27 @@ function TimeRangeInput({ start, end, onChangeStart, onChangeEnd, disabled }: Ti
         disabled={disabled}
         title="Active"
       />
-      <NumberInput
-        value={start}
-        onChange={onChangeStart}
-        disabled={disabled || !isActive}
-        min={0}
-        step={0.1}
-        label="Start"
-        className="w-20"
-      />
+      {derivedStartLabel ? (
+        <div className="flex w-24 flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Start</label>
+          <div
+            className="flex h-7 items-center rounded-md border border-input bg-muted px-2 text-xs text-muted-foreground"
+            title={derivedStartLabel}
+          >
+            {derivedStartLabel}
+          </div>
+        </div>
+      ) : (
+        <NumberInput
+          value={start}
+          onChange={onChangeStart}
+          disabled={disabled || !isActive || startDisabled}
+          min={0}
+          step={0.1}
+          label="Start"
+          className="w-20"
+        />
+      )}
       <span className="text-muted-foreground">-</span>
       <NumberInput
         value={end}
@@ -181,10 +196,14 @@ export function EventEditor({
   onMoveDown,
   disabled,
 }: EventEditorProps) {
+  const dependencyAnalysis = analyzeEventDependencies(allEvents);
+  const eventIssues = getEventDependencyIssues(dependencyAnalysis, event.id);
   // Get available prerequisites (other events except self)
   const prereqOptions = allEvents
     .filter(e => e.id !== event.id)
     .map(e => ({ value: e.id, label: e.id }));
+  const prereqMissing = event.prereq && !prereqOptions.some(opt => opt.value === event.prereq);
+  const derivedStartLabel = event.prereq ? `time(${event.prereq})` : undefined;
 
   const handleBaseFieldChange = <K extends keyof EventDefinition>(
     field: K,
@@ -350,6 +369,8 @@ export function EventEditor({
           end={event.end}
           onChangeStart={(v) => handleBaseFieldChange('start', v)}
           onChangeEnd={(v) => handleBaseFieldChange('end', v)}
+          startDisabled={!!event.prereq}
+          derivedStartLabel={derivedStartLabel}
           disabled={disabled}
         />
         <div className="flex flex-col gap-1">
@@ -424,6 +445,9 @@ export function EventEditor({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__none__">(None)</SelectItem>
+              {prereqMissing && event.prereq && (
+                <SelectItem value={event.prereq}>{event.prereq} (missing)</SelectItem>
+              )}
               {prereqOptions.map(opt => (
                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
               ))}
@@ -453,6 +477,22 @@ export function EventEditor({
           </Select>
         </div>
       </div>
+
+      {event.prereq && (
+        <div className="rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-xs text-blue-700 dark:text-blue-300">
+          Start is controlled by <code>{event.prereq}</code>; this event is sampled after that event fires and is skipped if the dependency is skipped.
+        </div>
+      )}
+
+      {eventIssues.length > 0 && (
+        <div className="space-y-1 rounded-md border border-destructive/30 bg-destructive/10 px-2 py-1 text-xs text-destructive">
+          {eventIssues.map(issue => (
+            <div key={`${issue.type}-${issue.eventId}-${issue.dependencyId ?? ''}`}>
+              {issue.message}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
