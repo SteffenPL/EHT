@@ -96,6 +96,7 @@ function FormulaCell({
   formulas,
   onFormulaChange,
   onFormulaClear,
+  onCopyToOther,
   onNumericChange,
   disabled,
   min,
@@ -109,6 +110,7 @@ function FormulaCell({
   formulas: Record<string, string>;
   onFormulaChange: (field: string, formula: string, initialValue: number) => void;
   onFormulaClear: (field: string) => void;
+  onCopyToOther?: (field: string, formula: string) => void;
   onNumericChange: (value: number) => void;
   disabled?: boolean;
   min?: number;
@@ -144,12 +146,22 @@ function FormulaCell({
           />
         )}
         <button
+          type="button"
           onClick={() => setEditorOpen(true)}
           disabled={disabled}
           className={`text-[9px] px-0.5 rounded border leading-none h-5 disabled:opacity-50 ${isFormula ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
           title="Edit formula"
         >
           f(x)
+        </button>
+        <button
+          type="button"
+          onClick={() => onCopyToOther?.(fieldName, formula)}
+          disabled={disabled || !isFormula || !onCopyToOther}
+          className="h-5 rounded border px-1 text-[9px] leading-none hover:bg-muted disabled:opacity-50"
+          title={`Copy ${label} formula to other cell types`}
+        >
+          copy to other
         </button>
       </div>
       <FormulaEditorDialog
@@ -166,6 +178,7 @@ function FormulaCell({
         context="cell_type"
         onSave={(f, initialValue) => onFormulaChange(fieldName, f, initialValue)}
         onClear={() => onFormulaClear(fieldName)}
+        onCopyToOther={onCopyToOther ? (f) => onCopyToOther(fieldName, f) : undefined}
       />
     </td>
   );
@@ -174,6 +187,7 @@ function FormulaCell({
 function ExternalForceCell({
   value,
   onChange,
+  onCopyToOther,
   disabled,
   label,
   fieldName,
@@ -186,6 +200,7 @@ function ExternalForceCell({
 }: {
   value: string;
   onChange: (value: string) => void;
+  onCopyToOther?: (value: string) => void;
   disabled?: boolean;
   label: string;
   fieldName: string;
@@ -211,12 +226,22 @@ function ExternalForceCell({
           className={`h-6 w-24 cursor-pointer bg-muted px-1 text-xs font-mono ${error ? 'border-destructive' : ''}`}
         />
         <button
+          type="button"
           onClick={() => setEditorOpen(true)}
           disabled={disabled}
           className={`h-5 rounded border px-0.5 text-[9px] leading-none disabled:opacity-50 ${value && value !== '0' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
           title="Edit external force formula"
         >
           f(x)
+        </button>
+        <button
+          type="button"
+          onClick={() => onCopyToOther?.(value || '0')}
+          disabled={disabled || !onCopyToOther}
+          className="h-5 rounded border px-1 text-[9px] leading-none hover:bg-muted disabled:opacity-50"
+          title={`Copy ${label} formula to other cell types`}
+        >
+          copy to other
         </button>
       </div>
       {error && (
@@ -239,6 +264,7 @@ function ExternalForceCell({
         softRadius={softRadius}
         onSave={(formula) => onChange(formula.trim() || '0')}
         onClear={() => onChange('0')}
+        onCopyToOther={onCopyToOther ? (formula) => onCopyToOther(formula.trim() || '0') : undefined}
       />
     </td>
   );
@@ -535,6 +561,20 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     onChange(newParams);
   };
 
+  const copyExternalForceToOtherCellTypes = useCallback((sourceCellType: string, index: number, formula: string) => {
+    const newParams = structuredClone(params);
+    for (const [cellTypeKey, cellType] of Object.entries(newParams.cell_types)) {
+      if (cellTypeKey === sourceCellType) continue;
+      const formulas = [...((cellType as EHTCellTypeParams).external_forces ?? [])];
+      while (formulas.length <= index) {
+        formulas.push('0');
+      }
+      formulas[index] = formula.trim() || '0';
+      (cellType as EHTCellTypeParams).external_forces = formulas;
+    }
+    onChange(newParams);
+  }, [params, onChange]);
+
   const addExternalForce = () => {
     const newParams = structuredClone(params);
     for (const cellType of Object.values(newParams.cell_types)) {
@@ -563,6 +603,17 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
       cellType[field] = initialValue;
     }
     ct.formulas = { ...ct.formulas, [field]: formula };
+    onChange(newParams);
+  }, [params, onChange]);
+
+  const copyCellFormulaToOtherCellTypes = useCallback((sourceTypeKey: string, field: string, formula: string) => {
+    if (!formula.trim()) return;
+    const newParams = structuredClone(params);
+    for (const [typeKey, cellType] of Object.entries(newParams.cell_types)) {
+      if (typeKey === sourceTypeKey) continue;
+      const ct = cellType as EHTCellTypeParams;
+      ct.formulas = { ...ct.formulas, [field]: formula };
+    }
     onChange(newParams);
   }, [params, onChange]);
 
@@ -755,6 +806,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 formulas={getCellType(key).formulas}
                 onFormulaChange={(field, formula, initialValue) => updateCellFormula(key, field, formula, initialValue)}
                 onFormulaClear={(f) => clearCellFormula(key, f)}
+                onCopyToOther={(field, formula) => copyCellFormulaToOtherCellTypes(key, field, formula)}
                 onNumericChange={(v) => updateCellType(key, 'R_soft', v)}
                 disabled={disabled}
                 min={0}
@@ -833,6 +885,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 formulas={getCellType(key).formulas}
                 onFormulaChange={(field, formula, initialValue) => updateCellFormula(key, field, formula, initialValue)}
                 onFormulaClear={(f) => clearCellFormula(key, f)}
+                onCopyToOther={(field, formula) => copyCellFormulaToOtherCellTypes(key, field, formula)}
                 onNumericChange={(v) => updateCellType(key, 'stiffness_nuclei_apical', v)}
                 disabled={disabled}
                 min={0}
@@ -851,6 +904,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 formulas={getCellType(key).formulas}
                 onFormulaChange={(field, formula, initialValue) => updateCellFormula(key, field, formula, initialValue)}
                 onFormulaClear={(f) => clearCellFormula(key, f)}
+                onCopyToOther={(field, formula) => copyCellFormulaToOtherCellTypes(key, field, formula)}
                 onNumericChange={(v) => updateCellType(key, 'stiffness_nuclei_basal', v)}
                 disabled={disabled}
                 min={0}
@@ -869,6 +923,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 formulas={getCellType(key).formulas}
                 onFormulaChange={(field, formula, initialValue) => updateCellFormula(key, field, formula, initialValue)}
                 onFormulaClear={(f) => clearCellFormula(key, f)}
+                onCopyToOther={(field, formula) => copyCellFormulaToOtherCellTypes(key, field, formula)}
                 onNumericChange={(v) => updateCellType(key, 'stiffness_repulsion', v)}
                 disabled={disabled}
                 min={0}
@@ -887,6 +942,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                 formulas={getCellType(key).formulas}
                 onFormulaChange={(field, formula, initialValue) => updateCellFormula(key, field, formula, initialValue)}
                 onFormulaClear={(f) => clearCellFormula(key, f)}
+                onCopyToOther={(field, formula) => copyCellFormulaToOtherCellTypes(key, field, formula)}
                 onNumericChange={(v) => updateCellType(key, 'stiffness_straightness', v)}
                 disabled={disabled}
                 min={0}
@@ -933,6 +989,7 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
                     key={key}
                     value={formula}
                     onChange={(value) => updateExternalForce(key, index, value)}
+                    onCopyToOther={(value) => copyExternalForceToOtherCellTypes(key, index, value)}
                     disabled={disabled}
                     label={`External Force ${index + 1} (${key})`}
                     fieldName={`external_forces.${index}`}

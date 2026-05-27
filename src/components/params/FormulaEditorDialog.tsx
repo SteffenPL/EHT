@@ -55,6 +55,7 @@ interface FormulaEditorDialogProps {
   softRadius?: number;
   onSave: (formula: string, initialValue: number) => void;
   onClear: () => void;
+  onCopyToOther?: (formula: string, initialValue: number) => void;
 }
 
 function useDebounced<T>(value: T, delay: number): T {
@@ -365,6 +366,7 @@ export function FormulaEditorDialog({
   open, onOpenChange, fieldName: _fieldName, label,
   formula: initialFormula, currentNumericValue, initialValueMin, initialValueMax, tEnd,
   constants, context, initialPerimeter, initialAspectRatio, softRadius, onSave, onClear,
+  onCopyToOther,
 }: FormulaEditorDialogProps) {
   const [formula, setFormula] = useState(initialFormula);
   const [initialValueText, setInitialValueText] = useState(String(currentNumericValue));
@@ -483,6 +485,8 @@ export function FormulaEditorDialog({
     return getExternalForceEffectiveFormula(formula.trim() || '0').effectiveFormula;
   }, [context, formula]);
 
+  const canCopyToOther = !!onCopyToOther && !!formula.trim() && !formulaError && !initialValueError;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[min(1180px,calc(100vw-2rem))] max-w-none max-h-[92vh] gap-0 overflow-hidden p-0">
@@ -498,6 +502,16 @@ export function FormulaEditorDialog({
             </DialogHeader>
 
             <div className="flex shrink-0 flex-wrap items-center gap-2">
+              {onCopyToOther && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onCopyToOther(formula.trim() || '0', effectiveInitialValue)}
+                  disabled={!canCopyToOther}
+                >
+                  Copy to other
+                </Button>
+              )}
               <Button
                 variant="destructive"
                 size="sm"

@@ -127,4 +127,33 @@ describe('FormulaEditorDialog', () => {
       'sinwave(t, period=heartbeat, from=init_value, to=init_value * 1.1)'
     );
   });
+
+  it('copies the current draft formula to other cell types', () => {
+    const onCopyToOther = vi.fn();
+
+    render(
+      <FormulaEditorDialog
+        open
+        onOpenChange={vi.fn()}
+        fieldName="R_soft"
+        label="R Soft (um)"
+        formula="init_value"
+        currentNumericValue={100}
+        tEnd={48}
+        constants={{}}
+        context="cell_type"
+        onSave={vi.fn()}
+        onClear={vi.fn()}
+        onCopyToOther={onCopyToOther}
+      />
+    );
+
+    const dialog = screen.getByRole('dialog');
+
+    fireEvent.change(within(dialog).getByLabelText('Initial value'), { target: { value: '130' } });
+    fireEvent.change(within(dialog).getByLabelText('Formula'), { target: { value: 'init_value * 2' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Copy to other' }));
+
+    expect(onCopyToOther).toHaveBeenCalledWith('init_value * 2', 130);
+  });
 });
