@@ -99,7 +99,7 @@ describe('FormulaEditorDialog', () => {
     expect(within(dialog).getByText('Preset builders')).toBeInTheDocument();
     expect(within(dialog).getAllByRole('combobox')).toHaveLength(2);
     expect(within(dialog).getByRole('button', { name: 'Use preset' })).toBeInTheDocument();
-    expect(within(dialog).getByText('10% heartbeat')).toBeInTheDocument();
+    expect(within(dialog).getByText('10% sine (6h)')).toBeInTheDocument();
   });
 
   it('uses the selected preset by replacing the current formula', () => {
@@ -123,9 +123,8 @@ describe('FormulaEditorDialog', () => {
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Use preset' }));
 
-    expect(within(dialog).getByLabelText('Formula term')).toHaveValue(
-      'sinwave(t, period=heartbeat, from=init_value, to=init_value * 1.1)'
-    );
+    expect(within(dialog).getByLabelText('Formula term')).toHaveValue('sinwave(t, period=6, from=1, to=1.1)');
+    expect(within(dialog).getByText('init_value * (sinwave(t, period=6, from=1, to=1.1))')).toBeInTheDocument();
   });
 
   it('copies the current draft formula to other cell types', () => {

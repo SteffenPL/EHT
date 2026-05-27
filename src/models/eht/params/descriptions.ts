@@ -86,48 +86,24 @@ $$d\\mathbf{x} = \\sqrt{2D}\\, d\\mathbf{W}$$`,
 
   'cell_types.cytos_init': `Initial cytoskeleton length $L_{cytos}$ in microns (distance from basal to apical point).`,
 
-  'cell_types.basal_membrane_repulsion': `Repulsion strength keeping nuclei inside the basal membrane boundary. The built-in basal membrane force is radius-normalized:
+  'cell_types.basal_membrane_repulsion': `Repulsion strength keeping nuclei inside the basal membrane boundary. The built-in force is:
 $$F_{basal} = k\\,\\frac{\\max(0, R_{soft} - \\delta)}{R_{soft}^2}\\,\\mathbf{N}$$
 
-Here $\\delta$ is measured from the basal curve to the **nucleus center** along $\\mathbf{N}$; it does not include $R_{soft}$ or $R_{hard}$ automatically.
+Here $\\delta$ is the signed distance from the basal curve to the nucleus center along inward normal $\\mathbf{N}$. As an external-force numerator, the equivalent radius-aware form is:
+\`k * max(0, 1 - delta / R_soft) * N\`
 
-Center-only repulsion starts after the nucleus center crosses outside the basal curve:
-$$F_{center} = k\\,\\max(0, -\\delta)\\,\\mathbf{N}$$
-\`0.1 * max(0, -delta / R_soft) * N\`
-
-Radius-aware repulsion starts when the nucleus edge reaches the boundary:
-$$F_{radius} = k\\,\\frac{\\max(0, R_{soft} - \\delta)}{R_{soft}^2}\\,\\mathbf{N}$$
-\`0.1 * max(0, 1 - delta / R_soft) * N\` as an external force, which is additionally normalized by \`R_soft\`.`,
+External force rows are normalized by \`R_soft\`, giving the same radius-normalized scaling as the built-in force.`,
 
   'cell_types.apical_junction_init': `Initial rest length in microns for apical junctions between neighboring cells.`,
 
   'cell_types.max_cytoskeleton_length': `Maximum allowed cytoskeleton length in microns. Prevents cells from stretching too far.`,
 
-  'cell_types.external_forces': `External force rows applied to cell nuclei. Each row has a numeric initial scalar value and an optional **math.js** formula. Formulas are evaluated per cell per substep, normalized by the current cell \`R_soft\`, and all external force rows are added to the nucleus force term. Write formulas as order-one numerators; include explicit radius factors when you want different scaling.
+  'cell_types.external_forces': `External force rows applied to cell nuclei. Each row has an editable initial scalar and an optional **math.js** formula.
 
-**Available variables:**
-- \`x\`, \`y\`: Cartesian position relative to geometry center
-- \`alpha\`: Polar angle ($0$ at bottom, $\\pm\\pi$ at top)
-- \`r\`: Distance from geometry center
-- \`t\`: Simulation time (hours)
-- \`init_value\`: Initial scalar value from the external force row.
-- \`age\`: Current cell age in hours, computed as simulation time minus cell birth time.
-- \`N\`: Unit inward normal from basal geometry (into tissue, toward center). Computed from the basal curve at the cell's projected position. Points in the same direction as \`delta\`.
-- \`T\`: Unit tangent vector, perpendicular to \`N\` (counter-clockwise: $T = (-N_y, N_x)$).
-- \`delta\`: Signed distance from basal curve to the nucleus center ($\\langle \\mathbf{N}, \\mathbf{X} - \\mathbf{a} \\rangle$ where $\\mathbf{N}$ is the inward normal, $\\mathbf{a}$ the projection onto the curve). Positive above, zero on, negative below the basal line. $\\mathbf{N} \\approx \\nabla \\delta$. Nucleus radii are not included automatically.
-- \`R_soft\`, \`R_hard\`: Current runtime radii for the cell.
-- \`G2\`, \`Mitosis\`: Cell-cycle phase flags. Each is \`1\` when the cell is currently in that phase, otherwise \`0\`.
+Formulas are evaluated per cell per substep. A scalar result is auto-wrapped as tangential flow toward the bottom:
+\`-(scalar) * sign(alpha) * T\`
 
-**Auto-wrapping:** If the formula does not contain \`T\` or \`N\`, it is treated as a scalar and wrapped as \`-(scalar) * sign(alpha) * T\`, producing tangential flow converging at the bottom ($\\alpha = 0$).
-
-**Examples:**
-- \`10\` → magnitude-10 tangential flow toward bottom
-- \`5 * T + 3 * N\` → tangential + radial force (used as-is)
-- \`10 * sin(t)\` → time-varying tangential flow
-- \`0.1 * max(0, 1 - delta / R_soft) * N\` → basal repulsion based on the nucleus center and soft radius
-- \`-0.1 * max(0, delta / R_soft - 2) * N\` → fluid pressure active once \`delta > 2 * R_soft\`
-- \`age > 4 ? 5 * N : 0\` → age-gated external force
-- \`G2 * 5 * N\` → phase-gated external force active only during G2`,
+Vector formulas using \`T\` or \`N\` are used directly. The final row force is divided by the current cell \`R_soft\` before it is added to the nucleus force, so formulas should usually be written as order-one numerators.`,
 
   'cell_types.external_force': `Deprecated single external force formula. Use external force rows instead.`,
 

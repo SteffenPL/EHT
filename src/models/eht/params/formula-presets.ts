@@ -21,6 +21,7 @@ export interface FormulaQuickPreset {
   name: string;
   context: 'time' | 'external_force';
   description: string;
+  initialValueMode?: 'ignore' | 'add' | 'multiply';
   generate: () => string;
 }
 
@@ -98,17 +99,19 @@ export const FORMULA_PRESETS: FormulaPreset[] = [
 
 export const FORMULA_QUICK_PRESETS: FormulaQuickPreset[] = [
   {
-    key: 'heartbeat_10_percent',
-    name: '10% heartbeat',
+    key: 'sine_10_percent_6h',
+    name: '10% sine (6h)',
     context: 'time',
-    description: 'Oscillate from init_value to init_value * 1.1 using the heartbeat constant as the period',
-    generate: () => 'sinwave(t, period=heartbeat, from=init_value, to=init_value * 1.1)',
+    description: 'Multiply the initial value by a smooth sine wave from 1 to 1.1 with a 6 h period',
+    initialValueMode: 'multiply',
+    generate: () => 'sinwave(t, period=6, from=1, to=1.1)',
   },
   {
     key: 'towards_bottom',
     name: 'Towards bottom',
     context: 'external_force',
     description: 'Constant tangential force toward alpha = 0 at the bottom',
+    initialValueMode: 'ignore',
     generate: () => '5 * sign(alpha) * T',
   },
   {
@@ -116,6 +119,7 @@ export const FORMULA_QUICK_PRESETS: FormulaQuickPreset[] = [
     name: 'Basal repulsion',
     context: 'external_force',
     description: 'Radius-aware basal-boundary repulsion using the current cell R_soft',
+    initialValueMode: 'ignore',
     generate: () => '0.1 * max(0, 1 - delta / R_soft) * N',
   },
   {
@@ -123,6 +127,7 @@ export const FORMULA_QUICK_PRESETS: FormulaQuickPreset[] = [
     name: 'Fluid pressure',
     context: 'external_force',
     description: 'Pressure force active after the nucleus center is more than 2 * R_soft inside the tissue',
+    initialValueMode: 'ignore',
     generate: () => '-0.1 * max(0, delta / R_soft - 2) * N',
   },
 ];

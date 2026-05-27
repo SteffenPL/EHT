@@ -18,20 +18,19 @@ describe('FORMULA_PRESETS', () => {
     expect(evaluate(formula, { t: 10, ...formulaFunctions })).toBeCloseTo(1);
   });
 
-  it('includes a 10% heartbeat quick preset using the heartbeat constant', () => {
-    const preset = FORMULA_QUICK_PRESETS.find(p => p.key === 'heartbeat_10_percent');
+  it('includes a 10% sine quick preset for multiply mode', () => {
+    const preset = FORMULA_QUICK_PRESETS.find(p => p.key === 'sine_10_percent_6h');
 
     expect(preset).toBeDefined();
+    expect(preset!.initialValueMode).toBe('multiply');
     const formula = preset!.generate();
     const scope = {
-      init_value: 100,
-      heartbeat: 10,
       ...formulaFunctions,
     };
 
-    expect(evaluate(formula, { ...scope, t: 0 })).toBeCloseTo(100);
-    expect(evaluate(formula, { ...scope, t: 5 })).toBeCloseTo(110);
-    expect(evaluate(formula, { ...scope, t: 10 })).toBeCloseTo(100);
+    expect(evaluate(formula, { ...scope, t: 0 })).toBeCloseTo(1);
+    expect(evaluate(formula, { ...scope, t: 3 })).toBeCloseTo(1.1);
+    expect(evaluate(formula, { ...scope, t: 6 })).toBeCloseTo(1);
   });
 
   it('generates tangential force toward the bottom', () => {
