@@ -19,6 +19,7 @@ interface FormulaSpatialExplainerProps {
   initialPerimeter?: number;
   initialAspectRatio?: number;
   softRadius?: number;
+  initValue?: number;
 }
 
 interface Point {
@@ -264,6 +265,7 @@ export function FormulaSpatialExplainer({
   initialPerimeter,
   initialAspectRatio,
   softRadius,
+  initValue = 0,
 }: FormulaSpatialExplainerProps) {
   const markerPrefix = useId().replace(/:/g, '');
   const [perimeter, setPerimeter] = useState(() =>
@@ -299,7 +301,7 @@ export function FormulaSpatialExplainer({
     };
     const alpha = (alphaDegrees * Math.PI) / 180;
     const nucleus = positionForAlphaDelta(basalGeometry, a, b, alpha, previewDelta, visibleHalfWidth);
-    const spatial = buildExternalForceScope(nucleus, basalGeometry, time, constants, cellContext);
+    const spatial = buildExternalForceScope(nucleus, basalGeometry, time, constants, cellContext, initValue);
     const safeFormula = formula?.trim() || '0';
     let selectedEvaluation: ExternalForceEvaluation | null = null;
     let previewError: string | null = null;
@@ -307,6 +309,7 @@ export function FormulaSpatialExplainer({
     try {
       selectedEvaluation = evaluateExternalForceAtPosition({
         formula: safeFormula,
+        initValue,
         position: nucleus,
         basalGeometry,
         t: time,
@@ -323,6 +326,7 @@ export function FormulaSpatialExplainer({
           position,
           evaluation: evaluateExternalForceAtPosition({
             formula: safeFormula,
+            initValue,
             position,
             basalGeometry,
             t: time,

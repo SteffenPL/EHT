@@ -23,6 +23,7 @@ import { HelpPopover } from '@/components/ui/help-popover';
 import { getParameterDescription } from '../params/descriptions';
 import { FormulaEditorDialog } from '@/components/params/FormulaEditorDialog';
 import { formulaModeSymbol, parseFormulaInitMode } from '@/components/params/formulaInitMode';
+import { DEFAULT_EXTERNAL_FORCE_VALUES } from '../params/external-forces';
 // Section definitions for copy/paste
 type SectionKey = 'initial' | 'geometry' | 'appearance' | 'stiffness' | 'strain' | 'division' | 'cellTypeProps' | 'running';
 
@@ -88,14 +89,6 @@ function NumberCell({ value, onChange, disabled, min, max }: NumberCellProps) {
       />
     </td>
   );
-}
-
-function parseNumericFormula(value: string): number | null {
-  const trimmed = value.trim();
-  if (!trimmed) return 0;
-  if (!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(trimmed)) return null;
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /** Table cell that shows either a number input or read-only formula preview with f(x) popup */
@@ -205,7 +198,10 @@ function FormulaCell({
 
 function ExternalForceCell({
   value,
+  initialValue,
   onChange,
+  onInitialValueChange,
+  onFormulaSave,
   onCopyToOther,
   disabled,
   label,
@@ -218,8 +214,11 @@ function ExternalForceCell({
   error,
 }: {
   value: string;
+  initialValue: number;
   onChange: (value: string) => void;
-  onCopyToOther?: (value: string) => void;
+  onInitialValueChange: (value: number) => void;
+  onFormulaSave: (formula: string, initialValue: number) => void;
+  onCopyToOther?: (formula: string, initialValue: number) => void;
   disabled?: boolean;
   label: string;
   fieldName: string;
@@ -231,42 +230,37 @@ function ExternalForceCell({
   error?: string;
 }) {
   const [editorOpen, setEditorOpen] = useState(false);
-  const numericValue = parseNumericFormula(value);
-  const isNumericScalar = numericValue !== null;
+  const formulaForEditing = value.trim() || 'init_value * (0)';
+  const formulaMode = formulaModeSymbol(parseFormulaInitMode(formulaForEditing).mode);
+  const isFormulaActive = value.trim() !== '' && value.trim() !== '0';
 
   return (
     <td className="py-1 px-1">
       <div className="flex items-center gap-0.5">
-        {isNumericScalar ? (
-          <NumericTextInput
-            value={numericValue}
-            onChange={(nextValue) => onChange(String(nextValue))}
-            disabled={disabled}
-            className={`h-6 w-20 text-xs ${error ? 'border-destructive' : ''}`}
-          />
-        ) : (
-          <Input
-            type="text"
-            value={value}
-            readOnly
-            title={value}
-            onClick={() => !disabled && setEditorOpen(true)}
-            disabled={disabled}
-            className={`h-6 w-24 cursor-pointer bg-muted px-1 text-xs font-mono ${error ? 'border-destructive' : ''}`}
-          />
-        )}
+        <NumericTextInput
+          value={initialValue}
+          onChange={onInitialValueChange}
+          disabled={disabled}
+          className={`h-6 w-20 text-xs ${error ? 'border-destructive' : ''}`}
+        />
+        <span
+          className="flex h-5 w-5 items-center justify-center rounded border bg-muted font-mono text-[10px] text-muted-foreground"
+          title={`Formula mode: ${formulaMode}`}
+        >
+          {formulaMode}
+        </span>
         <button
           type="button"
           onClick={() => setEditorOpen(true)}
           disabled={disabled}
-          className={`h-5 rounded border px-0.5 text-[9px] leading-none disabled:opacity-50 ${value && value !== '0' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+          className={`h-5 rounded border px-0.5 text-[9px] leading-none disabled:opacity-50 ${isFormulaActive ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
           title="Edit external force formula"
         >
           f(x)
         </button>
         <button
           type="button"
-          onClick={() => onCopyToOther?.(value || '0')}
+          onClick={() => onCopyToOther?.(value, initialValue)}
           disabled={disabled || !onCopyToOther}
           className="flex h-5 w-5 items-center justify-center rounded border hover:bg-muted disabled:opacity-50"
           title={`Copy ${label} formula to other cell types`}
@@ -285,17 +279,17 @@ function ExternalForceCell({
         onOpenChange={setEditorOpen}
         fieldName={fieldName}
         label={label}
-        formula={value || '0'}
-        currentNumericValue={0}
+        formula={formulaForEditing}
+        currentNumericValue={initialValue}
         tEnd={tEnd}
         constants={constants}
         context="external_force"
         initialPerimeter={initialPerimeter}
         initialAspectRatio={initialAspectRatio}
         softRadius={softRadius}
-        onSave={(formula) => onChange(formula.trim() || '0')}
-        onClear={() => onChange('0')}
-        onCopyToOther={onCopyToOther ? (formula) => onCopyToOther(formula.trim() || '0') : undefined}
+        onSave={(formula, nextInitialValue) => onFormulaSave(formula.trim(), nextInitialValue)}
+        onClear={() => onChange('')}
+        onCopyToOther={onCopyToOther ? (formula, nextInitialValue) => onCopyToOther(formula.trim(), nextInitialValue) : undefined}
       />
     </td>
   );
@@ -572,11 +566,18 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
 
   const externalForceCount = Math.max(
     1,
-    ...cellTypeKeys.map((key) => getCellType(key).external_forces?.length ?? 0)
+    ...cellTypeKeys.map((key) => Math.max(
+      getCellType(key).external_forces?.length ?? 0,
+      getCellType(key).external_force_values?.length ?? 0
+    ))
   );
 
   const getExternalForceFormula = (cellType: string, index: number): string => {
-    return getCellType(cellType).external_forces?.[index] ?? '0';
+    return getCellType(cellType).external_forces?.[index] ?? '';
+  };
+
+  const getExternalForceValue = (cellType: string, index: number): number => {
+    return getCellType(cellType).external_force_values?.[index] ?? DEFAULT_EXTERNAL_FORCE_VALUES[index] ?? 1;
   };
 
   const updateExternalForce = (cellType: string, index: number, value: string) => {
@@ -592,16 +593,57 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     onChange(newParams);
   };
 
-  const copyExternalForceToOtherCellTypes = useCallback((sourceCellType: string, index: number, formula: string) => {
+  const updateExternalForceValue = (cellType: string, index: number, value: number) => {
+    const newParams = structuredClone(params);
+    const values = [
+      ...((newParams.cell_types[cellType] as EHTCellTypeParams).external_force_values ?? []),
+    ];
+    while (values.length <= index) {
+      values.push(DEFAULT_EXTERNAL_FORCE_VALUES[values.length] ?? 1);
+    }
+    values[index] = value;
+    (newParams.cell_types[cellType] as EHTCellTypeParams).external_force_values = values;
+    onChange(newParams);
+  };
+
+  const updateExternalForceRow = (cellType: string, index: number, formula: string, value: number) => {
+    const newParams = structuredClone(params);
+    const ct = newParams.cell_types[cellType] as EHTCellTypeParams;
+
+    const formulas = [...(ct.external_forces ?? [])];
+    while (formulas.length <= index) {
+      formulas.push('');
+    }
+    formulas[index] = formula;
+    ct.external_forces = formulas;
+
+    const values = [...(ct.external_force_values ?? [])];
+    while (values.length <= index) {
+      values.push(DEFAULT_EXTERNAL_FORCE_VALUES[values.length] ?? 1);
+    }
+    values[index] = value;
+    ct.external_force_values = values;
+
+    onChange(newParams);
+  };
+
+  const copyExternalForceToOtherCellTypes = useCallback((sourceCellType: string, index: number, formula: string, initialValue: number) => {
     const newParams = structuredClone(params);
     for (const [cellTypeKey, cellType] of Object.entries(newParams.cell_types)) {
       if (cellTypeKey === sourceCellType) continue;
       const formulas = [...((cellType as EHTCellTypeParams).external_forces ?? [])];
       while (formulas.length <= index) {
-        formulas.push('0');
+        formulas.push('');
       }
-      formulas[index] = formula.trim() || '0';
+      formulas[index] = formula.trim();
       (cellType as EHTCellTypeParams).external_forces = formulas;
+
+      const values = [...((cellType as EHTCellTypeParams).external_force_values ?? [])];
+      while (values.length <= index) {
+        values.push(DEFAULT_EXTERNAL_FORCE_VALUES[values.length] ?? 1);
+      }
+      values[index] = initialValue;
+      (cellType as EHTCellTypeParams).external_force_values = values;
     }
     onChange(newParams);
   }, [params, onChange]);
@@ -610,7 +652,9 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     const newParams = structuredClone(params);
     for (const cellType of Object.values(newParams.cell_types)) {
       const formulas = (cellType as EHTCellTypeParams).external_forces ?? [];
-      (cellType as EHTCellTypeParams).external_forces = [...formulas, '0'];
+      (cellType as EHTCellTypeParams).external_forces = [...formulas, ''];
+      const values = (cellType as EHTCellTypeParams).external_force_values ?? [];
+      (cellType as EHTCellTypeParams).external_force_values = [...values, 1];
     }
     onChange(newParams);
   };
@@ -621,7 +665,10 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
     for (const cellType of Object.values(newParams.cell_types)) {
       const formulas = [...((cellType as EHTCellTypeParams).external_forces ?? [])];
       formulas.splice(index, 1);
-      (cellType as EHTCellTypeParams).external_forces = formulas.length > 0 ? formulas : ['0'];
+      (cellType as EHTCellTypeParams).external_forces = formulas.length > 0 ? formulas : [''];
+      const values = [...((cellType as EHTCellTypeParams).external_force_values ?? [])];
+      values.splice(index, 1);
+      (cellType as EHTCellTypeParams).external_force_values = values.length > 0 ? values : [1];
     }
     onChange(newParams);
   };
@@ -1014,13 +1061,17 @@ export function EHTCellTypesTab({ params, onChange, disabled }: ModelUITabProps<
             >
               {cellTypeKeys.map((key) => {
                 const formula = getExternalForceFormula(key, index);
+                const initialValue = getExternalForceValue(key, index);
                 const error = getExternalForceError(formula);
                 return (
                   <ExternalForceCell
                     key={key}
                     value={formula}
+                    initialValue={initialValue}
                     onChange={(value) => updateExternalForce(key, index, value)}
-                    onCopyToOther={(value) => copyExternalForceToOtherCellTypes(key, index, value)}
+                    onInitialValueChange={(value) => updateExternalForceValue(key, index, value)}
+                    onFormulaSave={(value, nextInitialValue) => updateExternalForceRow(key, index, value, nextInitialValue)}
+                    onCopyToOther={(value, nextInitialValue) => copyExternalForceToOtherCellTypes(key, index, value, nextInitialValue)}
                     disabled={disabled}
                     label={`External Force ${index + 1} (${key})`}
                     fieldName={`external_forces.${index}`}

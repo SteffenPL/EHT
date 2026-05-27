@@ -111,7 +111,8 @@ steps = 2
       },
     });
 
-    expect(params.cell_types.control.external_forces).toEqual(['5 * N', '0', '0']);
+    expect(params.cell_types.control.external_forces).toEqual(['5 * N', '', '']);
+    expect(params.cell_types.control.external_force_values).toEqual([1, 1, 1]);
     expect(params.cell_types.control.external_force).toBeUndefined();
   });
 

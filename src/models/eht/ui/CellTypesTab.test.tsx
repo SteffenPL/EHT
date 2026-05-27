@@ -28,7 +28,9 @@ describe('EHTCellTypesTab formula copy actions', () => {
   it('copies an external force formula to the other cell types', () => {
     const params = cloneDeep(DEFAULT_EHT_PARAMS);
     params.cell_types.control.external_forces = ['5 * N'];
+    params.cell_types.control.external_force_values = [2];
     params.cell_types.emt.external_forces = ['0'];
+    params.cell_types.emt.external_force_values = [0];
     const onChange = vi.fn();
 
     render(<EHTCellTypesTab params={params} onChange={onChange} />);
@@ -41,12 +43,15 @@ describe('EHTCellTypesTab formula copy actions', () => {
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange.mock.calls[0][0].cell_types.emt.external_forces[0]).toBe('5 * N');
+    expect(onChange.mock.calls[0][0].cell_types.emt.external_force_values[0]).toBe(2);
   });
 
   it('edits numeric external force rows as scalar initial values', () => {
     const params = cloneDeep(DEFAULT_EHT_PARAMS);
-    params.cell_types.control.external_forces = ['0'];
-    params.cell_types.emt.external_forces = ['0'];
+    params.cell_types.control.external_force_values = [0];
+    params.cell_types.control.external_forces = [''];
+    params.cell_types.emt.external_force_values = [0];
+    params.cell_types.emt.external_forces = [''];
     const onChange = vi.fn();
 
     render(<EHTCellTypesTab params={params} onChange={onChange} />);
@@ -58,6 +63,7 @@ describe('EHTCellTypesTab formula copy actions', () => {
     fireEvent.change(scalarInputs[0], { target: { value: '4' } });
 
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange.mock.calls[0][0].cell_types.control.external_forces[0]).toBe('4');
+    expect(onChange.mock.calls[0][0].cell_types.control.external_force_values[0]).toBe(4);
+    expect(onChange.mock.calls[0][0].cell_types.control.external_forces[0]).toBe('');
   });
 });

@@ -19,7 +19,11 @@ import {
   isBeforeParamFormatV2,
   legacyParamsToMicrons,
 } from './unit-conversion';
-import { DEFAULT_EXTERNAL_FORCES, normalizeCellTypeExternalForces } from './external-forces';
+import {
+  DEFAULT_EXTERNAL_FORCES,
+  DEFAULT_EXTERNAL_FORCE_VALUES,
+  normalizeCellTypeExternalForces,
+} from './external-forces';
 
 // =============================================================================
 // Default Events
@@ -177,6 +181,7 @@ export const LEGACY_DEFAULT_CONTROL_CELL: EHTCellTypeParams = {
   cytos_init: 0.0,
   basal_membrane_repulsion: 0.0,
   apical_junction_init: 0.0,
+  external_force_values: [...DEFAULT_EXTERNAL_FORCE_VALUES],
   external_forces: [...DEFAULT_EXTERNAL_FORCES],
   formulas: {},
 };
@@ -230,6 +235,7 @@ export const LEGACY_DEFAULT_EMT_CELL: EHTCellTypeParams = {
   cytos_init: 0.0,
   basal_membrane_repulsion: 0.0,
   apical_junction_init: 0.0,
+  external_force_values: [...DEFAULT_EXTERNAL_FORCE_VALUES],
   external_forces: [...DEFAULT_EXTERNAL_FORCES],
   formulas: {},
 };

@@ -91,6 +91,37 @@ describe('calcExternalForces', () => {
     expect(forces[0].f.y).toBeCloseTo(10 / cell.R_soft, 5);
   });
 
+  it('applies no force when external force formula is blank even with nonzero init value', () => {
+    const params = createDefaultEHTParams();
+    params.cell_types.control.external_force_values = [10];
+    params.cell_types.control.external_forces = [''];
+
+    const cell = makeCell(5, 0, 'control');
+    const state = makeState([cell]);
+    const forces: CellForces[] = [zeroForces()];
+
+    calcExternalForces(state, params, forces);
+
+    expect(forces[0].f.x).toBeCloseTo(0, 5);
+    expect(forces[0].f.y).toBeCloseTo(0, 5);
+  });
+
+  it('exposes external force init_value to formulas', () => {
+    const params = createDefaultEHTParams();
+    params.cell_types.control.external_force_values = [10];
+    params.cell_types.control.external_forces = ['init_value * (1 + t)'];
+
+    const cell = makeCell(5, 0, 'control');
+    const state = makeState([cell]);
+    state.t = 1;
+    const forces: CellForces[] = [zeroForces()];
+
+    calcExternalForces(state, params, forces);
+
+    expect(forces[0].f.x).toBeCloseTo(0, 5);
+    expect(forces[0].f.y).toBeCloseTo(20 / cell.R_soft, 5);
+  });
+
   it('uses vector formula direction as-is when T or N present', () => {
     const params = createDefaultEHTParams();
     params.cell_types.control.external_forces = ['5 * N'];

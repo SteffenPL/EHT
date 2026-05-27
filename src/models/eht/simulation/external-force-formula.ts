@@ -10,6 +10,7 @@ export const VECTOR_VAR_REGEX = /\bT\b|\bN\b/;
 
 export interface ExternalForceEvaluationInput {
   formula: string;
+  initValue?: number;
   position: Vector2;
   basalGeometry: BasalGeometry;
   t: number;
@@ -58,7 +59,8 @@ export function buildExternalForceScope(
   basalGeometry: BasalGeometry,
   t: number,
   constants?: Record<string, number>,
-  cellContext: ExternalForceCellContext = {}
+  cellContext: ExternalForceCellContext = {},
+  initValue = 0
 ): Omit<ExternalForceEvaluation, 'force' | 'effectiveFormula' | 'isScalarFormula'> {
   const center = basalGeometry.center;
   const x = position.x - center.x;
@@ -75,6 +77,8 @@ export function buildExternalForceScope(
     alpha,
     r,
     t,
+    init_value: initValue,
+    old_value: initValue,
     T: matrix([tangent.x, tangent.y]),
     N: matrix([normal.x, normal.y]),
     delta,
@@ -114,14 +118,16 @@ export function externalForceResultToVector2(result: unknown): Vector2 {
 
 export function evaluateExternalForceAtPosition({
   formula,
+  initValue = 0,
   position,
   basalGeometry,
   t,
   constants,
   cellContext,
 }: ExternalForceEvaluationInput): ExternalForceEvaluation {
-  const spatial = buildExternalForceScope(position, basalGeometry, t, constants, cellContext);
-  const { effectiveFormula, isScalarFormula } = getExternalForceEffectiveFormula(formula);
+  const spatial = buildExternalForceScope(position, basalGeometry, t, constants, cellContext, initValue);
+  const formulaWithFallback = formula.trim() || '0';
+  const { effectiveFormula, isScalarFormula } = getExternalForceEffectiveFormula(formulaWithFallback);
   const result = evaluate(effectiveFormula, spatial.scope);
   const radius = Math.max(cellContext?.R_soft ?? 1, MIN_RADIUS);
 

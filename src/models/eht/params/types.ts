@@ -160,6 +160,7 @@ export interface EHTCellTypeParams {
   cytos_init: number;               // Initial cytoskeleton length
   basal_membrane_repulsion: number; // Basal membrane repulsion strength
   apical_junction_init: number;     // Initial apical junction distance
+  external_force_values: number[];  // Initial scalar values for external force rows
   external_forces: string[];        // External force formulas (math.js expressions), summed per substep
   /** @deprecated Use external_forces instead. Kept for old TOML/preset compatibility. */
   external_force?: string;

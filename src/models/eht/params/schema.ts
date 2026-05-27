@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import { CellCyclePhase } from './types';
-import { DEFAULT_EXTERNAL_FORCES } from './external-forces';
+import { DEFAULT_EXTERNAL_FORCES, DEFAULT_EXTERNAL_FORCE_VALUES } from './external-forces';
 
 /** Metadata schema */
 export const metadataSchema = z.object({
@@ -138,6 +138,7 @@ export const ehtCellTypeSchema = z.object({
   cytos_init: z.number().nonnegative(),
   basal_membrane_repulsion: z.number().nonnegative(),
   apical_junction_init: z.number().nonnegative(),
+  external_force_values: z.array(z.number()).default([...DEFAULT_EXTERNAL_FORCE_VALUES]),
   external_forces: z.array(z.string()).default([...DEFAULT_EXTERNAL_FORCES]),
   external_force: z.string().optional(),
   formulas: z.record(z.string(), z.string()).default({}),

@@ -103,13 +103,14 @@ $$F_{radius} = k\\,\\frac{\\max(0, R_{soft} - \\delta)}{R_{soft}^2}\\,\\mathbf{N
 
   'cell_types.max_cytoskeleton_length': `Maximum allowed cytoskeleton length in microns. Prevents cells from stretching too far.`,
 
-  'cell_types.external_forces': `External force formulas applied to cell nuclei. Each **math.js** expression is evaluated per cell per substep, normalized by the current cell \`R_soft\`, and all external force rows are added to the nucleus force term. Write formulas as order-one numerators; include explicit radius factors when you want different scaling.
+  'cell_types.external_forces': `External force rows applied to cell nuclei. Each row has a numeric initial scalar value and an optional **math.js** formula. Formulas are evaluated per cell per substep, normalized by the current cell \`R_soft\`, and all external force rows are added to the nucleus force term. Write formulas as order-one numerators; include explicit radius factors when you want different scaling.
 
 **Available variables:**
 - \`x\`, \`y\`: Cartesian position relative to geometry center
 - \`alpha\`: Polar angle ($0$ at bottom, $\\pm\\pi$ at top)
 - \`r\`: Distance from geometry center
 - \`t\`: Simulation time (hours)
+- \`init_value\`: Initial scalar value from the external force row.
 - \`age\`: Current cell age in hours, computed as simulation time minus cell birth time.
 - \`N\`: Unit inward normal from basal geometry (into tissue, toward center). Computed from the basal curve at the cell's projected position. Points in the same direction as \`delta\`.
 - \`T\`: Unit tangent vector, perpendicular to \`N\` (counter-clockwise: $T = (-N_y, N_x)$).

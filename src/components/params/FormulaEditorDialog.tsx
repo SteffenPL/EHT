@@ -380,7 +380,7 @@ export function FormulaEditorDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const formulaInputId = useId();
   const initialValueInputId = useId();
-  const usesInitialValue = context !== 'external_force';
+  const usesInitialValue = true;
   const presetContext = context === 'external_force' ? 'external_force' : 'time';
   const quickPresets = useMemo(
     () => FORMULA_QUICK_PRESETS.filter(preset => preset.context === presetContext),
@@ -390,13 +390,9 @@ export function FormulaEditorDialog({
   // Reset local state when dialog opens
   useEffect(() => {
     if (open) {
-      if (usesInitialValue) {
-        const parsed = parseFormulaInitMode(initialFormula);
-        setFormula(parsed.expression);
-        setInitValueMode(parsed.mode);
-      } else {
-        setFormula(initialFormula || '0');
-      }
+      const parsed = parseFormulaInitMode(initialFormula);
+      setFormula(parsed.expression);
+      setInitValueMode(parsed.mode);
       setInitialValueText(String(currentNumericValue));
       setSelectedPresetKey(quickPresets[0]?.key ?? '');
     }
@@ -462,7 +458,8 @@ export function FormulaEditorDialog({
           initialAspectRatio ?? 1
         );
         evaluateExternalForceAtPosition({
-          formula,
+          formula: parameterEffectiveFormula,
+          initValue: effectiveInitialValue,
           position: new Vector2(18, -22),
           basalGeometry: createBasalGeometry(curvature_1, curvature_2, 360),
           t: 0,
@@ -512,12 +509,11 @@ export function FormulaEditorDialog({
   ]);
 
   const effectiveFormula = useMemo(() => {
-    if (usesInitialValue) return parameterEffectiveFormula;
-    if (context !== 'external_force') return null;
-    return getExternalForceEffectiveFormula(formula.trim() || '0').effectiveFormula;
-  }, [context, formula, parameterEffectiveFormula, usesInitialValue]);
+    if (context !== 'external_force') return parameterEffectiveFormula;
+    return getExternalForceEffectiveFormula(parameterEffectiveFormula.trim() || 'init_value').effectiveFormula;
+  }, [context, parameterEffectiveFormula]);
 
-  const formulaToSave = usesInitialValue ? parameterEffectiveFormula : formula;
+  const formulaToSave = parameterEffectiveFormula;
   const canCopyToOther = !!onCopyToOther && !!formulaToSave.trim() && !formulaError && !initialValueError;
 
   return (
@@ -637,11 +633,12 @@ export function FormulaEditorDialog({
                     {context === 'external_force' ? (
                       <FormulaSpatialExplainer
                         compact
-                        formula={formula}
+                        formula={formulaToSave}
                         constants={constants}
                         initialPerimeter={initialPerimeter}
                         initialAspectRatio={initialAspectRatio}
                         softRadius={softRadius}
+                        initValue={effectiveInitialValue}
                       />
                     ) : (
                       <GraphPreview

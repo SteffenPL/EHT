@@ -6,7 +6,7 @@
 import { Vector2 } from '@/core/math/vector2';
 import { CellPhase, type EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
-import { normalizeExternalForces } from '../params/external-forces';
+import { normalizeExternalForces, normalizeExternalForceValues } from '../params/external-forces';
 import { evaluateExternalForceAtPosition } from './external-force-formula';
 
 const MIN_RADIUS = 1e-12;
@@ -302,13 +302,19 @@ export function calcExternalForces(
     const ci = cells[i];
     const cellType = cellTypes[ci.typeIndex] ?? fallbackType;
     const formulas = normalizeExternalForces(cellType);
+    const values = normalizeExternalForceValues(cellType);
+    const rowCount = Math.max(formulas.length, values.length);
 
-    for (const formula of formulas) {
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+      const formula = formulas[rowIndex]?.trim() ?? '';
+      const initValue = values[rowIndex] ?? 1;
+      const effectiveFormulaKey = formula || `init_value:${initValue}`;
+
       // Skip if no external force
       if (!formula || formula === '0') continue;
 
       // Skip formulas already known to be invalid — use NaN force
-      if (failedFormulas.has(formula)) {
+      if (failedFormulas.has(effectiveFormulaKey)) {
         forces[i].f.x = NaN;
         forces[i].f.y = NaN;
         continue;
@@ -317,6 +323,7 @@ export function calcExternalForces(
       try {
         const { force } = evaluateExternalForceAtPosition({
           formula,
+          initValue,
           position: Vector2.from(ci.pos),
           basalGeometry: state.basalGeometry,
           t: state.t,
@@ -333,7 +340,7 @@ export function calcExternalForces(
         forces[i].f.y += force.y;
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        failedFormulas.set(formula, msg);
+        failedFormulas.set(effectiveFormulaKey, msg);
         console.warn(`[ExternalForce] Invalid formula "${formula}": ${msg}`);
         forces[i].f.x = NaN;
         forces[i].f.y = NaN;
