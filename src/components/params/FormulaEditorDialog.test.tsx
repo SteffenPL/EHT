@@ -2,7 +2,7 @@
 import '@testing-library/jest-dom/vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { FormulaEditorDialog } from './FormulaEditorDialog';
 
 vi.mock('recharts', () => {
@@ -21,6 +21,18 @@ vi.mock('recharts', () => {
 });
 
 describe('FormulaEditorDialog', () => {
+  beforeAll(() => {
+    vi.stubGlobal('ResizeObserver', class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    });
+  });
+
+  afterAll(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('saves the formula and edited initial value together', () => {
     const onSave = vi.fn();
 
@@ -125,6 +137,32 @@ describe('FormulaEditorDialog', () => {
 
     expect(within(dialog).getByLabelText('Formula term')).toHaveValue('sinwave(t, period=6, from=1, to=1.1)');
     expect(within(dialog).getByText('init_value * (sinwave(t, period=6, from=1, to=1.1))')).toBeInTheDocument();
+  });
+
+  it('uses external force preset strengths as multiplied initial values', () => {
+    render(
+      <FormulaEditorDialog
+        open
+        onOpenChange={vi.fn()}
+        fieldName="external_forces.0"
+        label="External force"
+        formula="0"
+        currentNumericValue={1}
+        tEnd={48}
+        constants={{}}
+        context="external_force"
+        onSave={vi.fn()}
+        onClear={vi.fn()}
+      />
+    );
+
+    const dialog = screen.getByRole('dialog');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Use preset' }));
+
+    expect(within(dialog).getByLabelText('Initial value')).toHaveValue(5);
+    expect(within(dialog).getByLabelText('Formula term')).toHaveValue('sign(alpha) * T');
+    expect(within(dialog).getByText('init_value * (sign(alpha) * T)')).toBeInTheDocument();
   });
 
   it('copies the current draft formula to other cell types', () => {

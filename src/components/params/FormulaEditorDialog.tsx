@@ -442,6 +442,9 @@ export function FormulaEditorDialog({
     setFormula(nextFormula);
     if (usesInitialValue) {
       setInitValueMode(preset.initialValueMode ?? 'ignore');
+      if (preset.initialValue !== undefined) {
+        setInitialValueText(String(preset.initialValue));
+      }
     }
     requestAnimationFrame(() => {
       inputRef.current?.focus();

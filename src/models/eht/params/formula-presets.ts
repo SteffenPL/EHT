@@ -22,6 +22,7 @@ export interface FormulaQuickPreset {
   context: 'time' | 'external_force';
   description: string;
   initialValueMode?: 'ignore' | 'add' | 'multiply';
+  initialValue?: number;
   generate: () => string;
 }
 
@@ -111,23 +112,26 @@ export const FORMULA_QUICK_PRESETS: FormulaQuickPreset[] = [
     name: 'Towards bottom',
     context: 'external_force',
     description: 'Constant tangential force toward alpha = 0 at the bottom',
-    initialValueMode: 'ignore',
-    generate: () => '5 * sign(alpha) * T',
+    initialValueMode: 'multiply',
+    initialValue: 5,
+    generate: () => 'sign(alpha) * T',
   },
   {
     key: 'basal_repulsion',
     name: 'Basal repulsion',
     context: 'external_force',
     description: 'Radius-aware basal-boundary repulsion using the current cell R_soft',
-    initialValueMode: 'ignore',
-    generate: () => '0.1 * max(0, 1 - delta / R_soft) * N',
+    initialValueMode: 'multiply',
+    initialValue: 0.1,
+    generate: () => 'max(0, 1 - delta / R_soft) * N',
   },
   {
     key: 'fluid_pressure',
     name: 'Fluid pressure',
     context: 'external_force',
     description: 'Pressure force active after the nucleus center is more than 2 * R_soft inside the tissue',
-    initialValueMode: 'ignore',
-    generate: () => '-0.1 * max(0, delta / R_soft - 2) * N',
+    initialValueMode: 'multiply',
+    initialValue: -0.1,
+    generate: () => 'max(0, delta / R_soft - 2) * N',
   },
 ];

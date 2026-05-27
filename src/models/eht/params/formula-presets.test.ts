@@ -6,6 +6,10 @@ import { evaluateExternalForceAtPosition } from '../simulation/external-force-fo
 import { FORMULA_PRESETS, FORMULA_QUICK_PRESETS } from './formula-presets';
 import { formulaFunctions } from '../simulation/formula-functions';
 
+function composePresetFormula(preset: NonNullable<(typeof FORMULA_QUICK_PRESETS)[number]>) {
+  return `init_value * (${preset.generate()})`;
+}
+
 describe('FORMULA_PRESETS', () => {
   it('includes a sine wave preset that oscillates between min and max values', () => {
     const preset = FORMULA_PRESETS.find(p => p.name === 'Sine Wave');
@@ -38,10 +42,13 @@ describe('FORMULA_PRESETS', () => {
     const geometry = createBasalGeometry(1 / 5, 1 / 5);
 
     expect(preset).toBeDefined();
-    const formula = preset!.generate();
+    expect(preset!.initialValueMode).toBe('multiply');
+    expect(preset!.initialValue).toBe(5);
+    const formula = composePresetFormula(preset!);
 
     const force = evaluateExternalForceAtPosition({
       formula,
+      initValue: preset!.initialValue,
       position: new Vector2(5, 0),
       basalGeometry: geometry,
       t: 0,
@@ -56,10 +63,13 @@ describe('FORMULA_PRESETS', () => {
     const geometry = createBasalGeometry(0, 0);
 
     expect(preset).toBeDefined();
-    const formula = preset!.generate();
+    expect(preset!.initialValueMode).toBe('multiply');
+    expect(preset!.initialValue).toBe(0.1);
+    const formula = composePresetFormula(preset!);
 
     const outside = evaluateExternalForceAtPosition({
       formula,
+      initValue: preset!.initialValue,
       position: new Vector2(0, -1),
       basalGeometry: geometry,
       t: 0,
@@ -67,6 +77,7 @@ describe('FORMULA_PRESETS', () => {
     }).force;
     const insideBeyondRadius = evaluateExternalForceAtPosition({
       formula,
+      initValue: preset!.initialValue,
       position: new Vector2(0, 3),
       basalGeometry: geometry,
       t: 0,
@@ -84,10 +95,13 @@ describe('FORMULA_PRESETS', () => {
     const geometry = createBasalGeometry(0, 0);
 
     expect(preset).toBeDefined();
-    const formula = preset!.generate();
+    expect(preset!.initialValueMode).toBe('multiply');
+    expect(preset!.initialValue).toBe(-0.1);
+    const formula = composePresetFormula(preset!);
 
     const nearBoundary = evaluateExternalForceAtPosition({
       formula,
+      initValue: preset!.initialValue,
       position: new Vector2(0, 3),
       basalGeometry: geometry,
       t: 0,
@@ -95,6 +109,7 @@ describe('FORMULA_PRESETS', () => {
     }).force;
     const pastThreshold = evaluateExternalForceAtPosition({
       formula,
+      initValue: preset!.initialValue,
       position: new Vector2(0, 5),
       basalGeometry: geometry,
       t: 0,
