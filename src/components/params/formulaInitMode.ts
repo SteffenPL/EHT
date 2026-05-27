@@ -80,7 +80,7 @@ export function summarizeFormulaWithInitValue(formula: string, initialValue: num
 }
 
 export function formulaTermLabel(formula: string, maxLength = 3): string {
-  const expression = parseFormulaInitMode(formula).expression.trim();
+  const expression = stripOuterParens(parseFormulaInitMode(formula).expression).trim();
   if (!expression) return '';
   return expression.slice(0, maxLength);
 }

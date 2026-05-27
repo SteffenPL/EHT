@@ -70,7 +70,8 @@ function FormulaNumberInput({
         </span>
         {formulaLabel && (
           <span
-            className="mb-0.5 flex h-8 min-w-8 max-w-10 shrink-0 items-center justify-center truncate rounded border bg-muted px-1 font-mono text-xs text-muted-foreground"
+            className="mb-0.5 flex h-8 min-w-8 max-w-10 shrink-0 items-center justify-center truncate rounded border bg-primary/10 px-1 font-mono text-xs text-primary"
+            aria-label={`Formula preview: ${formulaLabel}`}
             title={formula}
           >
             {formulaLabel}

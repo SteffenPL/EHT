@@ -43,5 +43,6 @@ describe('formula init mode helpers', () => {
   it('labels formulas by the first three characters of the formula term', () => {
     expect(formulaTermLabel('init_value * (triangle(t, period=10, min=1, max=2))')).toBe('tri');
     expect(formulaTermLabel('old_value - 1')).toBe('old');
+    expect(formulaTermLabel('(sin(t))')).toBe('sin');
   });
 });

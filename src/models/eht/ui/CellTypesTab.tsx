@@ -159,7 +159,8 @@ function FormulaCell({
             </span>
             {formulaLabel && (
               <span
-                className="flex h-5 min-w-6 max-w-8 items-center justify-center truncate rounded border bg-muted px-1 font-mono text-[10px] text-muted-foreground"
+                className="flex h-5 min-w-6 max-w-8 items-center justify-center truncate rounded border bg-primary/10 px-1 font-mono text-[10px] text-primary"
+                aria-label={`Formula preview: ${formulaLabel}`}
                 title={formula}
               >
                 {formulaLabel}
@@ -263,7 +264,8 @@ function ExternalForceCell({
         </span>
         {formulaLabel && (
           <span
-            className="flex h-5 min-w-6 max-w-8 items-center justify-center truncate rounded border bg-muted px-1 font-mono text-[10px] text-muted-foreground"
+            className="flex h-5 min-w-6 max-w-8 items-center justify-center truncate rounded border bg-primary/10 px-1 font-mono text-[10px] text-primary"
+            aria-label={`Formula preview: ${formulaLabel}`}
             title={value}
           >
             {formulaLabel}

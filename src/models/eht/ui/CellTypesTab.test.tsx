@@ -7,6 +7,41 @@ import { DEFAULT_EHT_PARAMS } from '../params/defaults';
 import { EHTCellTypesTab } from './CellTypesTab';
 
 describe('EHTCellTypesTab formula copy actions', () => {
+  it('shows the formula term preview after the mode in cell type formula cells', () => {
+    const params = cloneDeep(DEFAULT_EHT_PARAMS);
+    params.cell_types.control.formulas = {
+      R_soft: 'init_value * (triangle(t, period=10, min=1, max=2))',
+    };
+
+    render(<EHTCellTypesTab params={params} onChange={vi.fn()} />);
+
+    const row = screen.getByText('R Soft (um)').closest('tr');
+    expect(row).not.toBeNull();
+    const preview = within(row!).getByLabelText('Formula preview: tri');
+    const rowText = row!.textContent ?? '';
+
+    expect(preview).toHaveTextContent('tri');
+    expect(rowText.indexOf('*')).toBeLessThan(rowText.indexOf('tri'));
+    expect(rowText.indexOf('tri')).toBeLessThan(rowText.indexOf('f(x)'));
+  });
+
+  it('shows the formula term preview after the mode in external force cells', () => {
+    const params = cloneDeep(DEFAULT_EHT_PARAMS);
+    params.cell_types.control.external_forces = ['init_value * (sign(alpha) * T)'];
+    params.cell_types.control.external_force_values = [5];
+
+    render(<EHTCellTypesTab params={params} onChange={vi.fn()} />);
+
+    const row = screen.getByText('External Force (1)').closest('tr');
+    expect(row).not.toBeNull();
+    const preview = within(row!).getByLabelText('Formula preview: sig');
+    const rowText = row!.textContent ?? '';
+
+    expect(preview).toHaveTextContent('sig');
+    expect(rowText.indexOf('*')).toBeLessThan(rowText.indexOf('sig'));
+    expect(rowText.indexOf('sig')).toBeLessThan(rowText.indexOf('f(x)'));
+  });
+
   it('copies a parameter formula to the other cell types', () => {
     const params = cloneDeep(DEFAULT_EHT_PARAMS);
     params.cell_types.control.formulas = { R_soft: 'init_value * 2' };
