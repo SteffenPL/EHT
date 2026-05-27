@@ -195,7 +195,15 @@ export function EHTParametersTab({ params, onChange, disabled }: ModelUITabProps
         <Label className="text-sm font-medium">Geometry</Label>
         <div className="space-y-2 pl-2">
           <BoolInput label="Full Circle" value={g.full_circle} onChange={(v) => update('full_circle', v)} disabled={disabled} description={desc('full_circle')} />
-          <NumberInput label="Initial Width (um)" value={g.w_init} onChange={(v) => update('w_init', v)} disabled={disabled} min={0} description={desc('w_init')} />
+          <NumberInput
+            label="Initial Width (um)"
+            value={g.w_init}
+            onChange={(v) => update('w_init', v)}
+            disabled={disabled || g.full_circle}
+            min={0}
+            description={desc('w_init')}
+            className={g.full_circle ? 'opacity-45' : undefined}
+          />
           <NumberInput label="Initial Height (um)" value={g.h_init} onChange={(v) => update('h_init', v)} disabled={disabled} min={0} description={desc('h_init')} />
           <FormulaNumberInput
             fieldName="perimeter"

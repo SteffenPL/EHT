@@ -4,6 +4,7 @@
  */
 import { NumericTextInput } from './NumericTextInput';
 import { ScrubLabel } from './ScrubLabel';
+import { cn } from '@/lib/utils';
 
 export interface NumberInputProps {
   label: string;
@@ -14,11 +15,12 @@ export interface NumberInputProps {
   max?: number;
   step?: number;
   description?: string;
+  className?: string;
 }
 
-export function NumberInput({ label, value, onChange, disabled, min, max, description }: NumberInputProps) {
+export function NumberInput({ label, value, onChange, disabled, min, max, description, className }: NumberInputProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn('flex items-center gap-2', className)}>
       <ScrubLabel
         label={label}
         value={value}

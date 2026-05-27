@@ -7,6 +7,20 @@ import { DEFAULT_EHT_PARAMS } from '../params/defaults';
 import { EHTParametersTab } from './ParametersTab';
 
 describe('EHTParametersTab formula previews', () => {
+  it('visually disables initial width when full circle is active', () => {
+    const params = cloneDeep(DEFAULT_EHT_PARAMS);
+    params.general.full_circle = true;
+    params.general.w_init = 80;
+
+    render(<EHTParametersTab params={params} onChange={vi.fn()} />);
+
+    const widthInput = screen.getByDisplayValue('80');
+    const widthRow = screen.getByText('Initial Width (um)').closest('div[class*="opacity-45"]');
+
+    expect(widthInput).toBeDisabled();
+    expect(widthRow).not.toBeNull();
+  });
+
   it('shows the formula term preview after the mode in parameter formula rows', () => {
     const params = cloneDeep(DEFAULT_EHT_PARAMS);
     params.general.formulas = {
