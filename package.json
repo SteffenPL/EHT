@@ -1,6 +1,6 @@
 {
   "name": "eht-simulator",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "EHT Cell Simulator - Epithelial-to-Hematopoietic Transition",
   "type": "module",
   "scripts": {

@@ -22,7 +22,7 @@ import type { RGBColor } from '@/components/params/inputs/ColorInput';
 import { HelpPopover } from '@/components/ui/help-popover';
 import { getParameterDescription } from '../params/descriptions';
 import { FormulaEditorDialog } from '@/components/params/FormulaEditorDialog';
-import { summarizeFormulaWithInitValue } from '@/components/params/formulaInitMode';
+import { formulaModeSymbol, parseFormulaInitMode } from '@/components/params/formulaInitMode';
 // Section definitions for copy/paste
 type SectionKey = 'initial' | 'geometry' | 'appearance' | 'stiffness' | 'strain' | 'division' | 'cellTypeProps' | 'running';
 
@@ -90,6 +90,14 @@ function NumberCell({ value, onChange, disabled, min, max }: NumberCellProps) {
   );
 }
 
+function parseNumericFormula(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  if (!/^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 /** Table cell that shows either a number input or read-only formula preview with f(x) popup */
 function FormulaCell({
   fieldName,
@@ -123,19 +131,19 @@ function FormulaCell({
   const formula = formulas[fieldName];
   const isFormula = formula !== undefined && formula !== '';
   const [editorOpen, setEditorOpen] = useState(false);
-  const formulaPreview = isFormula ? summarizeFormulaWithInitValue(formula, numericValue) : '';
+  const formulaMode = isFormula ? formulaModeSymbol(parseFormulaInitMode(formula).mode) : '';
 
   return (
     <td className="py-1 px-1">
       <div className="flex items-center gap-0.5">
         {isFormula ? (
-          <input
-            type="text"
-            value={formulaPreview}
-            readOnly
-            className="h-6 text-xs w-20 font-mono border rounded px-1 bg-muted cursor-pointer"
-            title={formula}
-            onClick={() => !disabled && setEditorOpen(true)}
+          <NumericTextInput
+            value={numericValue}
+            onChange={onNumericChange}
+            disabled={disabled}
+            min={min}
+            max={max}
+            className="h-6 text-xs w-20"
           />
         ) : (
           <NumericTextInput
@@ -146,6 +154,14 @@ function FormulaCell({
             max={max}
             className="h-6 text-xs w-20"
           />
+        )}
+        {isFormula && (
+          <span
+            className="flex h-5 w-5 items-center justify-center rounded border bg-muted font-mono text-[10px] text-muted-foreground"
+            title={`Formula mode: ${formulaMode}`}
+          >
+            {formulaMode}
+          </span>
         )}
         <button
           type="button"
@@ -215,19 +231,30 @@ function ExternalForceCell({
   error?: string;
 }) {
   const [editorOpen, setEditorOpen] = useState(false);
+  const numericValue = parseNumericFormula(value);
+  const isNumericScalar = numericValue !== null;
 
   return (
     <td className="py-1 px-1">
       <div className="flex items-center gap-0.5">
-        <Input
-          type="text"
-          value={value}
-          readOnly
-          title={value}
-          onClick={() => !disabled && setEditorOpen(true)}
-          disabled={disabled}
-          className={`h-6 w-24 cursor-pointer bg-muted px-1 text-xs font-mono ${error ? 'border-destructive' : ''}`}
-        />
+        {isNumericScalar ? (
+          <NumericTextInput
+            value={numericValue}
+            onChange={(nextValue) => onChange(String(nextValue))}
+            disabled={disabled}
+            className={`h-6 w-20 text-xs ${error ? 'border-destructive' : ''}`}
+          />
+        ) : (
+          <Input
+            type="text"
+            value={value}
+            readOnly
+            title={value}
+            onClick={() => !disabled && setEditorOpen(true)}
+            disabled={disabled}
+            className={`h-6 w-24 cursor-pointer bg-muted px-1 text-xs font-mono ${error ? 'border-destructive' : ''}`}
+          />
+        )}
         <button
           type="button"
           onClick={() => setEditorOpen(true)}

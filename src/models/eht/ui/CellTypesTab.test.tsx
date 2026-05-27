@@ -17,7 +17,7 @@ describe('EHTCellTypesTab formula copy actions', () => {
 
     const row = screen.getByText('R Soft (um)').closest('tr');
     expect(row).not.toBeNull();
-    const copyButtons = within(row!).getAllByRole('button', { name: /copy to other/i });
+    const copyButtons = within(row!).getAllByRole('button', { name: /Copy R Soft.*other cell types/i });
 
     fireEvent.click(copyButtons[0]);
 
@@ -35,11 +35,29 @@ describe('EHTCellTypesTab formula copy actions', () => {
 
     const row = screen.getByText('External Force (1)').closest('tr');
     expect(row).not.toBeNull();
-    const copyButtons = within(row!).getAllByRole('button', { name: /copy to other/i });
+    const copyButtons = within(row!).getAllByRole('button', { name: /Copy External Force.*other cell types/i });
 
     fireEvent.click(copyButtons[0]);
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange.mock.calls[0][0].cell_types.emt.external_forces[0]).toBe('5 * N');
+  });
+
+  it('edits numeric external force rows as scalar initial values', () => {
+    const params = cloneDeep(DEFAULT_EHT_PARAMS);
+    params.cell_types.control.external_forces = ['0'];
+    params.cell_types.emt.external_forces = ['0'];
+    const onChange = vi.fn();
+
+    render(<EHTCellTypesTab params={params} onChange={onChange} />);
+
+    const row = screen.getByText('External Force (1)').closest('tr');
+    expect(row).not.toBeNull();
+    const scalarInputs = within(row!).getAllByDisplayValue('0');
+
+    fireEvent.change(scalarInputs[0], { target: { value: '4' } });
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0].cell_types.control.external_forces[0]).toBe('4');
   });
 });

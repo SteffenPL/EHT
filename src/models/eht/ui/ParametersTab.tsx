@@ -5,11 +5,10 @@ import { useState, useCallback } from 'react';
 import type { ModelUITabProps } from '@/core/registry';
 import type { EHTParams } from '../params/types';
 import { NumberInput, IntegerInput, BoolInput } from '@/components/params/inputs';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getParameterDescription } from '../params/descriptions';
 import { FormulaEditorDialog, type FormulaContext } from '@/components/params/FormulaEditorDialog';
-import { summarizeFormulaWithInitValue } from '@/components/params/formulaInitMode';
+import { formulaModeSymbol, parseFormulaInitMode } from '@/components/params/formulaInitMode';
 
 /** Input that shows either a NumberInput or read-only formula preview with f(x) toggle */
 function FormulaNumberInput({
@@ -46,32 +45,36 @@ function FormulaNumberInput({
   const formula = formulas[fieldName];
   const isFormula = formula !== undefined && formula !== '';
   const [editorOpen, setEditorOpen] = useState(false);
-  const formulaPreview = isFormula ? summarizeFormulaWithInitValue(formula, numericValue) : '';
+  const formulaMode = isFormula ? formulaModeSymbol(parseFormulaInitMode(formula).mode) : '';
 
   if (isFormula) {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-end gap-1">
         <div className="flex-1">
-          <label className="text-sm font-medium">{label}</label>
-          <div className="flex items-center gap-1">
-            <Input
-              type="text"
-              value={formulaPreview}
-              readOnly
-              className="h-8 text-xs font-mono bg-muted cursor-pointer"
-              title={formula}
-              onClick={() => !disabled && setEditorOpen(true)}
-            />
-            <button
-              onClick={() => setEditorOpen(true)}
-              disabled={disabled}
-              className="text-xs px-1.5 py-1 rounded border bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              title="Edit formula"
-            >
-              f(x)
-            </button>
-          </div>
+          <NumberInput
+            label={label}
+            value={numericValue}
+            onChange={onNumericChange}
+            disabled={disabled}
+            min={min}
+            max={max}
+            description={description}
+          />
         </div>
+        <span
+          className="mb-0.5 flex h-8 w-7 shrink-0 items-center justify-center rounded border bg-muted font-mono text-sm text-muted-foreground"
+          title={`Formula mode: ${formulaMode}`}
+        >
+          {formulaMode}
+        </span>
+        <button
+          onClick={() => setEditorOpen(true)}
+          disabled={disabled}
+          className="mb-0.5 h-8 rounded border bg-primary px-1.5 text-xs text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+          title={formula}
+        >
+          f(x)
+        </button>
         <FormulaEditorDialog
           open={editorOpen}
           onOpenChange={setEditorOpen}
