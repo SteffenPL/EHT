@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   composeFormulaWithInitValue,
+  formulaTermLabel,
   parseFormulaInitMode,
   summarizeFormulaWithInitValue,
 } from './formulaInitMode';
@@ -37,5 +38,10 @@ describe('formula init mode helpers', () => {
   it('summarizes active formulas for compact parameter cells', () => {
     expect(summarizeFormulaWithInitValue('init_value * (1 + t)', 12.345678)).toBe('12.3457 * (1 + t)');
     expect(summarizeFormulaWithInitValue('old_value - 1', 12)).toBe('/ old_value - 1');
+  });
+
+  it('labels formulas by the first three characters of the formula term', () => {
+    expect(formulaTermLabel('init_value * (triangle(t, period=10, min=1, max=2))')).toBe('tri');
+    expect(formulaTermLabel('old_value - 1')).toBe('old');
   });
 });

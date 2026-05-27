@@ -22,7 +22,7 @@ import type { RGBColor } from '@/components/params/inputs/ColorInput';
 import { HelpPopover } from '@/components/ui/help-popover';
 import { getParameterDescription } from '../params/descriptions';
 import { FormulaEditorDialog } from '@/components/params/FormulaEditorDialog';
-import { formulaModeSymbol, parseFormulaInitMode } from '@/components/params/formulaInitMode';
+import { formulaModeSymbol, formulaTermLabel, parseFormulaInitMode } from '@/components/params/formulaInitMode';
 import { DEFAULT_EXTERNAL_FORCE_VALUES } from '../params/external-forces';
 // Section definitions for copy/paste
 type SectionKey = 'initial' | 'geometry' | 'appearance' | 'stiffness' | 'strain' | 'division' | 'cellTypeProps' | 'running';
@@ -125,6 +125,7 @@ function FormulaCell({
   const isFormula = formula !== undefined && formula !== '';
   const [editorOpen, setEditorOpen] = useState(false);
   const formulaMode = isFormula ? formulaModeSymbol(parseFormulaInitMode(formula).mode) : '';
+  const formulaLabel = isFormula ? formulaTermLabel(formula) : '';
 
   return (
     <td className="py-1 px-1">
@@ -149,12 +150,22 @@ function FormulaCell({
           />
         )}
         {isFormula && (
-          <span
-            className="flex h-5 w-5 items-center justify-center rounded border bg-muted font-mono text-[10px] text-muted-foreground"
-            title={`Formula mode: ${formulaMode}`}
-          >
-            {formulaMode}
-          </span>
+          <>
+            <span
+              className="flex h-5 w-5 items-center justify-center rounded border bg-muted font-mono text-[10px] text-muted-foreground"
+              title={`Formula mode: ${formulaMode}`}
+            >
+              {formulaMode}
+            </span>
+            {formulaLabel && (
+              <span
+                className="flex h-5 min-w-6 max-w-8 items-center justify-center truncate rounded border bg-muted px-1 font-mono text-[10px] text-muted-foreground"
+                title={formula}
+              >
+                {formulaLabel}
+              </span>
+            )}
+          </>
         )}
         <button
           type="button"
@@ -233,6 +244,7 @@ function ExternalForceCell({
   const formulaForEditing = value.trim() || 'init_value * (0)';
   const formulaMode = formulaModeSymbol(parseFormulaInitMode(formulaForEditing).mode);
   const isFormulaActive = value.trim() !== '' && value.trim() !== '0';
+  const formulaLabel = isFormulaActive ? formulaTermLabel(value) : '';
 
   return (
     <td className="py-1 px-1">
@@ -249,6 +261,14 @@ function ExternalForceCell({
         >
           {formulaMode}
         </span>
+        {formulaLabel && (
+          <span
+            className="flex h-5 min-w-6 max-w-8 items-center justify-center truncate rounded border bg-muted px-1 font-mono text-[10px] text-muted-foreground"
+            title={value}
+          >
+            {formulaLabel}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setEditorOpen(true)}

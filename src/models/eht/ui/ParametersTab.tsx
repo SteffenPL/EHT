@@ -8,7 +8,7 @@ import { NumberInput, IntegerInput, BoolInput } from '@/components/params/inputs
 import { Label } from '@/components/ui/label';
 import { getParameterDescription } from '../params/descriptions';
 import { FormulaEditorDialog, type FormulaContext } from '@/components/params/FormulaEditorDialog';
-import { formulaModeSymbol, parseFormulaInitMode } from '@/components/params/formulaInitMode';
+import { formulaModeSymbol, formulaTermLabel, parseFormulaInitMode } from '@/components/params/formulaInitMode';
 
 /** Input that shows either a NumberInput or read-only formula preview with f(x) toggle */
 function FormulaNumberInput({
@@ -46,6 +46,7 @@ function FormulaNumberInput({
   const isFormula = formula !== undefined && formula !== '';
   const [editorOpen, setEditorOpen] = useState(false);
   const formulaMode = isFormula ? formulaModeSymbol(parseFormulaInitMode(formula).mode) : '';
+  const formulaLabel = isFormula ? formulaTermLabel(formula) : '';
 
   if (isFormula) {
     return (
@@ -67,6 +68,14 @@ function FormulaNumberInput({
         >
           {formulaMode}
         </span>
+        {formulaLabel && (
+          <span
+            className="mb-0.5 flex h-8 min-w-8 max-w-10 shrink-0 items-center justify-center truncate rounded border bg-muted px-1 font-mono text-xs text-muted-foreground"
+            title={formula}
+          >
+            {formulaLabel}
+          </span>
+        )}
         <button
           onClick={() => setEditorOpen(true)}
           disabled={disabled}
