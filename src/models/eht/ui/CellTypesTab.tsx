@@ -17,11 +17,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Copy, ClipboardPaste } from 'lucide-react';
+import { ArrowLeftRight, Plus, Trash2, Copy, ClipboardPaste } from 'lucide-react';
 import type { RGBColor } from '@/components/params/inputs/ColorInput';
 import { HelpPopover } from '@/components/ui/help-popover';
 import { getParameterDescription } from '../params/descriptions';
 import { FormulaEditorDialog } from '@/components/params/FormulaEditorDialog';
+import { summarizeFormulaWithInitValue } from '@/components/params/formulaInitMode';
 // Section definitions for copy/paste
 type SectionKey = 'initial' | 'geometry' | 'appearance' | 'stiffness' | 'strain' | 'division' | 'cellTypeProps' | 'running';
 
@@ -122,6 +123,7 @@ function FormulaCell({
   const formula = formulas[fieldName];
   const isFormula = formula !== undefined && formula !== '';
   const [editorOpen, setEditorOpen] = useState(false);
+  const formulaPreview = isFormula ? summarizeFormulaWithInitValue(formula, numericValue) : '';
 
   return (
     <td className="py-1 px-1">
@@ -129,7 +131,7 @@ function FormulaCell({
         {isFormula ? (
           <input
             type="text"
-            value={formula}
+            value={formulaPreview}
             readOnly
             className="h-6 text-xs w-20 font-mono border rounded px-1 bg-muted cursor-pointer"
             title={formula}
@@ -158,10 +160,11 @@ function FormulaCell({
           type="button"
           onClick={() => onCopyToOther?.(fieldName, formula)}
           disabled={disabled || !isFormula || !onCopyToOther}
-          className="h-5 rounded border px-1 text-[9px] leading-none hover:bg-muted disabled:opacity-50"
+          className="flex h-5 w-5 items-center justify-center rounded border hover:bg-muted disabled:opacity-50"
           title={`Copy ${label} formula to other cell types`}
+          aria-label={`Copy ${label} formula to other cell types`}
         >
-          copy to other
+          <ArrowLeftRight className="h-3 w-3" />
         </button>
       </div>
       <FormulaEditorDialog
@@ -238,10 +241,11 @@ function ExternalForceCell({
           type="button"
           onClick={() => onCopyToOther?.(value || '0')}
           disabled={disabled || !onCopyToOther}
-          className="h-5 rounded border px-1 text-[9px] leading-none hover:bg-muted disabled:opacity-50"
+          className="flex h-5 w-5 items-center justify-center rounded border hover:bg-muted disabled:opacity-50"
           title={`Copy ${label} formula to other cell types`}
+          aria-label={`Copy ${label} formula to other cell types`}
         >
-          copy to other
+          <ArrowLeftRight className="h-3 w-3" />
         </button>
       </div>
       {error && (

@@ -43,10 +43,10 @@ describe('FormulaEditorDialog', () => {
     const dialog = screen.getByRole('dialog');
 
     fireEvent.change(within(dialog).getByLabelText('Initial value'), { target: { value: '120' } });
-    fireEvent.change(within(dialog).getByLabelText('Formula'), { target: { value: 'init_value * 1.05' } });
+    fireEvent.change(within(dialog).getByLabelText('Formula term'), { target: { value: '1.05' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'OK' }));
 
-    expect(onSave).toHaveBeenCalledWith('init_value * 1.05', 120);
+    expect(onSave).toHaveBeenCalledWith('init_value * (1.05)', 120);
   });
 
   it('blocks saving when the initial value violates the parameter minimum', () => {
@@ -97,7 +97,7 @@ describe('FormulaEditorDialog', () => {
     const dialog = screen.getByRole('dialog');
 
     expect(within(dialog).getByText('Preset builders')).toBeInTheDocument();
-    expect(within(dialog).getByRole('combobox')).toBeInTheDocument();
+    expect(within(dialog).getAllByRole('combobox')).toHaveLength(2);
     expect(within(dialog).getByRole('button', { name: 'Use preset' })).toBeInTheDocument();
     expect(within(dialog).getByText('10% heartbeat')).toBeInTheDocument();
   });
@@ -123,7 +123,7 @@ describe('FormulaEditorDialog', () => {
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Use preset' }));
 
-    expect(within(dialog).getByLabelText('Formula')).toHaveValue(
+    expect(within(dialog).getByLabelText('Formula term')).toHaveValue(
       'sinwave(t, period=heartbeat, from=init_value, to=init_value * 1.1)'
     );
   });
@@ -151,9 +151,9 @@ describe('FormulaEditorDialog', () => {
     const dialog = screen.getByRole('dialog');
 
     fireEvent.change(within(dialog).getByLabelText('Initial value'), { target: { value: '130' } });
-    fireEvent.change(within(dialog).getByLabelText('Formula'), { target: { value: 'init_value * 2' } });
+    fireEvent.change(within(dialog).getByLabelText('Formula term'), { target: { value: '2' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Copy to other' }));
 
-    expect(onCopyToOther).toHaveBeenCalledWith('init_value * 2', 130);
+    expect(onCopyToOther).toHaveBeenCalledWith('init_value * (2)', 130);
   });
 });

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { getParameterDescription } from '../params/descriptions';
 import { FormulaEditorDialog, type FormulaContext } from '@/components/params/FormulaEditorDialog';
+import { summarizeFormulaWithInitValue } from '@/components/params/formulaInitMode';
 
 /** Input that shows either a NumberInput or read-only formula preview with f(x) toggle */
 function FormulaNumberInput({
@@ -45,6 +46,7 @@ function FormulaNumberInput({
   const formula = formulas[fieldName];
   const isFormula = formula !== undefined && formula !== '';
   const [editorOpen, setEditorOpen] = useState(false);
+  const formulaPreview = isFormula ? summarizeFormulaWithInitValue(formula, numericValue) : '';
 
   if (isFormula) {
     return (
@@ -54,7 +56,7 @@ function FormulaNumberInput({
           <div className="flex items-center gap-1">
             <Input
               type="text"
-              value={formula}
+              value={formulaPreview}
               readOnly
               className="h-8 text-xs font-mono bg-muted cursor-pointer"
               title={formula}

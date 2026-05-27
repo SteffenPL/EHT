@@ -34,6 +34,11 @@ import {
 } from '@/models/eht/simulation/external-force-formula';
 import { FormulaSpatialExplainer } from './FormulaSpatialExplainer';
 import { insertFormulaText } from './formulaInsertion';
+import {
+  composeFormulaWithInitValue,
+  parseFormulaInitMode,
+  type FormulaInitMode,
+} from './formulaInitMode';
 import { variablesForContext } from './formulaVariables';
 
 export type FormulaContext = 'general' | 'cell_type' | 'external_force';
@@ -370,6 +375,7 @@ export function FormulaEditorDialog({
 }: FormulaEditorDialogProps) {
   const [formula, setFormula] = useState(initialFormula);
   const [initialValueText, setInitialValueText] = useState(String(currentNumericValue));
+  const [initValueMode, setInitValueMode] = useState<FormulaInitMode>('multiply');
   const [selectedPresetKey, setSelectedPresetKey] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const formulaInputId = useId();
@@ -384,11 +390,17 @@ export function FormulaEditorDialog({
   // Reset local state when dialog opens
   useEffect(() => {
     if (open) {
-      setFormula(initialFormula || String(currentNumericValue));
+      if (usesInitialValue) {
+        const parsed = parseFormulaInitMode(initialFormula);
+        setFormula(parsed.expression);
+        setInitValueMode(parsed.mode);
+      } else {
+        setFormula(initialFormula || '0');
+      }
       setInitialValueText(String(currentNumericValue));
       setSelectedPresetKey(quickPresets[0]?.key ?? '');
     }
-  }, [open, initialFormula, currentNumericValue, quickPresets]);
+  }, [open, initialFormula, currentNumericValue, quickPresets, usesInitialValue]);
 
   const parsedInitialValue = useMemo(() => {
     if (!initialValueText.trim()) return null;
@@ -409,6 +421,10 @@ export function FormulaEditorDialog({
   }, [initialValueMax, initialValueMin, parsedInitialValue, usesInitialValue]);
 
   const effectiveInitialValue = parsedInitialValue ?? currentNumericValue;
+  const parameterEffectiveFormula = useMemo(
+    () => usesInitialValue ? composeFormulaWithInitValue(initValueMode, formula) : formula,
+    [formula, initValueMode, usesInitialValue]
+  );
 
   const insertAtCursor = useCallback((text: string, options: { implicitMultiply?: boolean } = {}) => {
     const input = inputRef.current;
@@ -428,14 +444,17 @@ export function FormulaEditorDialog({
     if (!preset) return;
     const nextFormula = preset.generate();
     setFormula(nextFormula);
+    if (usesInitialValue) {
+      setInitValueMode('ignore');
+    }
     requestAnimationFrame(() => {
       inputRef.current?.focus();
       inputRef.current?.setSelectionRange(nextFormula.length, nextFormula.length);
     });
-  }, [quickPresets, selectedPresetKey]);
+  }, [quickPresets, selectedPresetKey, usesInitialValue]);
 
   const formulaError = useMemo(() => {
-    if (!formula.trim()) return null;
+    if (!formula.trim() && (!usesInitialValue || initValueMode === 'ignore')) return null;
     try {
       if (context === 'external_force') {
         const { curvature_1, curvature_2 } = computeEllipseFromPerimeter(
@@ -473,19 +492,33 @@ export function FormulaEditorDialog({
         INM: 0,
         ...constants, ...formulaFunctions,
       };
-      evaluate(formula, scope);
+      evaluate(parameterEffectiveFormula, scope);
       return null;
     } catch (e) {
       return e instanceof Error ? e.message : String(e);
     }
-  }, [formula, context, effectiveInitialValue, constants, tEnd, initialPerimeter, initialAspectRatio, softRadius]);
+  }, [
+    formula,
+    usesInitialValue,
+    initValueMode,
+    context,
+    effectiveInitialValue,
+    constants,
+    tEnd,
+    initialPerimeter,
+    initialAspectRatio,
+    softRadius,
+    parameterEffectiveFormula,
+  ]);
 
   const effectiveFormula = useMemo(() => {
+    if (usesInitialValue) return parameterEffectiveFormula;
     if (context !== 'external_force') return null;
     return getExternalForceEffectiveFormula(formula.trim() || '0').effectiveFormula;
-  }, [context, formula]);
+  }, [context, formula, parameterEffectiveFormula, usesInitialValue]);
 
-  const canCopyToOther = !!onCopyToOther && !!formula.trim() && !formulaError && !initialValueError;
+  const formulaToSave = usesInitialValue ? parameterEffectiveFormula : formula;
+  const canCopyToOther = !!onCopyToOther && !!formulaToSave.trim() && !formulaError && !initialValueError;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -506,7 +539,7 @@ export function FormulaEditorDialog({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => onCopyToOther(formula.trim() || '0', effectiveInitialValue)}
+                  onClick={() => onCopyToOther(formulaToSave.trim() || '0', effectiveInitialValue)}
                   disabled={!canCopyToOther}
                 >
                   Copy to other
@@ -524,7 +557,7 @@ export function FormulaEditorDialog({
               </Button>
               <Button
                 size="sm"
-                onClick={() => { onSave(formula, effectiveInitialValue); onOpenChange(false); }}
+                onClick={() => { onSave(formulaToSave, effectiveInitialValue); onOpenChange(false); }}
                 disabled={!!formulaError || !!initialValueError}
               >
                 OK
@@ -534,23 +567,7 @@ export function FormulaEditorDialog({
 
           <div className="min-h-0 flex-1 overflow-y-auto p-4">
             <div className="space-y-4">
-              <div className={`grid gap-3 ${usesInitialValue ? 'sm:grid-cols-[minmax(0,1fr)_180px]' : ''}`}>
-                <div>
-                  <Label htmlFor={formulaInputId} className="mb-1.5 block text-xs font-medium text-muted-foreground">Formula</Label>
-                  <Input
-                    id={formulaInputId}
-                    ref={inputRef}
-                    type="text"
-                    value={formula}
-                    onChange={(e) => setFormula(e.target.value)}
-                    placeholder="Enter formula, for example triangle(t, period=10, min=1, max=2)"
-                    className="h-10 font-mono text-sm"
-                    autoFocus
-                  />
-                  {formulaError && (
-                    <p className="mt-1 text-xs text-destructive">{formulaError}</p>
-                  )}
-                </div>
+              <div className={`grid gap-3 ${usesInitialValue ? 'sm:grid-cols-[160px_128px_minmax(0,1fr)]' : ''}`}>
                 {usesInitialValue && (
                   <div>
                     <Label htmlFor={initialValueInputId} className="mb-1.5 block text-xs font-medium text-muted-foreground">
@@ -570,6 +587,39 @@ export function FormulaEditorDialog({
                     )}
                   </div>
                 )}
+                {usesInitialValue && (
+                  <div>
+                    <Label className="mb-1.5 block text-xs font-medium text-muted-foreground">Mode</Label>
+                    <Select value={initValueMode} onValueChange={(value) => setInitValueMode(value as FormulaInitMode)}>
+                      <SelectTrigger className="h-10 font-mono text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ignore">ignore</SelectItem>
+                        <SelectItem value="add">+</SelectItem>
+                        <SelectItem value="multiply">*</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor={formulaInputId} className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    {usesInitialValue ? 'Formula term' : 'Formula'}
+                  </Label>
+                  <Input
+                    id={formulaInputId}
+                    ref={inputRef}
+                    type="text"
+                    value={formula}
+                    onChange={(e) => setFormula(e.target.value)}
+                    placeholder="Enter formula, for example triangle(t, period=10, min=1, max=2)"
+                    className="h-10 font-mono text-sm"
+                    autoFocus
+                  />
+                  {formulaError && (
+                    <p className="mt-1 text-xs text-destructive">{formulaError}</p>
+                  )}
+                </div>
               </div>
               {effectiveFormula && (
                 <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 text-xs">
@@ -595,7 +645,7 @@ export function FormulaEditorDialog({
                       />
                     ) : (
                       <GraphPreview
-                        formula={formula}
+                        formula={formulaToSave}
                         tEnd={tEnd}
                         numericValue={effectiveInitialValue}
                         constants={constants}
