@@ -367,12 +367,9 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
     if (!canvas || !renderer) return null;
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
     return renderer.screenToWorld({
-      x: (event.clientX - rect.left) * scaleX,
-      y: (event.clientY - rect.top) * scaleY,
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
     });
   }, []);
 
@@ -415,7 +412,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
     if (cellIndex === null) return;
 
     event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
     dragRef.current = { pointerId: event.pointerId, cellIndex };
     onCellDragStart?.(cellIndex, position);
   }, [dragEnabled, findCellAtPosition, getCanvasPosition, onCellDragStart]);

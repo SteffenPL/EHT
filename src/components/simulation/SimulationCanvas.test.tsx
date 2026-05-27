@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest';
-import { act, cleanup, render, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SimulationCanvas } from './SimulationCanvas';
 
@@ -14,6 +14,8 @@ vi.mock('../../rendering', () => ({
     resizeCalls: unknown[][] = [];
     setDarkModeCalls: unknown[][] = [];
     setRenderOptionsCalls: unknown[][] = [];
+    setInteractionOverlayCalls: unknown[][] = [];
+    screenToWorldCalls: unknown[][] = [];
 
     init(...args: unknown[]) {
       this.initCalls.push(args);
@@ -52,6 +54,15 @@ vi.mock('../../rendering', () => ({
 
     setRenderOptions(...args: unknown[]) {
       this.setRenderOptionsCalls.push(args);
+    }
+
+    setInteractionOverlay(...args: unknown[]) {
+      this.setInteractionOverlayCalls.push(args);
+    }
+
+    screenToWorld(...args: unknown[]) {
+      this.screenToWorldCalls.push(args);
+      return { x: 1, y: 2 };
     }
 
     constructor() {
@@ -152,5 +163,54 @@ describe('SimulationCanvas', () => {
     await waitFor(() => expect(renderer.renderCalls).toContainEqual([latestState]));
     expect(renderer.setModelCalls).toContainEqual([contextMock.currentModel]);
     expect(renderer.setParamsCalls).toContainEqual([params]);
+  });
+
+  it('uses logical canvas coordinates for drag hit testing', async () => {
+    const onCellDragStart = vi.fn();
+    const state = {
+      t: 0,
+      cells: [{ pos: { x: 1, y: 2 }, R_soft: 1.2, R_hard: 0.4 }],
+    };
+
+    const view = render(
+      <SimulationCanvas
+        state={state}
+        params={params as any}
+        dragEnabled
+        onCellDragStart={onCellDragStart}
+      />
+    );
+
+    await waitFor(() => expect(rendererMock.initResolvers).toHaveLength(1));
+
+    await act(async () => {
+      resolveInit();
+      await Promise.resolve();
+    });
+
+    const canvas = view.container.querySelector('canvas');
+    if (!canvas) throw new Error('Expected canvas to render');
+
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+      left: 10,
+      top: 20,
+      width: 400,
+      height: 300,
+      right: 410,
+      bottom: 320,
+      x: 10,
+      y: 20,
+      toJSON: () => ({}),
+    });
+
+    fireEvent.pointerDown(canvas, {
+      clientX: 35,
+      clientY: 50,
+      pointerId: 1,
+    });
+
+    const renderer = rendererMock.instances[0];
+    expect(renderer.screenToWorldCalls).toContainEqual([{ x: 25, y: 30 }]);
+    expect(onCellDragStart).toHaveBeenCalledWith(0, { x: 1, y: 2 });
   });
 });
