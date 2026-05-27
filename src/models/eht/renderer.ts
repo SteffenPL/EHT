@@ -11,6 +11,7 @@ import type { EHTParams } from './params/types';
 import { shapeCenter } from '@/core/math/geometry';
 import { computeEllipseFromPerimeter } from './params/geometry';
 import { toEHTEngineParams } from './compat/engine-params';
+import { calcAllForces } from './simulation/forces';
 
 /**
  * Get curvatures from state.geometry or compute from params as fallback.
@@ -35,6 +36,7 @@ interface EHTThemeColors {
   basalLink: number;
   cytoskeleton: number;
   membrane: number;
+  forceArrow: number;
 }
 
 const LIGHT_THEME: EHTThemeColors = {
@@ -44,6 +46,7 @@ const LIGHT_THEME: EHTThemeColors = {
   basalLink: 0x000000,
   cytoskeleton: 0x643200,
   membrane: 0xcccccc,
+  forceArrow: 0x2563eb,
 };
 
 const DARK_THEME: EHTThemeColors = {
@@ -53,7 +56,14 @@ const DARK_THEME: EHTThemeColors = {
   basalLink: 0xeeeeee,
   cytoskeleton: 0xd4a574,
   membrane: 0x666666,
+  forceArrow: 0x93c5fd,
 };
+
+function getDraggedCellIndex(renderOptions: Record<string, unknown>, state: EHTSimulationState): number | null {
+  const value = renderOptions.draggedCellIndex;
+  if (typeof value !== 'number' || !Number.isInteger(value)) return null;
+  return value >= 0 && value < state.cells.length ? value : null;
+}
 
 /**
  * Convert RGB to hex color number.
@@ -176,6 +186,51 @@ function drawCellIds(ctx: ModelRenderContext, state: EHTSimulationState): void {
 }
 
 /**
+ * Draw the current net force on a dragged nucleus.
+ */
+function drawForceArrow(
+  graphics: Graphics,
+  state: EHTSimulationState,
+  params: EHTParams,
+  cellIndex: number,
+  theme: EHTThemeColors
+): void {
+  const cell = state.cells[cellIndex];
+  if (!cell) return;
+
+  const forces = calcAllForces(state, params);
+  const force = forces[cellIndex]?.f;
+  if (!force || !Number.isFinite(force.x) || !Number.isFinite(force.y)) return;
+
+  const magnitude = Math.hypot(force.x, force.y);
+  if (magnitude < 1e-9) return;
+
+  const ux = force.x / magnitude;
+  const uy = force.y / magnitude;
+  const minLength = Math.max(cell.R_soft * 0.8, 0.5);
+  const maxLength = Math.max(cell.R_soft * 4, 1.5);
+  const length = Math.min(maxLength, Math.max(minLength, magnitude * 0.35));
+  const startX = cell.pos.x;
+  const startY = cell.pos.y;
+  const endX = startX + ux * length;
+  const endY = startY + uy * length;
+  const headLength = Math.min(length * 0.35, Math.max(cell.R_soft * 0.9, 0.35));
+  const headWidth = headLength * 0.55;
+  const px = -uy;
+  const py = ux;
+
+  graphics.moveTo(startX, startY);
+  graphics.lineTo(endX, endY);
+  graphics.stroke({ color: theme.forceArrow, alpha: 0.95, width: 0.1 });
+
+  graphics.moveTo(endX, endY);
+  graphics.lineTo(endX - ux * headLength + px * headWidth, endY - uy * headLength + py * headWidth);
+  graphics.lineTo(endX - ux * headLength - px * headWidth, endY - uy * headLength - py * headWidth);
+  graphics.closePath();
+  graphics.fill({ color: theme.forceArrow, alpha: 0.95 });
+}
+
+/**
  * EHT Model Renderer
  */
 export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
@@ -233,6 +288,7 @@ export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
     const theme = ctx.isDark ? DARK_THEME : LIGHT_THEME;
     const cellsGraphics = ctx.graphics.cells as Graphics;
     const linksGraphics = ctx.graphics.links as Graphics;
+    const overlayGraphics = ctx.graphics.overlay as Graphics;
     const { curvature_1, curvature_2 } = getCurvatures(state, engineParams);
 
     // Draw basal membrane
@@ -244,6 +300,11 @@ export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
 
     // Draw cells
     drawCells(cellsGraphics, state, engineParams, theme);
+
+    const draggedCellIndex = getDraggedCellIndex(ctx.renderOptions, state);
+    if (draggedCellIndex !== null) {
+      drawForceArrow(overlayGraphics, state, state.params ?? engineParams, draggedCellIndex, theme);
+    }
 
     // Draw cell IDs if enabled
     if (ctx.renderOptions?.showCellIds) {

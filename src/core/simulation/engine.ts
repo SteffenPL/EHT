@@ -107,6 +107,14 @@ export class SimulationEngine<Params = any, State = any> {
   }
 
   /**
+   * Replace the current state. Interactive modes use this to keep the engine
+   * aligned with the currently displayed frame.
+   */
+  setState(state: State): void {
+    this.state = state;
+  }
+
+  /**
    * Get parameters.
    */
   getParams(): Params {

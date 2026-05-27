@@ -28,8 +28,8 @@ export interface ModelRenderContext {
     viewportCenter: { x: number; y: number };
     /** Canvas dimensions in pixels */
     canvasSize: { width: number; height: number };
-    /** Model-specific render options */
-    renderOptions: Record<string, boolean>;
+    /** Model-specific render options and transient interaction overlays */
+    renderOptions: Record<string, unknown>;
 }
 
 export interface ModelRenderer<Params = any, State = any> {

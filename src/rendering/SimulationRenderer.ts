@@ -29,7 +29,8 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
   private uiContainer: Container;
 
   private isDark: boolean;
-  private renderOptions: Record<string, boolean> = {};
+  private renderOptions: Record<string, unknown> = {};
+  private interactionOverlay: Record<string, unknown> = {};
 
   private model: SimulationModel<Params, State> | null = null;
   private params: Params | null = null;
@@ -114,8 +115,28 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
   /**
    * Set render options (model-specific toggles like showCellIds, showScaleBar).
    */
-  setRenderOptions(options: Record<string, boolean>): void {
+  setRenderOptions(options: Record<string, unknown>): void {
     this.renderOptions = options;
+  }
+
+  /**
+   * Set transient interaction overlay data, such as hovered or dragged cells.
+   */
+  setInteractionOverlay(options: Record<string, unknown>): void {
+    this.interactionOverlay = options;
+  }
+
+  /**
+   * Convert a canvas-space point into simulation coordinates.
+   */
+  screenToWorld(point: { x: number; y: number }): { x: number; y: number } {
+    const canvasWidth = this.app.renderer?.width ?? 800;
+    const canvasHeight = this.app.renderer?.height ?? 600;
+
+    return {
+      x: (point.x - canvasWidth / 2) / this.scale + this.centerX,
+      y: -(point.y - canvasHeight / 2) / this.scale + this.centerY,
+    };
   }
 
   /**
@@ -200,7 +221,7 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
       scale: this.scale,
       viewportCenter: { x: this.centerX, y: this.centerY },
       canvasSize: { width: canvasWidth, height: canvasHeight },
-      renderOptions: this.renderOptions,
+      renderOptions: { ...this.renderOptions, ...this.interactionOverlay },
     };
 
     // Delegate rendering to the model
