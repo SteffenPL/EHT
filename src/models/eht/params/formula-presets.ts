@@ -108,6 +108,14 @@ export const FORMULA_QUICK_PRESETS: FormulaQuickPreset[] = [
     generate: () => 'sinwave(t, period=6, from=1, to=1.1)',
   },
   {
+    key: 'up_and_down',
+    name: 'Up and down',
+    context: 'time',
+    description: 'Multiply the initial value by a smooth rise from 1 to 3 and return to 1',
+    initialValueMode: 'multiply',
+    generate: () => '1 + smoothstep(t, start=5, stop=10, from=0, to=2) - smoothstep(t, start=15, stop=20, from=0, to=2)',
+  },
+  {
     key: 'towards_bottom',
     name: 'Towards bottom',
     context: 'external_force',

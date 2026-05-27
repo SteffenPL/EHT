@@ -37,6 +37,21 @@ describe('FORMULA_PRESETS', () => {
     expect(evaluate(formula, { ...scope, t: 6 })).toBeCloseTo(1);
   });
 
+  it('includes an up and down quick preset for multiply mode', () => {
+    const preset = FORMULA_QUICK_PRESETS.find(p => p.key === 'up_and_down');
+
+    expect(preset).toBeDefined();
+    expect(preset!.name).toBe('Up and down');
+    expect(preset!.context).toBe('time');
+    expect(preset!.initialValueMode).toBe('multiply');
+    const formula = preset!.generate();
+
+    expect(formula).toBe('1 + smoothstep(t, start=5, stop=10, from=0, to=2) - smoothstep(t, start=15, stop=20, from=0, to=2)');
+    expect(evaluate(formula, { t: 0, ...formulaFunctions })).toBeCloseTo(1);
+    expect(evaluate(formula, { t: 10, ...formulaFunctions })).toBeCloseTo(3);
+    expect(evaluate(formula, { t: 20, ...formulaFunctions })).toBeCloseTo(1);
+  });
+
   it('generates tangential force toward the bottom', () => {
     const preset = FORMULA_QUICK_PRESETS.find(p => p.key === 'towards_bottom');
     const geometry = createBasalGeometry(1 / 5, 1 / 5);
