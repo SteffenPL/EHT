@@ -1,7 +1,19 @@
 /**
  * Simulation control buttons (play, pause, reset, step) and time slider.
  */
-import { Play, Pause, RotateCcw, SkipForward, Camera, Video, FileDown, Loader2 } from 'lucide-react';
+import {
+  Play,
+  Pause,
+  RotateCcw,
+  SkipForward,
+  Camera,
+  Video,
+  FileDown,
+  Loader2,
+  MousePointer2,
+  Shuffle,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { Button } from '../ui/button';
 import { Slider } from '../ui/slider';
 import {
@@ -12,6 +24,7 @@ import {
   SelectValue,
 } from '../ui/select';
 import type { ParamChangeBehavior } from '@/hooks/useSimulation';
+import type { SimulationMode } from '@/hooks/useSimulation';
 import type { VideoFormat } from '@/core/export/videoEncoder';
 
 export interface SimulationControlsProps {
@@ -26,8 +39,11 @@ export interface SimulationControlsProps {
   onPause: () => void;
   onReset: () => void;
   onStep: () => void;
+  onResetRandom: () => void;
   /** Seek to a specific time */
   onSeek: (time: number) => void;
+  simulationMode: SimulationMode;
+  onSimulationModeChange: (mode: SimulationMode) => void;
   paramChangeBehavior: ParamChangeBehavior;
   onParamChangeBehaviorChange: (behavior: ParamChangeBehavior) => void;
   // Export callbacks
@@ -52,7 +68,10 @@ export function SimulationControls({
   onPause,
   onReset,
   onStep,
+  onResetRandom,
   onSeek,
+  simulationMode,
+  onSimulationModeChange,
   paramChangeBehavior,
   onParamChangeBehaviorChange,
   onSaveScreenshot,
@@ -74,6 +93,7 @@ export function SimulationControls({
   return (
     <div className="space-y-3">
       {/* Time Slider - moved to top */}
+      {simulationMode === 'slider' && (
       <div className="space-y-1">
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">
@@ -97,9 +117,35 @@ export function SimulationControls({
           />
         </div>
       </div>
+      )}
 
       {/* Control buttons */}
       <div className="flex gap-2 flex-wrap items-center">
+        <div className="flex items-center rounded-md border border-input overflow-hidden">
+          <Button
+            type="button"
+            variant={simulationMode === 'slider' ? 'secondary' : 'ghost'}
+            size="sm"
+            className="rounded-none border-0"
+            onClick={() => onSimulationModeChange('slider')}
+            aria-pressed={simulationMode === 'slider'}
+          >
+            <SlidersHorizontal className="h-4 w-4 mr-1" />
+            Slider
+          </Button>
+          <Button
+            type="button"
+            variant={simulationMode === 'realtime' ? 'secondary' : 'ghost'}
+            size="sm"
+            className="rounded-none border-0 border-l border-input"
+            onClick={() => onSimulationModeChange('realtime')}
+            aria-pressed={simulationMode === 'realtime'}
+          >
+            <MousePointer2 className="h-4 w-4 mr-1" />
+            Realtime
+          </Button>
+        </div>
+
         {isRunning || isCatchingUp ? (
           <Button onClick={onPause} variant="outline" size="sm">
             <Pause className="h-4 w-4 mr-1" />
@@ -124,6 +170,11 @@ export function SimulationControls({
         <Button onClick={onReset} variant="outline" size="sm" disabled={isCatchingUp}>
           <RotateCcw className="h-4 w-4 mr-1" />
           Reset
+        </Button>
+
+        <Button onClick={onResetRandom} variant="outline" size="sm" disabled={isCatchingUp}>
+          <Shuffle className="h-4 w-4 mr-1" />
+          Reset Random
         </Button>
 
         <div className="flex items-center gap-2 ml-4">

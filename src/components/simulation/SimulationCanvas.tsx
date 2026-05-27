@@ -69,6 +69,13 @@ export interface SimulationCanvasProps {
   style?: React.CSSProperties;
   /** Model-specific render options */
   renderOptions?: Record<string, boolean>;
+  /** Transient renderer overlay data for interactions */
+  interactionOverlay?: Record<string, unknown>;
+  /** Enable nucleus dragging for models that expose cells with pos/R_soft. */
+  dragEnabled?: boolean;
+  onCellDragStart?: (cellIndex: number, position: { x: number; y: number }) => void;
+  onCellDragMove?: (cellIndex: number, position: { x: number; y: number }) => void;
+  onCellDragEnd?: (cellIndex: number, position: { x: number; y: number }) => void;
 }
 
 export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvasProps>(({
@@ -80,6 +87,11 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   className,
   style,
   renderOptions = {},
+  interactionOverlay = {},
+  dragEnabled = false,
+  onCellDragStart,
+  onCellDragMove,
+  onCellDragEnd,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -87,6 +99,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   const videoEncoderRef = useRef<IVideoEncoder | null>(null);
   const videoFormatRef = useRef<VideoFormat>('mp4'); // Store current recording format
   const isFinishingRef = useRef<boolean>(false); // Track if encoder is being finalized
+  const dragRef = useRef<{ pointerId: number; cellIndex: number } | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [size, setSize] = useState({ width: 800, height: minHeight });
   const { isDark } = useTheme();
@@ -338,6 +351,99 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
     }
   }, [renderOptions, isReady, state]);
 
+  // Update transient interaction overlays when they change
+  useEffect(() => {
+    if (rendererRef.current && isReady) {
+      rendererRef.current.setInteractionOverlay?.(interactionOverlay);
+      if (state) {
+        rendererRef.current.render(state);
+      }
+    }
+  }, [interactionOverlay, isReady, state]);
+
+  const getCanvasPosition = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    const renderer = rendererRef.current;
+    if (!canvas || !renderer) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    return renderer.screenToWorld({
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    });
+  }, []);
+
+  const findCellAtPosition = useCallback((position: { x: number; y: number }) => {
+    const cells = state?.cells;
+    if (!Array.isArray(cells)) return null;
+
+    let closestIndex: number | null = null;
+    let closestDistanceSq = Infinity;
+
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      if (!cell?.pos) continue;
+
+      const radius = Math.max(
+        typeof cell.R_soft === 'number' ? cell.R_soft : 0,
+        typeof cell.R_hard === 'number' ? cell.R_hard : 0,
+        0.35
+      );
+      const dx = position.x - cell.pos.x;
+      const dy = position.y - cell.pos.y;
+      const distanceSq = dx * dx + dy * dy;
+
+      if (distanceSq <= radius * radius && distanceSq < closestDistanceSq) {
+        closestIndex = i;
+        closestDistanceSq = distanceSq;
+      }
+    }
+
+    return closestIndex;
+  }, [state]);
+
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!dragEnabled) return;
+
+    const position = getCanvasPosition(event);
+    if (!position) return;
+
+    const cellIndex = findCellAtPosition(position);
+    if (cellIndex === null) return;
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    dragRef.current = { pointerId: event.pointerId, cellIndex };
+    onCellDragStart?.(cellIndex, position);
+  }, [dragEnabled, findCellAtPosition, getCanvasPosition, onCellDragStart]);
+
+  const handlePointerMove = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const position = getCanvasPosition(event);
+    if (!position) return;
+
+    event.preventDefault();
+    onCellDragMove?.(drag.cellIndex, position);
+  }, [getCanvasPosition, onCellDragMove]);
+
+  const finishDrag = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const position = getCanvasPosition(event);
+    dragRef.current = null;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    if (position) {
+      onCellDragEnd?.(drag.cellIndex, position);
+    }
+  }, [getCanvasPosition, onCellDragEnd]);
+
   return (
     <div
       ref={containerRef}
@@ -354,10 +460,16 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
         ref={canvasRef}
         width={size.width}
         height={size.height}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={finishDrag}
+        onPointerCancel={finishDrag}
         style={{
           display: 'block',
           width: `${size.width}px`,
           height: `${size.height}px`,
+          cursor: dragEnabled ? 'grab' : 'default',
+          touchAction: dragEnabled ? 'none' : 'auto',
         }}
       />
     </div>

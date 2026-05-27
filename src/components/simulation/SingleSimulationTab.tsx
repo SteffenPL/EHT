@@ -2,7 +2,7 @@
  * Single simulation tab - combines canvas, controls, params, and stats.
  */
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { useSimulation, type ParamChangeBehavior } from '@/hooks';
+import { useSimulation, type ParamChangeBehavior, type SimulationMode } from '@/hooks';
 import { useModel } from '@/contexts';
 import { SimulationCanvas, type SimulationCanvasRef } from './SimulationCanvas';
 import { SimulationControls } from './SimulationControls';
@@ -24,11 +24,14 @@ export function SingleSimulationTab() {
 
 function SingleSimulationTabInner() {
   const [paramChangeBehavior, setParamChangeBehavior] = useState<ParamChangeBehavior>('run');
+  const [simulationMode, setSimulationMode] = useState<SimulationMode>('slider');
+  const [draggedCellIndex, setDraggedCellIndex] = useState<number | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   // Initialize with recommended format for browser
   const [videoFormat, setVideoFormat] = useState<VideoFormat>(() => getRecommendedVideoFormat());
-  const { currentModel, currentParams } = useModel();
+  const { currentModel, currentParams, setParams: setModelParams } = useModel();
   const canvasRef = useRef<SimulationCanvasRef>(null);
+  const dragConstraintRef = useRef<{ cellIndex: number; position: { x: number; y: number } } | null>(null);
 
   // Get browser-specific recommendation message
   const formatRecommendation = useMemo(() => getFormatRecommendationMessage(), []);
@@ -50,6 +53,17 @@ function SingleSimulationTabInner() {
     <RenderOptionsPanel options={renderOptions} onChange={setRenderOptions} />
   ) : null;
 
+  const applyDragConstraint = useCallback((draftState: any) => {
+    const drag = dragConstraintRef.current;
+    if (!drag || !Array.isArray(draftState?.cells)) return;
+
+    const cell = draftState.cells[drag.cellIndex];
+    if (!cell?.pos) return;
+
+    cell.pos.x = drag.position.x;
+    cell.pos.y = drag.position.y;
+  }, []);
+
   const {
     state,
     isRunning,
@@ -61,7 +75,62 @@ function SingleSimulationTabInner() {
     reset,
     step,
     seekTo,
-  } = useSimulation({ model: currentModel, params: currentParams, paramChangeBehavior });
+    mutateState,
+  } = useSimulation({
+    model: currentModel,
+    params: currentParams,
+    paramChangeBehavior,
+    simulationMode,
+    realtimeStateMutator: applyDragConstraint,
+  });
+
+  useEffect(() => {
+    if (simulationMode === 'realtime') return;
+    dragConstraintRef.current = null;
+    setDraggedCellIndex(null);
+  }, [simulationMode]);
+
+  const handleSimulationModeChange = useCallback((mode: SimulationMode) => {
+    dragConstraintRef.current = null;
+    setDraggedCellIndex(null);
+    setSimulationMode(mode);
+  }, []);
+
+  const moveDraggedCell = useCallback((cellIndex: number, position: { x: number; y: number }) => {
+    dragConstraintRef.current = { cellIndex, position };
+    setDraggedCellIndex(cellIndex);
+    mutateState(applyDragConstraint);
+  }, [applyDragConstraint, mutateState]);
+
+  const handleCellDragEnd = useCallback((cellIndex: number, position: { x: number; y: number }) => {
+    dragConstraintRef.current = { cellIndex, position };
+    mutateState(applyDragConstraint);
+    dragConstraintRef.current = null;
+    setDraggedCellIndex(null);
+  }, [applyDragConstraint, mutateState]);
+
+  const handleResetRandom = useCallback(() => {
+    const cryptoApi = globalThis.crypto;
+    const randomSeed = (() => {
+      if (cryptoApi?.getRandomValues) {
+        const values = new Uint32Array(1);
+        cryptoApi.getRandomValues(values);
+        return values[0] & 0x7fffffff;
+      }
+      return Math.floor(Math.random() * 0x7fffffff);
+    })();
+
+    dragConstraintRef.current = null;
+    setDraggedCellIndex(null);
+    setParamChangeBehavior('init');
+    setModelParams({
+      ...currentParams,
+      general: {
+        ...currentParams.general,
+        random_seed: randomSeed,
+      },
+    });
+  }, [currentParams, setModelParams]);
 
   // Screenshot: download current canvas as PNG
   const handleSaveScreenshot = useCallback(() => {
@@ -207,6 +276,11 @@ function SingleSimulationTabInner() {
           minHeight={350}
           maxHeight={600}
           renderOptions={renderOptions}
+          interactionOverlay={{ draggedCellIndex }}
+          dragEnabled={simulationMode === 'realtime'}
+          onCellDragStart={moveDraggedCell}
+          onCellDragMove={moveDraggedCell}
+          onCellDragEnd={handleCellDragEnd}
         />
       </Card>
 
@@ -228,7 +302,10 @@ function SingleSimulationTabInner() {
         onPause={pause}
         onReset={reset}
         onStep={step}
+        onResetRandom={handleResetRandom}
         onSeek={seekTo}
+        simulationMode={simulationMode}
+        onSimulationModeChange={handleSimulationModeChange}
         paramChangeBehavior={paramChangeBehavior}
         onParamChangeBehaviorChange={setParamChangeBehavior}
         onSaveScreenshot={handleSaveScreenshot}
