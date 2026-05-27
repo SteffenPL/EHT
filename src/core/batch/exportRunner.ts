@@ -108,6 +108,8 @@ export async function runBatchExport(
 
   const csvSnapshots: BatchSnapshot[] = [];
   const statisticsSnapshots: BatchSnapshot[] = [];
+  const usedRunDirs = new Set<string>();
+  const sampledParamPaths = config.batchConfig.parameter_ranges.map(range => range.path);
 
   // Create the renderer lazily per run because parameter samples can change viewport bounds.
   let renderer: OffscreenRenderer | null = null;
@@ -149,7 +151,11 @@ export async function runBatchExport(
       }
       params.general.random_seed = seed;
 
-      const runDir = `run_${runNumber.toString().padStart(3, '0')}`;
+      const runDir = claimUniqueRunDirectory(
+        formatBatchRunDirectory(paramOverrides, seed, sampledParamPaths),
+        runNumber,
+        usedRunDirs
+      );
 
       if (exportConfig.data.tomlParams) {
         const paramsToml = stringifyToml(params as any);
@@ -446,6 +452,74 @@ function createBatchSnapshot(
     sampled_params: sampledParams,
     data: model.getSnapshot(state),
   };
+}
+
+export function formatBatchRunDirectory(
+  sampledParams: Record<string, number>,
+  seed: number,
+  parameterPaths: string[] = Object.keys(sampledParams)
+): string {
+  const knownPaths = new Set(parameterPaths);
+  const orderedPaths = [
+    ...parameterPaths.filter(path => Object.prototype.hasOwnProperty.call(sampledParams, path)),
+    ...Object.keys(sampledParams)
+      .filter(path => !knownPaths.has(path))
+      .sort(),
+  ];
+  const parts = orderedPaths.map(path => {
+    const label = getRunParameterLabel(path, orderedPaths);
+    return `${label}${formatRunNumberValue(sampledParams[path])}`;
+  });
+
+  parts.push(`seed${formatRunNumberValue(seed)}`);
+  return `run_${parts.join('_')}`;
+}
+
+function claimUniqueRunDirectory(baseName: string, runNumber: number, usedNames: Set<string>): string {
+  if (!usedNames.has(baseName)) {
+    usedNames.add(baseName);
+    return baseName;
+  }
+
+  let candidate = `${baseName}_run${runNumber.toString().padStart(3, '0')}`;
+  let suffix = 2;
+  while (usedNames.has(candidate)) {
+    candidate = `${baseName}_run${runNumber.toString().padStart(3, '0')}_${suffix}`;
+    suffix++;
+  }
+  usedNames.add(candidate);
+  return candidate;
+}
+
+function getRunParameterLabel(path: string, allPaths: string[]): string {
+  const segments = path.split('.').filter(Boolean);
+  const leaf = segments[segments.length - 1] ?? 'param';
+  const leafUses = allPaths.filter(otherPath => {
+    const otherSegments = otherPath.split('.').filter(Boolean);
+    return (otherSegments[otherSegments.length - 1] ?? 'param') === leaf;
+  }).length;
+
+  return sanitizeRunNamePart(leafUses > 1 ? segments.join('_') : leaf);
+}
+
+function sanitizeRunNamePart(value: string): string {
+  return value
+    .trim()
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'param';
+}
+
+function formatRunNumberValue(value: number): string {
+  const text = Number.isFinite(value)
+    ? (Number.isInteger(value) ? value.toString() : Number(value.toPrecision(12)).toString())
+    : value.toString();
+
+  return text
+    .replace(/-/g, 'm')
+    .replace(/\+/g, '')
+    .replace(/\./g, 'p')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || '0';
 }
 
 function formatScreenshotFilename(time: number): string {
