@@ -5,11 +5,11 @@
 
 import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
-import { evaluate } from 'mathjs';
 import type { EHTSimulationState, CellState, CellEventState } from '../types';
 import { CellPhase } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, EHTGeneralParams } from '../params/types';
 import { formulaFunctions } from './formula-functions';
+import { evaluateCompiledFormula } from './formula-evaluator';
 import { CellCyclePhase } from '../params/types';
 import { analyzeEventDependencies } from '../params/event-dependencies';
 
@@ -38,7 +38,7 @@ export function evaluateProbabilityFormula(
     if (cellTypeParams) {
       scope.INM = cellTypeParams.INM;
     }
-    const result = evaluate(formula, scope);
+    const result = evaluateCompiledFormula(formula, scope);
     return typeof result === 'number' ? result : Number(result);
   } catch {
     // Fallback: try parsing as plain number

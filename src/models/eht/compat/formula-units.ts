@@ -1,4 +1,3 @@
-import { evaluate } from 'mathjs';
 import type { EHTCellTypeParams, EHTGeneralParams, EHTParams } from '../params/types';
 import {
   isGeneralLengthField,
@@ -7,6 +6,7 @@ import {
   scaleFormulaScopeValue,
 } from '../params/unit-conversion';
 import { formulaFunctions } from '../simulation/formula-functions';
+import { evaluateCompiledFormula } from '../simulation/formula-evaluator';
 
 export interface FormulaCellContext {
   alpha: number;
@@ -108,7 +108,7 @@ export function evaluateUnitAwareFormula(options: EvaluateFormulaOptions): numbe
     scope.INM = cellTypeParams.INM;
   }
 
-  const result = evaluate(formula, scope);
+  const result = evaluateCompiledFormula(formula, scope);
   const engineValue = fromPublicResult(result, usePublicLengthScope);
   return typeof engineValue === 'number' ? engineValue : Number(engineValue);
 }

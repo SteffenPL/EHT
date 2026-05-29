@@ -1,7 +1,7 @@
 import type { BasalGeometry } from '@/core/math/basal-geometry';
 import { Vector2 } from '@/core/math/vector2';
-import { evaluate, matrix } from 'mathjs';
 import { formulaFunctions } from './formula-functions';
+import { evaluateCompiledFormula } from './formula-evaluator';
 
 const MIN_RADIUS = 1e-12;
 
@@ -79,8 +79,8 @@ export function buildExternalForceScope(
     t,
     init_value: initValue,
     old_value: initValue,
-    T: matrix([tangent.x, tangent.y]),
-    N: matrix([normal.x, normal.y]),
+    T: [tangent.x, tangent.y],
+    N: [normal.x, normal.y],
     delta,
     ...formulaFunctions,
     ...(constants ?? {}),
@@ -107,6 +107,13 @@ export function buildExternalForceScope(
  * Handles matrix results and unexpected scalar/object results.
  */
 export function externalForceResultToVector2(result: unknown): Vector2 {
+  if (Array.isArray(result)) {
+    const [x, y] = result;
+    if (typeof x === 'number' && typeof y === 'number') {
+      return new Vector2(x, y);
+    }
+  }
+
   if (result != null && typeof result === 'object' && 'toArray' in result) {
     const arr = (result as { toArray: () => number[] }).toArray() as number[];
     if (arr.length >= 2 && typeof arr[0] === 'number' && typeof arr[1] === 'number') {
@@ -128,7 +135,7 @@ export function evaluateExternalForceAtPosition({
   const spatial = buildExternalForceScope(position, basalGeometry, t, constants, cellContext, initValue);
   const formulaWithFallback = formula.trim() || '0';
   const { effectiveFormula, isScalarFormula } = getExternalForceEffectiveFormula(formulaWithFallback);
-  const result = evaluate(effectiveFormula, spatial.scope);
+  const result = evaluateCompiledFormula(effectiveFormula, spatial.scope);
   const radius = Math.max(cellContext?.R_soft ?? 1, MIN_RADIUS);
 
   return {

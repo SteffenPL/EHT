@@ -186,17 +186,29 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
     );
   }
 
+  private clearContainer(container: Container): void {
+    const removedChildren = container.removeChildren();
+    for (const child of removedChildren) {
+      child.destroy({
+        children: true,
+        context: true,
+        texture: true,
+        style: true,
+      });
+    }
+  }
+
   /**
    * Render the current simulation state.
    */
   render(state: State): void {
     if (!this.model || !this.params) return;
 
-    // Clear previous frame
-    this.cellsContainer.removeChildren();
-    this.linksContainer.removeChildren();
-    this.overlayContainer.removeChildren();
-    this.uiContainer.removeChildren();
+    // Clear previous frame and release Pixi resources owned by transient objects.
+    this.clearContainer(this.cellsContainer);
+    this.clearContainer(this.linksContainer);
+    this.clearContainer(this.overlayContainer);
+    this.clearContainer(this.uiContainer);
 
     // Create fresh Graphics objects for the model renderer
     const cellsGraphics = new Graphics();

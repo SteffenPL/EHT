@@ -284,6 +284,12 @@ export function getExternalForceError(formula: string): string | undefined {
   return failedFormulas.get(formula);
 }
 
+interface ExternalForceRow {
+  formula: string;
+  initValue: number;
+  effectiveFormulaKey: string;
+}
+
 /**
  * Calculate external forces from user-defined formulas.
  * Each cell type can specify multiple math.js formulas for external forces
@@ -297,24 +303,41 @@ export function calcExternalForces(
   const cells = state.cells;
   const cellTypes = params.cell_types;
   const fallbackType = cellTypes.control;
+  const rowsByCellType = new Map<string, ExternalForceRow[]>();
+
+  const getRowsForCellType = (typeIndex: string, cellType: typeof fallbackType): ExternalForceRow[] => {
+    const cachedRows = rowsByCellType.get(typeIndex);
+    if (cachedRows) return cachedRows;
+
+    const formulas = normalizeExternalForces(cellType);
+    const values = normalizeExternalForceValues(cellType);
+    const rowCount = Math.max(formulas.length, values.length);
+    const rows: ExternalForceRow[] = [];
+
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+      const formula = formulas[rowIndex]?.trim() ?? '';
+      if (!formula || formula === '0') continue;
+
+      const initValue = values[rowIndex] ?? 1;
+      rows.push({
+        formula,
+        initValue,
+        effectiveFormulaKey: formula,
+      });
+    }
+
+    rowsByCellType.set(typeIndex, rows);
+    return rows;
+  };
 
   for (let i = 0; i < cells.length; i++) {
     const ci = cells[i];
     const cellType = cellTypes[ci.typeIndex] ?? fallbackType;
-    const formulas = normalizeExternalForces(cellType);
-    const values = normalizeExternalForceValues(cellType);
-    const rowCount = Math.max(formulas.length, values.length);
+    const rows = getRowsForCellType(ci.typeIndex, cellType);
 
-    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-      const formula = formulas[rowIndex]?.trim() ?? '';
-      const initValue = values[rowIndex] ?? 1;
-      const effectiveFormulaKey = formula || `init_value:${initValue}`;
-
-      // Skip if no external force
-      if (!formula || formula === '0') continue;
-
+    for (const row of rows) {
       // Skip formulas already known to be invalid — use NaN force
-      if (failedFormulas.has(effectiveFormulaKey)) {
+      if (failedFormulas.has(row.effectiveFormulaKey)) {
         forces[i].f.x = NaN;
         forces[i].f.y = NaN;
         continue;
@@ -322,8 +345,8 @@ export function calcExternalForces(
 
       try {
         const { force } = evaluateExternalForceAtPosition({
-          formula,
-          initValue,
+          formula: row.formula,
+          initValue: row.initValue,
           position: Vector2.from(ci.pos),
           basalGeometry: state.basalGeometry,
           t: state.t,
@@ -340,8 +363,8 @@ export function calcExternalForces(
         forces[i].f.y += force.y;
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        failedFormulas.set(effectiveFormulaKey, msg);
-        console.warn(`[ExternalForce] Invalid formula "${formula}": ${msg}`);
+        failedFormulas.set(row.effectiveFormulaKey, msg);
+        console.warn(`[ExternalForce] Invalid formula "${row.formula}": ${msg}`);
         forces[i].f.x = NaN;
         forces[i].f.y = NaN;
       }
