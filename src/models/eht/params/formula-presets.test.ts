@@ -127,4 +127,48 @@ describe('FORMULA_PRESETS', () => {
     expect(force.x).toBeCloseTo(0);
     expect(force.y).toBeCloseTo(-0.05);
   });
+
+  it('generates inside-only fluid pressure above the basal line', () => {
+    const preset = FORMULA_QUICK_PRESETS.find(p => p.key === 'fluid_pressure_inside');
+    const geometry = createBasalGeometry(0, 0);
+
+    expect(preset).toBeDefined();
+    expect(preset!.name).toBe('Fluid pressure (inside)');
+    expect(preset!.initialValueMode).toBe('multiply');
+    expect(preset!.initialValue).toBe(-0.1);
+    const formula = composePresetFormula(preset!);
+    expect(formula).toBe('init_value * (max(0, sign(delta)) * N)');
+
+    const below = evaluateExternalForceAtPosition({
+      formula,
+      initValue: preset!.initialValue,
+      position: new Vector2(0, -1),
+      basalGeometry: geometry,
+      t: 0,
+      cellContext: { R_soft: 2 },
+    }).force;
+    const onLine = evaluateExternalForceAtPosition({
+      formula,
+      initValue: preset!.initialValue,
+      position: new Vector2(0, 0),
+      basalGeometry: geometry,
+      t: 0,
+      cellContext: { R_soft: 2 },
+    }).force;
+    const above = evaluateExternalForceAtPosition({
+      formula,
+      initValue: preset!.initialValue,
+      position: new Vector2(0, 3),
+      basalGeometry: geometry,
+      t: 0,
+      cellContext: { R_soft: 2 },
+    }).force;
+
+    expect(below.x).toBeCloseTo(0);
+    expect(below.y).toBeCloseTo(0);
+    expect(onLine.x).toBeCloseTo(0);
+    expect(onLine.y).toBeCloseTo(0);
+    expect(above.x).toBeCloseTo(0);
+    expect(above.y).toBeCloseTo(-0.05);
+  });
 });

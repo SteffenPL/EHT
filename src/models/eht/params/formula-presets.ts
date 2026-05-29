@@ -142,4 +142,13 @@ export const FORMULA_QUICK_PRESETS: FormulaQuickPreset[] = [
     initialValue: -0.1,
     generate: () => 'N',
   },
+  {
+    key: 'fluid_pressure_inside',
+    name: 'Fluid pressure (inside)',
+    context: 'external_force',
+    description: 'Constant pressure force along the outward normal only above the basal line',
+    initialValueMode: 'multiply',
+    initialValue: -0.1,
+    generate: () => 'max(0, sign(delta)) * N',
+  },
 ];
