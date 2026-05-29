@@ -165,6 +165,46 @@ describe('SimulationCanvas', () => {
     expect(renderer.setParamsCalls).toContainEqual([params]);
   });
 
+  it('reports visible render timings when requested', async () => {
+    const onRenderProfile = vi.fn();
+    const state = { t: 0 };
+
+    render(
+      <SimulationCanvas
+        state={state}
+        params={params as any}
+        onRenderProfile={onRenderProfile}
+      />
+    );
+
+    await waitFor(() => expect(rendererMock.initResolvers).toHaveLength(1));
+
+    await act(async () => {
+      resolveInit();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(onRenderProfile).toHaveBeenCalledWith(expect.any(Number));
+    });
+  });
+
+  it('does not collect render timings by default', async () => {
+    const state = { t: 0 };
+
+    render(<SimulationCanvas state={state} params={params as any} />);
+
+    await waitFor(() => expect(rendererMock.initResolvers).toHaveLength(1));
+
+    await act(async () => {
+      resolveInit();
+      await Promise.resolve();
+    });
+
+    const renderer = rendererMock.instances[0];
+    await waitFor(() => expect(renderer.renderCalls).toContainEqual([state]));
+  });
+
   it('uses logical canvas coordinates for drag hit testing', async () => {
     const onCellDragStart = vi.fn();
     const state = {

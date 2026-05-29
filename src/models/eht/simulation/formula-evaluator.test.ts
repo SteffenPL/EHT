@@ -1,6 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CircularGeometry } from '@/core/math/basal-geometry';
 import { Vector2 } from '@/core/math/vector2';
+import {
+  withActiveSimulationProfiler,
+  type SimulationProfilerCollector,
+} from '@/core/profiling/simulation-profiler';
 import {
   clearFormulaEvaluationCache,
   evaluateCompiledFormula,
@@ -42,5 +46,19 @@ describe('formula evaluator cache', () => {
       t: 2,
     });
     expect(getFormulaEvaluationCacheSize()).toBe(1);
+  });
+
+  it('records formula timing and formula cache size when profiling is active', () => {
+    const collector: SimulationProfilerCollector = {
+      recordTiming: vi.fn(),
+      recordSignal: vi.fn(),
+    };
+
+    withActiveSimulationProfiler(collector, () => {
+      expect(evaluateCompiledFormula('init_value + t', { init_value: 2, t: 3 })).toBe(5);
+    });
+
+    expect(collector.recordTiming).toHaveBeenCalledWith('formula', expect.any(Number));
+    expect(collector.recordSignal).toHaveBeenCalledWith('formulaCacheSize', 1);
   });
 });

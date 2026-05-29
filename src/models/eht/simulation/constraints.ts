@@ -4,6 +4,10 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
+import {
+  getActiveSimulationProfiler,
+  nowMs,
+} from '@/core/profiling/simulation-profiler';
 import type { EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 import { getCellType } from './cell';
@@ -247,7 +251,7 @@ export function projectBasalCurveConstraints(
 /**
  * Apply all EHT constraints in sequence.
  */
-export function applyAllConstraints(
+function applyAllConstraintsUnprofiled(
   state: EHTSimulationState,
   params: EHTParams
 ): void {
@@ -255,4 +259,22 @@ export function applyAllConstraints(
   projectBasalOrderingConstraints(state, params);
   projectMaxBasalDistanceConstraints(state, params);
   projectBasalCurveConstraints(state, params);
+}
+
+export function applyAllConstraints(
+  state: EHTSimulationState,
+  params: EHTParams
+): void {
+  const profiler = getActiveSimulationProfiler();
+  if (!profiler) {
+    applyAllConstraintsUnprofiled(state, params);
+    return;
+  }
+
+  const start = nowMs();
+  try {
+    applyAllConstraintsUnprofiled(state, params);
+  } finally {
+    profiler.recordTiming('constraints', nowMs() - start);
+  }
 }

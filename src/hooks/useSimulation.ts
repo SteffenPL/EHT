@@ -5,6 +5,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { SimulationEngine } from '../core/simulation/engine';
 import type { SimulationModel } from '../core/interfaces/model';
+import {
+  nowMs,
+  withActiveSimulationProfiler,
+  type SimulationProfilerCollector,
+} from '../core/profiling/simulation-profiler';
 
 /** Behavior when parameters change */
 export type ParamChangeBehavior = 'init' | 'step' | 'run';
@@ -20,6 +25,8 @@ export interface UseSimulationOptions<Params = any, State = any> {
   simulationMode?: SimulationMode;
   /** Optional live constraint applied before and after each realtime step. */
   realtimeStateMutator?: (state: State) => void;
+  /** Optional collector for the currently visible simulation profiler. */
+  profiler?: SimulationProfilerCollector | null;
 }
 
 export interface UseSimulationResult<Params = any, State = any> {
@@ -77,6 +84,7 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
     paramChangeBehavior = 'init',
     simulationMode = 'slider',
     realtimeStateMutator,
+    profiler,
   } = options;
 
   const [params, setParamsState] = useState<Params>(initialParams);
@@ -91,11 +99,52 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
   const currentIndexRef = useRef(0);
   const stateRef = useRef<State | null>(null);
   const realtimeStateMutatorRef = useRef<typeof realtimeStateMutator>(realtimeStateMutator);
+  const profilerRef = useRef<SimulationProfilerCollector | null>(profiler ?? null);
 
   // State history: stores all computed states for time-travel
   const stateHistoryRef = useRef<State[]>([]);
   // Target time for seeking (when catching up)
   const seekTargetRef = useRef<number | null>(null);
+
+  const cloneStateForDisplay = useCallback((sourceState: State): State => {
+    const currentProfiler = profilerRef.current;
+    if (!currentProfiler) return cloneState(sourceState);
+
+    const start = nowMs();
+    const cloned = cloneState(sourceState);
+    currentProfiler.recordTiming('clone', nowMs() - start);
+    return cloned;
+  }, []);
+
+  const runEngineStep = useCallback(() => {
+    const engine = engineRef.current;
+    if (!engine) return;
+
+    const currentProfiler = profilerRef.current;
+    if (!currentProfiler) {
+      engine.step();
+      return;
+    }
+
+    const start = nowMs();
+    withActiveSimulationProfiler(currentProfiler, () => {
+      engine.step();
+    });
+    currentProfiler.recordTiming('step', nowMs() - start);
+  }, []);
+
+  const recordProfilerSignals = useCallback(() => {
+    const currentProfiler = profilerRef.current;
+    if (!currentProfiler) return;
+
+    currentProfiler.recordSignal('stateHistoryLength', stateHistoryRef.current.length);
+
+    const visibleState = stateRef.current ?? engineRef.current?.getState() ?? null;
+    const cells = (visibleState as any)?.cells;
+    if (Array.isArray(cells)) {
+      currentProfiler.recordSignal('cellCount', cells.length);
+    }
+  }, []);
 
   useEffect(() => {
     currentIndexRef.current = currentIndex;
@@ -109,12 +158,21 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
     realtimeStateMutatorRef.current = realtimeStateMutator;
   }, [realtimeStateMutator]);
 
+  useEffect(() => {
+    profilerRef.current = profiler ?? null;
+    recordProfilerSignals();
+  }, [profiler, recordProfilerSignals]);
+
+  useEffect(() => {
+    recordProfilerSignals();
+  }, [state, currentIndex, recordProfilerSignals]);
+
   // Initialize engine and history on first render
   useEffect(() => {
     engineRef.current = new SimulationEngine({ model, params: initialParams, autoInit });
     if (autoInit) {
       const initialState = engineRef.current.getState();
-      const cloned = cloneState(initialState);
+      const cloned = cloneStateForDisplay(initialState);
       stateHistoryRef.current = [cloned];
       setCurrentIndex(0);
       setState(cloned);
@@ -145,15 +203,15 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
     // Reinitialize the engine with new model/params
     engineRef.current = new SimulationEngine({ model, params: initialParams });
     const initialState = engineRef.current.getState();
-    const cloned = cloneState(initialState);
+    const cloned = cloneStateForDisplay(initialState);
     stateHistoryRef.current = [cloned];
     setCurrentIndex(0);
     setState(cloned);
 
     if (paramChangeBehavior === 'step') {
       // Run one step after init
-      engineRef.current.step();
-      const s = cloneState(engineRef.current.getState());
+      runEngineStep();
+      const s = cloneStateForDisplay(engineRef.current.getState());
       stateHistoryRef.current.push(s);
       setCurrentIndex(1);
       setState(s);
@@ -162,20 +220,20 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
       setIsRunning(true);
     }
     // 'init' just initializes (already done above)
-  }, [model, initialParams, paramChangeBehavior]);
+  }, [model, initialParams, paramChangeBehavior, cloneStateForDisplay, runEngineStep]);
 
   // Realtime mode continues from the displayed frame, not from the furthest
   // precomputed history frame used by slider mode.
   useEffect(() => {
     if (simulationMode !== 'realtime' || !engineRef.current || !stateRef.current) return;
 
-    const liveState = cloneState(stateRef.current);
+    const liveState = cloneStateForDisplay(stateRef.current);
     realtimeStateMutatorRef.current?.(liveState);
-    engineRef.current.setState(cloneState(liveState));
-    stateHistoryRef.current = [cloneState(liveState)];
+    engineRef.current.setState(cloneStateForDisplay(liveState));
+    stateHistoryRef.current = [cloneStateForDisplay(liveState)];
     setCurrentIndex(0);
     setState(liveState);
-  }, [simulationMode]);
+  }, [simulationMode, cloneStateForDisplay]);
 
   // Animation loop - handles both running and catching up
   useEffect(() => {
@@ -183,11 +241,16 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
     if (!shouldAnimate || !engineRef.current) return;
 
     let lastTime = performance.now();
+    let lastFrameTimestamp = lastTime;
     const targetDt = 40; // ~25 fps for normal playback
     const catchUpDt = 0; // No delay when catching up (compute as fast as possible)
 
     const animate = (currentTime: number) => {
       if (!engineRef.current) return;
+
+      const frameDelta = currentTime - lastFrameTimestamp;
+      lastFrameTimestamp = currentTime;
+      profilerRef.current?.recordTiming('frame', frameDelta);
 
       const elapsed = currentTime - lastTime;
       const frameTime = isCatchingUp ? catchUpDt : targetDt;
@@ -219,8 +282,8 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
           }
 
           // Compute next state
-          engineRef.current.step();
-          const newState = cloneState(engineRef.current.getState());
+          runEngineStep();
+          const newState = cloneStateForDisplay(engineRef.current.getState());
           stateHistoryRef.current.push(newState);
 
           // Update display to show progress
@@ -233,10 +296,10 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
             const mutator = realtimeStateMutatorRef.current;
             const liveState = engineRef.current.getState();
             mutator?.(liveState);
-            engineRef.current.step();
+            runEngineStep();
             mutator?.(engineRef.current.getState());
 
-            const newState = cloneState(engineRef.current.getState());
+            const newState = cloneStateForDisplay(engineRef.current.getState());
             stateHistoryRef.current = [newState];
             setCurrentIndex(0);
             setState(newState);
@@ -254,8 +317,8 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
             setState(history[nextIndex]);
           } else if (!engineRef.current.isComplete()) {
             // Need to compute the next state
-            engineRef.current.step();
-            const newState = cloneState(engineRef.current.getState());
+            runEngineStep();
+            const newState = cloneStateForDisplay(engineRef.current.getState());
             stateHistoryRef.current.push(newState);
             setCurrentIndex(stateHistoryRef.current.length - 1);
             setState(newState);
@@ -276,7 +339,7 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isRunning, isCatchingUp, currentIndex, simulationMode]);
+  }, [isRunning, isCatchingUp, currentIndex, simulationMode, cloneStateForDisplay, runEngineStep]);
 
   const start = useCallback(() => {
     setIsCatchingUp(false);
@@ -297,7 +360,7 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
 
     if (simulationMode === 'realtime' && engineRef.current) {
       engineRef.current.resetWithParams(params);
-      const initialState = cloneState(engineRef.current.getState());
+      const initialState = cloneStateForDisplay(engineRef.current.getState());
       stateHistoryRef.current = [initialState];
       setCurrentIndex(0);
       setState(initialState);
@@ -310,7 +373,7 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
       setCurrentIndex(0);
       setState(history[0]);
     }
-  }, [params, simulationMode]);
+  }, [params, simulationMode, cloneStateForDisplay]);
 
   const step = useCallback(() => {
     if (!engineRef.current) return;
@@ -319,10 +382,10 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
       const mutator = realtimeStateMutatorRef.current;
       const liveState = engineRef.current.getState();
       mutator?.(liveState);
-      engineRef.current.step();
+      runEngineStep();
       mutator?.(engineRef.current.getState());
 
-      const newState = cloneState(engineRef.current.getState());
+      const newState = cloneStateForDisplay(engineRef.current.getState());
       stateHistoryRef.current = [newState];
       setCurrentIndex(0);
       setState(newState);
@@ -338,13 +401,13 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
       setState(history[nextIndex]);
     } else if (!engineRef.current.isComplete()) {
       // Need to compute new state
-      engineRef.current.step();
-      const newState = cloneState(engineRef.current.getState());
+      runEngineStep();
+      const newState = cloneStateForDisplay(engineRef.current.getState());
       stateHistoryRef.current.push(newState);
       setCurrentIndex(stateHistoryRef.current.length - 1);
       setState(newState);
     }
-  }, [currentIndex, simulationMode]);
+  }, [currentIndex, simulationMode, cloneStateForDisplay, runEngineStep]);
 
   const seekTo = useCallback((targetTime: number) => {
     if (simulationMode === 'realtime') return;
@@ -392,23 +455,23 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
     if (!engineRef.current) return;
 
     const baseState = stateRef.current ?? engineRef.current.getState();
-    const liveState = cloneState(baseState);
+    const liveState = cloneStateForDisplay(baseState);
     mutator(liveState);
     realtimeStateMutatorRef.current?.(liveState);
 
-    engineRef.current.setState(cloneState(liveState));
+    engineRef.current.setState(cloneStateForDisplay(liveState));
 
     if (simulationMode === 'realtime') {
-      stateHistoryRef.current = [cloneState(liveState)];
+      stateHistoryRef.current = [cloneStateForDisplay(liveState)];
       setCurrentIndex(0);
     } else {
       const nextHistory = stateHistoryRef.current.slice(0, currentIndexRef.current + 1);
-      nextHistory[currentIndexRef.current] = cloneState(liveState);
+      nextHistory[currentIndexRef.current] = cloneStateForDisplay(liveState);
       stateHistoryRef.current = nextHistory;
     }
 
     setState(liveState);
-  }, [simulationMode]);
+  }, [simulationMode, cloneStateForDisplay]);
 
   const setParams = useCallback((newParams: Params) => {
     setIsRunning(false);
@@ -418,12 +481,12 @@ export function useSimulation<Params = any, State = any>(options: UseSimulationO
 
     if (engineRef.current) {
       engineRef.current.resetWithParams(newParams);
-      const initialState = cloneState(engineRef.current.getState());
+      const initialState = cloneStateForDisplay(engineRef.current.getState());
       stateHistoryRef.current = [initialState];
       setCurrentIndex(0);
       setState(initialState);
     }
-  }, []);
+  }, [cloneStateForDisplay]);
 
   // Compute derived values
   const history = stateHistoryRef.current;

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHand
 import { SimulationRenderer } from '../../rendering';
 import { useTheme, useModel } from '@/contexts';
 import type { BaseSimulationParams } from '../../core/registry';
+import { nowMs } from '@/core/profiling/simulation-profiler';
 import {
   createVideoEncoder,
   getVideoFormatInfo,
@@ -76,6 +77,8 @@ export interface SimulationCanvasProps {
   onCellDragStart?: (cellIndex: number, position: { x: number; y: number }) => void;
   onCellDragMove?: (cellIndex: number, position: { x: number; y: number }) => void;
   onCellDragEnd?: (cellIndex: number, position: { x: number; y: number }) => void;
+  /** Optional visible-render timing sink for the simulation profiler. */
+  onRenderProfile?: (durationMs: number) => void;
 }
 
 export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvasProps>(({
@@ -92,6 +95,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   onCellDragStart,
   onCellDragMove,
   onCellDragEnd,
+  onRenderProfile,
 }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -104,6 +108,20 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   const [size, setSize] = useState({ width: 800, height: minHeight });
   const { isDark } = useTheme();
   const { currentModel } = useModel();
+
+  const renderState = useCallback((nextState: any) => {
+    const renderer = rendererRef.current;
+    if (!renderer) return;
+
+    if (!onRenderProfile) {
+      renderer.render(nextState);
+      return;
+    }
+
+    const start = nowMs();
+    renderer.render(nextState);
+    onRenderProfile(nowMs() - start);
+  }, [onRenderProfile]);
 
   // Expose imperative methods via ref
   useImperativeHandle(ref, () => ({
@@ -287,10 +305,10 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
       rendererRef.current.setParams(params);
       // Re-render after params change
       if (state) {
-        rendererRef.current.render(state);
+        renderState(state);
       }
     }
-  }, [params, isReady, state]);
+  }, [params, isReady, state, renderState]);
 
   // Handle resize
   useEffect(() => {
@@ -298,15 +316,15 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
       rendererRef.current.resize(size.width, size.height);
       // Re-render after resize
       if (state) {
-        rendererRef.current.render(state);
+        renderState(state);
       }
     }
-  }, [size.width, size.height, isReady, state]);
+  }, [size.width, size.height, isReady, state, renderState]);
 
   // Render state when it changes
   useEffect(() => {
     if (rendererRef.current && state && isReady) {
-      rendererRef.current.render(state);
+      renderState(state);
 
       // Capture frame if recording (check finishing flag to prevent race conditions)
       if (videoEncoderRef.current && canvasRef.current && !isFinishingRef.current) {
@@ -315,7 +333,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
           .catch(err => console.error('Failed to capture frame:', err));
       }
     }
-  }, [state, isReady]);
+  }, [state, isReady, renderState]);
 
   // Update theme when dark mode changes
   useEffect(() => {
@@ -323,10 +341,10 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
       rendererRef.current.setDarkMode(isDark);
       // Re-render with new theme
       if (state) {
-        rendererRef.current.render(state);
+        renderState(state);
       }
     }
-  }, [isDark, isReady, state]);
+  }, [isDark, isReady, state, renderState]);
 
   // Update model when it changes
   useEffect(() => {
@@ -335,10 +353,10 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
       rendererRef.current.setParams(params);
       // Re-render with new model
       if (state) {
-        rendererRef.current.render(state);
+        renderState(state);
       }
     }
-  }, [currentModel, isReady, state, params]);
+  }, [currentModel, isReady, state, params, renderState]);
 
   // Update render options when they change
   useEffect(() => {
@@ -346,20 +364,20 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
       rendererRef.current.setRenderOptions(renderOptions);
       // Re-render with new options
       if (state) {
-        rendererRef.current.render(state);
+        renderState(state);
       }
     }
-  }, [renderOptions, isReady, state]);
+  }, [renderOptions, isReady, state, renderState]);
 
   // Update transient interaction overlays when they change
   useEffect(() => {
     if (rendererRef.current && isReady) {
       rendererRef.current.setInteractionOverlay?.(interactionOverlay);
       if (state) {
-        rendererRef.current.render(state);
+        renderState(state);
       }
     }
-  }, [interactionOverlay, isReady, state]);
+  }, [interactionOverlay, isReady, state, renderState]);
 
   const getCanvasPosition = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;

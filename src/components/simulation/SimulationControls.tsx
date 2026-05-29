@@ -13,6 +13,7 @@ import {
   MousePointer2,
   Shuffle,
   SlidersHorizontal,
+  Activity,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Slider } from '../ui/slider';
@@ -25,6 +26,7 @@ import {
 } from '../ui/select';
 import type { ParamChangeBehavior } from '@/hooks/useSimulation';
 import type { SimulationMode } from '@/hooks/useSimulation';
+import type { SimulationProfilerSnapshot } from '@/hooks/useSimulationProfiler';
 import type { VideoFormat } from '@/core/export/videoEncoder';
 
 export interface SimulationControlsProps {
@@ -56,6 +58,31 @@ export interface SimulationControlsProps {
   onVideoFormatChange?: (format: VideoFormat) => void;
   /** Model-specific render options panel (optional) */
   renderOptionsPanel?: React.ReactNode;
+  /** Opt-in visible simulation profiler controls and readouts. */
+  profilerEnabled?: boolean;
+  onProfilerEnabledChange?: (enabled: boolean) => void;
+  profilerSnapshot?: SimulationProfilerSnapshot | null;
+}
+
+function formatMs(value: number | undefined): string {
+  if (value === undefined || !Number.isFinite(value)) return '--';
+  if (value >= 10) return `${value.toFixed(1)}ms`;
+  if (value >= 1) return `${value.toFixed(2)}ms`;
+  return `${value.toFixed(3)}ms`;
+}
+
+function formatCount(value: number | undefined): string {
+  if (value === undefined || !Number.isFinite(value)) return '--';
+  return value.toLocaleString();
+}
+
+function ProfilerMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="whitespace-nowrap">
+      <span className="text-muted-foreground">{label}</span>{' '}
+      <span className="font-medium tabular-nums text-foreground">{value}</span>
+    </span>
+  );
 }
 
 export function SimulationControls({
@@ -81,6 +108,9 @@ export function SimulationControls({
   videoFormat = 'mp4',
   onVideoFormatChange,
   renderOptionsPanel,
+  profilerEnabled = false,
+  onProfilerEnabledChange,
+  profilerSnapshot,
 }: SimulationControlsProps) {
   // Calculate percentage of simulation that has been computed (for visual feedback)
   const computedPercent = endTime > 0 ? (maxSimulatedTime / endTime) * 100 : 0;
@@ -193,6 +223,37 @@ export function SimulationControls({
             </SelectContent>
           </Select>
         </div>
+
+        {onProfilerEnabledChange && (
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant={profilerEnabled ? 'secondary' : 'outline'}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onProfilerEnabledChange(!profilerEnabled)}
+              aria-pressed={profilerEnabled}
+            >
+              <Activity className="h-3.5 w-3.5 mr-1" />
+              Profiler
+            </Button>
+
+            {profilerEnabled && (
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-5">
+                <ProfilerMetric label="Frame" value={formatMs(profilerSnapshot?.frameMs)} />
+                <ProfilerMetric label="Step" value={formatMs(profilerSnapshot?.stepMs)} />
+                <ProfilerMetric label="Forces" value={formatMs(profilerSnapshot?.forcesMs)} />
+                <ProfilerMetric label="Formula" value={formatMs(profilerSnapshot?.formulaMs)} />
+                <ProfilerMetric label="Constraints" value={formatMs(profilerSnapshot?.constraintsMs)} />
+                <ProfilerMetric label="Render" value={formatMs(profilerSnapshot?.renderMs)} />
+                <ProfilerMetric label="Clone" value={formatMs(profilerSnapshot?.cloneMs)} />
+                <ProfilerMetric label="Cells" value={formatCount(profilerSnapshot?.cellCount)} />
+                <ProfilerMetric label="History" value={formatCount(profilerSnapshot?.stateHistoryLength)} />
+                <ProfilerMetric label="Formula cache" value={formatCount(profilerSnapshot?.formulaCacheSize)} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Model-specific render options */}

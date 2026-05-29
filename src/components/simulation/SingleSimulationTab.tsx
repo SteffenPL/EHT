@@ -2,7 +2,12 @@
  * Single simulation tab - combines canvas, controls, params, and stats.
  */
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { useSimulation, type ParamChangeBehavior, type SimulationMode } from '@/hooks';
+import {
+  useSimulation,
+  useSimulationProfiler,
+  type ParamChangeBehavior,
+  type SimulationMode,
+} from '@/hooks';
 import { useModel } from '@/contexts';
 import { SimulationCanvas, type SimulationCanvasRef } from './SimulationCanvas';
 import { SimulationControls } from './SimulationControls';
@@ -27,6 +32,7 @@ function SingleSimulationTabInner() {
   const [simulationMode, setSimulationMode] = useState<SimulationMode>('slider');
   const [draggedCellIndex, setDraggedCellIndex] = useState<number | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [profilerEnabled, setProfilerEnabled] = useState(false);
   // Initialize with recommended format for browser
   const [videoFormat, setVideoFormat] = useState<VideoFormat>(() => getRecommendedVideoFormat());
   const { currentModel, currentParams, setParams: setModelParams } = useModel();
@@ -52,6 +58,12 @@ function SingleSimulationTabInner() {
   const renderOptionsPanel = RenderOptionsPanel ? (
     <RenderOptionsPanel options={renderOptions} onChange={setRenderOptions} />
   ) : null;
+
+  const {
+    collector: profilerCollector,
+    snapshot: profilerSnapshot,
+    recordRenderTiming,
+  } = useSimulationProfiler(profilerEnabled);
 
   const applyDragConstraint = useCallback((draftState: any) => {
     const drag = dragConstraintRef.current;
@@ -82,6 +94,7 @@ function SingleSimulationTabInner() {
     paramChangeBehavior,
     simulationMode,
     realtimeStateMutator: applyDragConstraint,
+    profiler: profilerCollector,
   });
 
   useEffect(() => {
@@ -281,6 +294,7 @@ function SingleSimulationTabInner() {
           onCellDragStart={moveDraggedCell}
           onCellDragMove={moveDraggedCell}
           onCellDragEnd={handleCellDragEnd}
+          onRenderProfile={recordRenderTiming}
         />
       </Card>
 
@@ -308,6 +322,9 @@ function SingleSimulationTabInner() {
         onSimulationModeChange={handleSimulationModeChange}
         paramChangeBehavior={paramChangeBehavior}
         onParamChangeBehaviorChange={setParamChangeBehavior}
+        profilerEnabled={profilerEnabled}
+        onProfilerEnabledChange={setProfilerEnabled}
+        profilerSnapshot={profilerSnapshot}
         onSaveScreenshot={handleSaveScreenshot}
         onSaveMovie={handleSaveMovie}
         onExportCSV={handleExportCSV}

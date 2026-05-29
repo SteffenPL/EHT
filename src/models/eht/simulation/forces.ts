@@ -4,6 +4,10 @@
  */
 
 import { Vector2 } from '@/core/math/vector2';
+import {
+  getActiveSimulationProfiler,
+  nowMs,
+} from '@/core/profiling/simulation-profiler';
 import { CellPhase, type EHTSimulationState } from '../types';
 import type { EHTParams } from '../params/types';
 import { normalizeExternalForces, normalizeExternalForceValues } from '../params/external-forces';
@@ -372,10 +376,7 @@ export function calcExternalForces(
   }
 }
 
-/**
- * Calculate all forces for the current state.
- */
-export function calcAllForces(
+function calcAllForcesUnprofiled(
   state: EHTSimulationState,
   params: EHTParams,
   reusableForces: CellForces[] = []
@@ -391,4 +392,25 @@ export function calcAllForces(
   calcExternalForces(state, params, forces);
 
   return forces;
+}
+
+/**
+ * Calculate all forces for the current state.
+ */
+export function calcAllForces(
+  state: EHTSimulationState,
+  params: EHTParams,
+  reusableForces: CellForces[] = []
+): CellForces[] {
+  const profiler = getActiveSimulationProfiler();
+  if (!profiler) {
+    return calcAllForcesUnprofiled(state, params, reusableForces);
+  }
+
+  const start = nowMs();
+  try {
+    return calcAllForcesUnprofiled(state, params, reusableForces);
+  } finally {
+    profiler.recordTiming('forces', nowMs() - start);
+  }
 }

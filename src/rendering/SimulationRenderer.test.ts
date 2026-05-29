@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { SimulationRenderer } from './SimulationRenderer';
-import type { SimulationModel } from '@/core/interfaces/model';
+import type { BaseSimulationParams, SimulationModel } from '@/core/registry';
 
 const destroyedChildren: string[] = [];
 
@@ -95,16 +95,29 @@ describe('SimulationRenderer', () => {
         getBoundingBox: () => ({ minX: -10, maxX: 10, minY: -10, maxY: 10 }),
         render: vi.fn(),
       },
-    } as unknown as SimulationModel<Record<string, unknown>, Record<string, unknown>>;
+    } as unknown as SimulationModel<BaseSimulationParams, Record<string, unknown>>;
 
-    const renderer = new SimulationRenderer<Record<string, unknown>, Record<string, unknown>>({
+    const params: BaseSimulationParams = {
+      metadata: { model: 'test-model', version: '1.0.0' },
+      general: {
+        t_end: 1,
+        dt: 0.1,
+        random_seed: 1,
+        n_substeps: 1,
+        w_screen: 800,
+        h_screen: 600,
+        mu: 1,
+      },
+    };
+
+    const renderer = new SimulationRenderer<BaseSimulationParams, Record<string, unknown>>({
       width: 800,
       height: 600,
     });
 
     await renderer.init({ width: 800, height: 600 } as HTMLCanvasElement);
     renderer.setModel(model);
-    renderer.setParams({});
+    renderer.setParams(params);
 
     renderer.render({});
     expect(destroyedChildren).toHaveLength(0);
