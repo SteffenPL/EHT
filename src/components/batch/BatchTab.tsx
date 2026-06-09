@@ -1,7 +1,7 @@
 /**
  * Batch simulations tab.
  */
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Play, Upload, Download, FileSpreadsheet, Square } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/card';
@@ -84,6 +84,14 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [exportProgress, setExportProgress] = useState<BatchExportProgress | null>(null);
   const exportAbortControllerRef = useRef<AbortController | null>(null);
+  const lastConfigFingerprintRef = useRef<string | null>(null);
+
+  const configFingerprint = useMemo(() => JSON.stringify({
+    params: config.params,
+    parameterRanges: config.parameterRanges,
+    timeSamples: config.timeSamples,
+    seedsPerConfig: config.seedsPerConfig,
+  }), [config]);
 
   // Calculate total runs
   const totalRuns = computeTotalRuns(config.parameterRanges, config.seedsPerConfig);
@@ -92,6 +100,32 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
   const exportTEnd = getParamEndTime(config.params, config.timeSamples.end);
   const exportDt = getParamTimeStep(config.params);
   const defaultStatisticsTimeSpec = formatTimeSampleConfig(config.timeSamples);
+
+  useEffect(() => {
+    if (lastConfigFingerprintRef.current === null) {
+      lastConfigFingerprintRef.current = configFingerprint;
+      return;
+    }
+
+    if (lastConfigFingerprintRef.current === configFingerprint) {
+      return;
+    }
+
+    lastConfigFingerprintRef.current = configFingerprint;
+
+    if (!batchData && resultsRows.length === 0 && resultsColumns.length === 0) {
+      return;
+    }
+
+    setBatchData(null);
+    setResultsColumns([]);
+    setResultsRows([]);
+    setResultsParamPaths([]);
+    setPlotXAxis('time_h');
+    setPlotYAxis('');
+    setPlotYMin('');
+    setPlotYMax('');
+  }, [batchData, configFingerprint, resultsColumns.length, resultsRows.length]);
 
   // Run batch
   const handleRunBatch = useCallback(async () => {
