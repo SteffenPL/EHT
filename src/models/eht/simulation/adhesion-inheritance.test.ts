@@ -81,7 +81,7 @@ describe('adhesion inheritance', () => {
     expect(state.cells.every(daughter => daughter.has_A === false)).toBe(true);
     expect(state.cells.every(daughter => daughter.has_B === false)).toBe(true);
     expect(state.cells.every(daughter => daughter.running_mode === 3)).toBe(true);
-    expect(state.cells.every(daughter => daughter.has_inm)).toBe(true);
+    expect(state.cells.every(daughter => daughter.has_inm === false)).toBe(true);
     expect(state.cells.every(daughter => daughter.stiffness_straightness === 0.42)).toBe(true);
     expect(state.ap_links).toHaveLength(0);
     expect(state.ba_links).toHaveLength(0);
@@ -142,7 +142,7 @@ describe('adhesion inheritance', () => {
     expect(state.cells[0].has_A).toBe(false);
     expect(state.cells[0].has_B).toBe(false);
     expect(state.cells[0].running_mode).toBe(3);
-    expect(state.cells[0].has_inm).toBe(true);
+    expect(state.cells[0].has_inm).toBe(false);
     expect(state.cells[0].stiffness_straightness).toBe(0.42);
     expect(state.cells[0].stiffness_nuclei_apical).toBe(0.25);
     expect(state.cells[0].stiffness_nuclei_basal).toBe(0.35);

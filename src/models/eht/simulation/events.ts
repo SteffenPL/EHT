@@ -571,6 +571,9 @@ function processParameterChangeEvent(
     constants
   );
   setCellParameter(cell, event.target_parameter, newValue);
+  if (event.id === 'inm_contract_apical') {
+    cell.has_inm = true;
+  }
 
   // Update event state
   eventState.has_fired = true;
