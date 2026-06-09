@@ -8,7 +8,17 @@ import { Vector2 } from '@/core/math/vector2';
 import { SeededRandom } from '@/core/math/random';
 import type { EHTSimulationState, ApicalLink, BasalLink, CellState, CellEventState } from '../types';
 import type { EHTParams, EHTCellTypeParams, EventDefinition, ParameterChangeEvent, SpecialEvent, SpecialEventName } from '../params/types';
-import { createCell, evaluateProbabilityFormula, getCellType, getEffectiveEvents, inheritEventStates, initializeEventStates, satisfiesCellCyclePhase, type CreateCellInput } from './cell';
+import {
+  createCell,
+  evaluateProbabilityFormula,
+  getCellType,
+  getEffectiveEvents,
+  inheritEventStates,
+  initializeEventStates,
+  satisfiesCellCyclePhase,
+  shouldPersistOneShotEventAcrossCycles,
+  type CreateCellInput,
+} from './cell';
 import { divideSingleCell } from './division';
 import { evaluateUnitAwareFormula } from '../compat/formula-units';
 import { analyzeEventDependencies } from '../params/event-dependencies';
@@ -755,6 +765,21 @@ function processCellCycleReset(
   newCell.event_states = cell.event_states
     ? inheritEventStates(cell.event_states, effectiveEvents, rng, params.general, cellType, params.constants)
     : initializeEventStates(effectiveEvents, rng, params.general, cellType, params.constants);
+
+  // Re-apply simulation-timed one-shot parameter changes whose effects should
+  // survive a cycle reset alongside the preserved event state.
+  for (const event of effectiveEvents) {
+    if (event.type !== 'parameter_change') continue;
+    if (!shouldPersistOneShotEventAcrossCycles(event)) continue;
+
+    const priorState = cell.event_states?.[event.id];
+    if (!priorState?.has_fired) continue;
+
+    const priorValue = getCellParameter(cell, event.target_parameter);
+    if (priorValue !== undefined) {
+      setCellParameter(newCell, event.target_parameter, priorValue);
+    }
+  }
   newCell.has_reached_G2 = false;
   newCell.has_reached_mitosis = false;
 

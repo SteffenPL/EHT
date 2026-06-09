@@ -147,4 +147,81 @@ describe('adhesion inheritance', () => {
     expect(state.cells[0].stiffness_nuclei_apical).toBe(0.25);
     expect(state.cells[0].stiffness_nuclei_basal).toBe(0.35);
   });
+
+  it('keeps fired adhesion prerequisites after a cycle reset', () => {
+    const resetEvent: EventDefinition = {
+      id: 'reset',
+      type: 'special',
+      special_name: 'cell_cycle_reset',
+      start: 0,
+      end: 0,
+      period: 0,
+      probability: '1',
+      prereq: null,
+      cell_cycle_phase: CellCyclePhase.Division,
+    };
+    const loseApical: EventDefinition = {
+      id: 'lose_apical',
+      type: 'special',
+      special_name: 'lose_apical_adhesion',
+      start: 6,
+      end: 24,
+      period: 0,
+      probability: '1',
+      prereq: null,
+      cell_cycle_phase: CellCyclePhase.Any,
+    };
+    const loseBasal: EventDefinition = {
+      id: 'lose_basal',
+      type: 'special',
+      special_name: 'lose_basal_adhesion',
+      start: 6,
+      end: 40,
+      period: 0,
+      probability: '1',
+      prereq: 'lose_apical',
+      cell_cycle_phase: CellCyclePhase.Any,
+    };
+    const params = cloneParams();
+    params.cell_types.control.events_v2 = [resetEvent, loseApical, loseBasal];
+
+    const cell = makeCell({
+      has_A: false,
+      phase: CellPhase.Division,
+      event_states: {
+        reset: {
+          event_id: 'reset',
+          trigger_time: 0,
+          pending_dependency: false,
+          has_fired: false,
+          last_fire_time: -Infinity,
+          fire_count: 0,
+        },
+        lose_apical: {
+          event_id: 'lose_apical',
+          trigger_time: 8,
+          pending_dependency: false,
+          has_fired: true,
+          last_fire_time: 8,
+          fire_count: 1,
+        },
+        lose_basal: {
+          event_id: 'lose_basal',
+          trigger_time: 14,
+          pending_dependency: false,
+          has_fired: false,
+          last_fire_time: -Infinity,
+          fire_count: 0,
+        },
+      },
+    });
+    const state = makeState(params, cell);
+
+    processV2Events(state, params, 0.1, new SeededRandom('reset-prereq'));
+
+    expect(state.cells[0].event_states?.lose_apical.has_fired).toBe(true);
+    expect(state.cells[0].event_states?.lose_apical.last_fire_time).toBe(8);
+    expect(state.cells[0].event_states?.lose_basal.pending_dependency).toBe(false);
+    expect(state.cells[0].event_states?.lose_basal.trigger_time).toBe(14);
+  });
 });
