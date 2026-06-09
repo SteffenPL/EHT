@@ -233,4 +233,74 @@ describe('dependent event state scheduling', () => {
     expect(inherited.lose_apical.trigger_time).toBe(17);
     expect(inherited.lose_apical.has_fired).toBe(false);
   });
+
+  it('keeps INM disabled when the probability is zero', () => {
+    const events = [
+      makeEvent('inm_contract_apical', {
+        start: 0,
+        end: 0,
+        probability: 'INM',
+        cell_cycle_phase: CellCyclePhase.G2,
+        target_parameter: 'apical_cytos_strain',
+        formula: '-1',
+      }),
+      makeEvent('inm_extend_basal', {
+        start: 0,
+        end: 0,
+        probability: '1',
+        prereq: 'inm_contract_apical',
+        cell_cycle_phase: CellCyclePhase.G2,
+        target_parameter: 'basal_cytos_strain',
+        formula: '2',
+      }),
+    ];
+    const params = makeParams(events);
+    params.cell_types.control.INM = 0;
+    const cell = makeCell(initializeEventStates(events, new SeededRandom('inm-off'), params.general, params.cell_types.control, params.constants));
+    cell.phase = CellPhase.G2;
+    cell.has_reached_G2 = true;
+    const state = makeState(params, cell, 0);
+
+    processV2Events(state, params, 0.1, new SeededRandom('inm-off-step'));
+
+    expect(cell.has_inm).toBe(false);
+    expect(cell.apical_cytos_strain).toBe(0);
+    expect(cell.basal_cytos_strain).toBe(0);
+    expect(cell.event_states?.inm_contract_apical.has_fired).toBe(false);
+  });
+
+  it('marks the cell when the INM contraction event actually fires', () => {
+    const events = [
+      makeEvent('inm_contract_apical', {
+        start: 0,
+        end: 0,
+        probability: 'INM',
+        cell_cycle_phase: CellCyclePhase.G2,
+        target_parameter: 'apical_cytos_strain',
+        formula: '-1',
+      }),
+      makeEvent('inm_extend_basal', {
+        start: 0,
+        end: 0,
+        probability: '1',
+        prereq: 'inm_contract_apical',
+        cell_cycle_phase: CellCyclePhase.G2,
+        target_parameter: 'basal_cytos_strain',
+        formula: '2',
+      }),
+    ];
+    const params = makeParams(events);
+    params.cell_types.control.INM = 1;
+    const cell = makeCell(initializeEventStates(events, new SeededRandom('inm-on'), params.general, params.cell_types.control, params.constants));
+    cell.phase = CellPhase.G2;
+    cell.has_reached_G2 = true;
+    const state = makeState(params, cell, 0);
+
+    processV2Events(state, params, 0.1, new SeededRandom('inm-on-step'));
+
+    expect(cell.has_inm).toBe(true);
+    expect(cell.apical_cytos_strain).toBe(-1);
+    expect(cell.basal_cytos_strain).toBe(2);
+    expect(cell.event_states?.inm_contract_apical.has_fired).toBe(true);
+  });
 });
