@@ -4,7 +4,7 @@ import { SeededRandom } from '@/core/math/random';
 import { LEGACY_DEFAULT_EHT_PARAMS } from '../params/defaults';
 import { CellCyclePhase, type EHTParams, type EventDefinition } from '../params/types';
 import { CellPhase, type CellState, type EHTSimulationState } from '../types';
-import { initializeEventStates } from './cell';
+import { inheritEventStates, initializeEventStates } from './cell';
 import { processV2Events } from './events';
 
 function makeEvent(id: string, overrides: Partial<EventDefinition> = {}): EventDefinition {
@@ -207,5 +207,30 @@ describe('dependent event state scheduling', () => {
     expect(cell.R_soft).toBe(2);
     expect(cell.R_hard).toBe(3);
     expect(cell.event_states?.downstream.trigger_time).toBe(5);
+  });
+
+  it('preserves simulation-timed one-shot schedules across cycle inheritance', () => {
+    const events = [
+      makeEvent('lose_apical', {
+        start: 6,
+        end: 24,
+        target_parameter: 'R_soft',
+        formula: '2',
+      }),
+    ];
+
+    const inherited = inheritEventStates({
+      lose_apical: {
+        event_id: 'lose_apical',
+        trigger_time: 17,
+        pending_dependency: false,
+        has_fired: false,
+        last_fire_time: -Infinity,
+        fire_count: 0,
+      },
+    }, events, new SeededRandom('inherit-one-shot'));
+
+    expect(inherited.lose_apical.trigger_time).toBe(17);
+    expect(inherited.lose_apical.has_fired).toBe(false);
   });
 });

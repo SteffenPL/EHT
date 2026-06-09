@@ -176,6 +176,14 @@ export function initializeEventStates(
 }
 
 /**
+ * One-shot events in the "Any" phase are simulation-timed, not cycle-timed.
+ * They should keep their sampled state across cell-cycle resets.
+ */
+export function shouldPersistOneShotEventAcrossCycles(event: EventDefinition): boolean {
+  return event.period === 0 && event.cell_cycle_phase === CellCyclePhase.Any;
+}
+
+/**
  * Copy event states from parent cell for cell division (v1.1.0).
  * Preserves has_fired status and trigger times from parent.
  */
@@ -215,7 +223,9 @@ export function inheritEventStates(
   for (const event of eventsToInitialize) {
     const parentState = parentStates[event.id];
 
-    if (event.prereq) {
+    if (shouldPersistOneShotEventAcrossCycles(event) && parentState) {
+      result[event.id] = { ...parentState };
+    } else if (event.prereq) {
       const prereqState = result[event.prereq] ?? parentStates[event.prereq];
       result[event.id] = eventCanParticipate(prereqState)
         ? createPendingEventState(event)
