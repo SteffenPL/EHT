@@ -124,7 +124,7 @@ $$F_{radius} = k\\,\\frac{\\max(0, R_{soft} - \\delta)}{R_{soft}^2}\\,\\mathbf{N
 - \`5 * T + 3 * N\` → tangential + radial force (used as-is)
 - \`10 * sin(t)\` → time-varying tangential flow
 - \`0.1 * max(0, 1 - delta / R_soft) * N\` → basal repulsion based on the nucleus center and soft radius
-- \`-0.1 * max(0, delta / R_soft - 2) * N\` → fluid pressure active once \`delta > 2 * R_soft\`
+- \`-0.1 * N\` → constant fluid pressure along the outward normal
 - \`age > 4 ? 5 * N : 0\` → age-gated external force
 - \`G2 * 5 * N\` → phase-gated external force active only during G2`,
 

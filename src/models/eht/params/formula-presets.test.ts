@@ -80,29 +80,23 @@ describe('FORMULA_PRESETS', () => {
     expect(insideBeyondRadius.y).toBeCloseTo(0);
   });
 
-  it('generates fluid pressure that starts past two soft radii', () => {
+  it('generates constant fluid pressure along the outward normal', () => {
     const preset = FORMULA_QUICK_PRESETS.find(p => p.key === 'fluid_pressure');
     const geometry = createBasalGeometry(0, 0);
 
     expect(preset).toBeDefined();
     const formula = preset!.generate();
+    expect(formula).toBe('-0.1 * N');
 
-    const nearBoundary = evaluateExternalForceAtPosition({
+    const force = evaluateExternalForceAtPosition({
       formula,
       position: new Vector2(0, 3),
       basalGeometry: geometry,
       t: 0,
       cellContext: { R_soft: 2 },
     }).force;
-    const pastThreshold = evaluateExternalForceAtPosition({
-      formula,
-      position: new Vector2(0, 5),
-      basalGeometry: geometry,
-      t: 0,
-      cellContext: { R_soft: 2 },
-    }).force;
 
-    expect(nearBoundary.y).toBeCloseTo(0);
-    expect(pastThreshold.y).toBeCloseTo(-0.025);
+    expect(force.x).toBeCloseTo(0);
+    expect(force.y).toBeCloseTo(-0.05);
   });
 });

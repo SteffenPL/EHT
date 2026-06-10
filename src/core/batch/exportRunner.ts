@@ -94,7 +94,7 @@ export async function runBatchExport(
 
   const zipBuilder = new ZipBuilder();
 
-  const masterConfigToml = stringifyToml(config.batchConfig as any);
+  const masterConfigToml = createBatchConfigToml(config.baseParams, config.batchConfig);
   zipBuilder.addFile('config.toml', masterConfigToml);
 
   callbacks.onProgress?.({
@@ -152,8 +152,9 @@ export async function runBatchExport(
       const runDir = `run_${runNumber.toString().padStart(3, '0')}`;
 
       if (exportConfig.data.tomlParams) {
-        const paramsToml = stringifyToml(params as any);
+        const paramsToml = createBatchConfigToml(params, config.batchConfig);
         zipBuilder.addFile(`${runDir}/params.toml`, paramsToml);
+        zipBuilder.addFile(`${runDir}/diff.toml`, createRunDiffToml(paramOverrides, seed));
       }
 
       if (doRender && runRenderResolution > 0) {
@@ -387,6 +388,37 @@ export async function runBatchExport(
   });
 
   return await zipBuilder.generate();
+}
+
+export function createBatchConfigToml(
+  params: BaseSimulationParams,
+  batchConfig: BatchConfig
+): string {
+  const prepared = structuredClone(params) as unknown as Record<string, unknown>;
+
+  prepared.parameter_ranges = batchConfig.parameter_ranges;
+  prepared.time_samples = batchConfig.time_samples;
+  prepared.seeds_per_config = batchConfig.seeds_per_config;
+  prepared.sampling_mode = batchConfig.sampling_mode;
+  if (batchConfig.random_sample_count !== undefined) {
+    prepared.random_sample_count = batchConfig.random_sample_count;
+  }
+
+  return stringifyToml(prepared as any);
+}
+
+export function createRunDiffToml(
+  paramOverrides: Record<string, number>,
+  seed: number
+): string {
+  const diff: Record<string, unknown> = {};
+
+  for (const [path, value] of Object.entries(paramOverrides)) {
+    setNestedValue(diff, path, value);
+  }
+  setNestedValue(diff, 'general.random_seed', seed);
+
+  return stringifyToml(diff as any);
 }
 
 function isDue(currentTime: number, targetTime: number): boolean {

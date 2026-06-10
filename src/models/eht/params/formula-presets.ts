@@ -122,7 +122,7 @@ export const FORMULA_QUICK_PRESETS: FormulaQuickPreset[] = [
     key: 'fluid_pressure',
     name: 'Fluid pressure',
     context: 'external_force',
-    description: 'Pressure force active after the nucleus center is more than 2 * R_soft inside the tissue',
-    generate: () => '-0.1 * max(0, delta / R_soft - 2) * N',
+    description: 'Constant pressure force along the outward normal',
+    generate: () => '-0.1 * N',
   },
 ];
