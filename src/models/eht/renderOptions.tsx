@@ -9,11 +9,13 @@ import type { RenderOptionsPanelProps } from '@/core/interfaces/model';
 export interface EHTRenderOptions {
   showCellIds: boolean;
   showScaleBar: boolean;
+  showTissueLines: boolean;
 }
 
 export const defaultEHTRenderOptions: EHTRenderOptions = {
   showCellIds: false,
   showScaleBar: true,
+  showTissueLines: false,
 };
 
 export function EHTRenderOptionsPanel({
@@ -51,6 +53,15 @@ export function EHTRenderOptionsPanel({
               }
             />
             Show Scale Bar
+          </label>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <Checkbox
+              checked={options.showTissueLines}
+              onCheckedChange={(checked) =>
+                onChange({ ...options, showTissueLines: !!checked })
+              }
+            />
+            Show Tissue Lines
           </label>
         </div>
       )}

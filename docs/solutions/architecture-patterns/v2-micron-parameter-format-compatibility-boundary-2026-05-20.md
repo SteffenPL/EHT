@@ -112,7 +112,8 @@ Formula-bearing files:
 Statistics and exports:
 
 - `ab_distance`, `AX`, `BX`, `ax`, `bx`, and per-cell coordinate exports are engine-facing.
-- `x`, `below_basal`, `above_apical`, and `below_control_cells` are unitless.
+- `x`, `below_basal`, `above_apical`, `below_basal_line`, `above_apical_line`, and `below_control_cells` are unitless.
+- `below_basal` and `above_apical` compare against control-cell basal/apical tissue lines interpolated in curved coordinates; the `_line` variants use local tangent-line tests.
 - A later output conversion plan should decide whether to add micron-facing export columns, rename existing columns, or preserve both.
 
 ## Related

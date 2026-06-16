@@ -10,9 +10,14 @@ import type { StatisticDefinition } from '@/core/registry/types';
 import type { EHTSimulationState, CellState } from './types';
 import type { EHTParams } from './params/types';
 import { Vector2 } from '@/core/math/vector2';
-import { createBasalGeometry } from '@/core/math';
 import { projectOntoApicalStrip, projectOntoBasalCurve } from './simulation/projections';
 import { EHT_STATISTIC_METADATA } from './statistics-metadata';
+import {
+  buildTissueLineSamples,
+  getWorkingBasalGeometry,
+  interpolateTissueLineHeight,
+  toCurvedCoordinate,
+} from './tissue-lines';
 
 /**
  * Per-cell computed values for statistics.
@@ -29,28 +34,13 @@ interface CellMetrics {
   ax: number;    // Distance from X to projection a
   bx: number;    // Distance from X to projection b (also called xb)
   x: number;     // Position on b→a scale (0 at b, 1 at a)
-  below_basal: boolean;         // x < 0
-  above_apical: boolean;        // x > 1
-  below_control_cells: boolean; // bx < lowest control cell's bx
+  below_basal: boolean;         // X is below the interpolated control-cell basal tissue strip
+  above_apical: boolean;        // X is above the interpolated control-cell apical tissue strip
+  below_basal_line: boolean;    // X is below the local basal tangent line
+  above_apical_line: boolean;   // X is above the local apical tangent line
+  below_control_cells: boolean; // X is below the interpolated non-boundary control-cell line
   isBoundary: boolean;          // Is this control cell in the boundary (left/right 10%)
   effectiveType: string;        // Effective type for statistics ('control_boundary' for boundary cells)
-}
-
-/**
- * Get a working BasalGeometry instance from state.
- * Handles cases where state was cloned (structuredClone loses class methods).
- */
-function getBasalGeometry(state: EHTSimulationState) {
-  // If basalGeometry has working methods, use it directly
-  if (typeof state.basalGeometry?.getArcLength === 'function') {
-    return state.basalGeometry;
-  }
-
-  // Otherwise, recreate from curvatures stored in geometry or basalGeometry
-  const curvature_1 = state.geometry?.curvature_1 ?? state.basalGeometry?.curvature_1 ?? 0;
-  const curvature_2 = state.geometry?.curvature_2 ?? state.basalGeometry?.curvature_2 ?? 0;
-
-  return createBasalGeometry(curvature_1, curvature_2, 360);
 }
 
 /**
@@ -70,7 +60,7 @@ function identifyBoundaryCells(
   }
 
   // Get working geometry (handles cloned states)
-  const geometry = getBasalGeometry(state);
+  const geometry = getWorkingBasalGeometry(state);
 
   // Find all control cells with their arc lengths
   const controlCells: { index: number; arcLength: number }[] = [];
@@ -108,6 +98,95 @@ function identifyBoundaryCells(
   return boundarySet;
 }
 
+function buildCellOrder(state: EHTSimulationState, params: EHTParams): number[] {
+  const geometry = getWorkingBasalGeometry(state);
+  const ordered = state.cells.map((cell, index) => {
+    const B = Vector2.from(cell.B);
+    const s = toCurvedCoordinate(B, geometry, params.general.full_circle).s;
+    return { index, s };
+  });
+
+  ordered.sort((a, b) => a.s - b.s || a.index - b.index);
+  return ordered.map(({ index }) => index);
+}
+
+function getNeighborIndices(order: number[], orderPosition: number, fullCircle: boolean): [number | null, number | null] {
+  if (order.length <= 1) return [null, null];
+
+  if (fullCircle && order.length > 2) {
+    const previous = (orderPosition - 1 + order.length) % order.length;
+    const next = (orderPosition + 1) % order.length;
+    return [order[previous], order[next]];
+  }
+
+  const previous = orderPosition > 0 ? order[orderPosition - 1] : null;
+  const next = orderPosition < order.length - 1 ? order[orderPosition + 1] : null;
+
+  return [
+    previous ?? order[orderPosition],
+    next ?? order[orderPosition],
+  ];
+}
+
+function orientedNormalFromTangent(tangent: Vector2, basalToApical: Vector2): Vector2 {
+  if (tangent.magSq() < 1e-10) {
+    return basalToApical.magSq() > 1e-10 ? basalToApical.normalize() : new Vector2(0, 1);
+  }
+
+  let normal = new Vector2(-tangent.y, tangent.x).normalize();
+  if (normal.dot(basalToApical) < 0) {
+    normal = normal.negate();
+  }
+  return normal;
+}
+
+function computeLocalLineFlags(
+  state: EHTSimulationState,
+  params: EHTParams
+): Map<number, { below_basal_line: boolean; above_apical_line: boolean }> {
+  const geometry = getWorkingBasalGeometry(state);
+  const periodic = params.general.full_circle && Number.isFinite(geometry.perimeter);
+  const order = buildCellOrder(state, params);
+  const orderPositionByCell = new Map<number, number>();
+  order.forEach((cellIndex, position) => orderPositionByCell.set(cellIndex, position));
+
+  const flags = new Map<number, { below_basal_line: boolean; above_apical_line: boolean }>();
+
+  for (let i = 0; i < state.cells.length; i++) {
+    const cell = state.cells[i];
+    const orderPosition = orderPositionByCell.get(i);
+    const X = Vector2.from(cell.pos);
+    const A = Vector2.from(cell.A);
+    const B = Vector2.from(cell.B);
+    const basalToApical = A.sub(B);
+
+    let basalNormal = basalToApical.magSq() > 1e-10 ? basalToApical.normalize() : new Vector2(0, 1);
+    let apicalNormal = basalNormal;
+
+    if (orderPosition !== undefined) {
+      const [previousIndex, nextIndex] = getNeighborIndices(order, orderPosition, periodic);
+
+      if (previousIndex !== null && nextIndex !== null) {
+        const previousCell = state.cells[previousIndex];
+        const nextCell = state.cells[nextIndex];
+
+        const basalTangent = Vector2.from(nextCell.B).sub(Vector2.from(previousCell.B));
+        const apicalTangent = Vector2.from(nextCell.A).sub(Vector2.from(previousCell.A));
+
+        basalNormal = orientedNormalFromTangent(basalTangent, basalToApical);
+        apicalNormal = orientedNormalFromTangent(apicalTangent, basalToApical);
+      }
+    }
+
+    flags.set(i, {
+      below_basal_line: X.sub(B).dot(basalNormal) < 0,
+      above_apical_line: X.sub(A).dot(apicalNormal) > 0,
+    });
+  }
+
+  return flags;
+}
+
 /**
  * Compute per-cell metrics for all cells.
  */
@@ -117,9 +196,8 @@ function computeCellMetrics(state: EHTSimulationState, params: EHTParams): CellM
 
   // Identify boundary control cells
   const boundaryCells = identifyBoundaryCells(state, params);
-
-  // First pass: compute basic metrics for each cell and track lowest control cell bx
-  let lowestControlBx = Infinity;
+  const tissueLines = buildTissueLineSamples(state, params, boundaryCells);
+  const localLineFlags = computeLocalLineFlags(state, params);
 
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i];
@@ -143,11 +221,6 @@ function computeCellMetrics(state: EHTSimulationState, params: EHTParams): CellM
       ? 'control_boundary'
       : cell.typeIndex;
 
-    // Track lowest control cell bx (excluding boundary cells)
-    if (cell.typeIndex === 'control' && !isBoundary && bx < lowestControlBx) {
-      lowestControlBx = bx;
-    }
-
     // Compute x: position on b→a scale
     // If b and a are the same, x is undefined, set to 0.5
     const ba = a.sub(b);
@@ -158,8 +231,14 @@ function computeCellMetrics(state: EHTSimulationState, params: EHTParams): CellM
       x = bX.dot(ba) / baLengthSq;
     }
 
-    const below_basal = x < 0;
-    const above_apical = x > 1;
+    const curvedX = toCurvedCoordinate(X, tissueLines.geometry, tissueLines.fullCircle);
+    const basalHeight = interpolateTissueLineHeight(tissueLines.basal, curvedX.s, tissueLines.geometry, tissueLines.fullCircle);
+    const apicalHeight = interpolateTissueLineHeight(tissueLines.apical, curvedX.s, tissueLines.geometry, tissueLines.fullCircle);
+    const controlHeight = interpolateTissueLineHeight(tissueLines.control, curvedX.s, tissueLines.geometry, tissueLines.fullCircle);
+    const lineFlags = localLineFlags.get(i) ?? { below_basal_line: false, above_apical_line: false };
+    const below_basal = basalHeight !== null && curvedX.h < basalHeight;
+    const above_apical = apicalHeight !== null && curvedX.h > apicalHeight;
+    const below_control_cells = controlHeight !== null && curvedX.h < controlHeight;
 
     metrics.push({
       cell,
@@ -175,17 +254,12 @@ function computeCellMetrics(state: EHTSimulationState, params: EHTParams): CellM
       x,
       below_basal,
       above_apical,
-      below_control_cells: false, // Computed in second pass
+      below_basal_line: lineFlags.below_basal_line,
+      above_apical_line: lineFlags.above_apical_line,
+      below_control_cells,
       isBoundary,
       effectiveType,
     });
-  }
-
-  // Second pass: compute below_control_cells
-  // A cell is below_control_cells if its bx < lowest control cell's bx
-  const hasControlCells = lowestControlBx < Infinity;
-  for (const m of metrics) {
-    m.below_control_cells = hasControlCells && m.bx < lowestControlBx;
   }
 
   return metrics;
@@ -238,6 +312,8 @@ function aggregateMetrics(metrics: CellMetrics[]): Record<string, number> {
       x: 0,
       below_basal: 0,
       above_apical: 0,
+      below_basal_line: 0,
+      above_apical_line: 0,
       below_control_cells: 0,
     };
   }
@@ -254,6 +330,8 @@ function aggregateMetrics(metrics: CellMetrics[]): Record<string, number> {
     x: mean(metrics.map(m => m.x)),
     below_basal: fraction(metrics.map(m => m.below_basal)),
     above_apical: fraction(metrics.map(m => m.above_apical)),
+    below_basal_line: fraction(metrics.map(m => m.below_basal_line)),
+    above_apical_line: fraction(metrics.map(m => m.above_apical_line)),
     below_control_cells: fraction(metrics.map(m => m.below_control_cells)),
   };
 }
@@ -331,6 +409,8 @@ export function exportCellMetrics(
     x: m.x,
     below_basal: m.below_basal ? 1 : 0,
     above_apical: m.above_apical ? 1 : 0,
+    below_basal_line: m.below_basal_line ? 1 : 0,
+    above_apical_line: m.above_apical_line ? 1 : 0,
     below_control_cells: m.below_control_cells ? 1 : 0,
   }));
 }

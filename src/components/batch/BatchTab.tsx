@@ -448,7 +448,9 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
       'b_x', 'b_y',
       'ab_distance',
       'AX', 'BX', 'ax', 'bx', 'x',
-      'below_basal', 'above_apical', 'below_neighbours',
+      'below_basal', 'above_apical',
+      'below_basal_line', 'above_apical_line',
+      'below_control_cells',
     ];
 
     // Build rows - one row per cell
@@ -478,7 +480,7 @@ export function BatchTab({ config, onConfigChange: _onConfigChange }: BatchTabPr
           cellData.typeIndex || '', // cell_type
           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Placeholder for position/geometry data
           0, 0, 0, 0, 0, 0, // Placeholder for distance metrics
-          0, 0, 0, // Placeholder for boolean metrics
+          0, 0, 0, 0, 0, // Placeholder for boolean metrics
         ];
         rows.push(row);
       }

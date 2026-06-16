@@ -6,7 +6,7 @@ import { computeEHTStatistics, generateEHTStatistics } from './statistics';
 import type { EHTSimulationState, CellState } from './types';
 import type { EHTParams } from './params/types';
 import { DEFAULT_EHT_PARAMS } from './params/defaults';
-import { StraightLineGeometry, CircularGeometry } from '@/core/math';
+import { StraightLineGeometry, CircularGeometry, Vector2 } from '@/core/math';
 
 /**
  * Create a minimal test state with cells of different types.
@@ -84,6 +84,41 @@ function createTestParams(cellTypeKeys: string[]): EHTParams {
   return params;
 }
 
+function createCellState(
+  id: number,
+  typeIndex: string,
+  pos: { x: number; y: number },
+  A: { x: number; y: number },
+  B: { x: number; y: number }
+): CellState {
+  return {
+    id,
+    typeIndex,
+    pos,
+    A,
+    B,
+    R_soft: 1.2,
+    R_hard: 0.4,
+    eta_A: 2.5,
+    eta_B: 2.5,
+    has_A: true,
+    has_B: true,
+    phase: 0,
+    birth_time: 0,
+    division_time: 10,
+    is_running: false,
+    running_mode: 0,
+    has_inm: false,
+    stiffness_apical_apical: 1.0,
+    stiffness_straightness: 100.0,
+    stiffness_nuclei_apical: 1.0,
+    stiffness_nuclei_basal: 1.0,
+    apical_cytos_strain: 0,
+    basal_cytos_strain: 0,
+    k_apical_junction: 0,
+  };
+}
+
 describe('EHT Statistics - Cell Type Groups', () => {
   it('should compute statistics for 2 cell types without pairs', () => {
     const cellTypes = ['control', 'emt'];
@@ -157,8 +192,8 @@ describe('EHT Statistics - Cell Type Groups', () => {
       expect(statIds).toContain(`ab_distance_${group}`);
     });
 
-    // Count total stats: 9 metrics × 4 groups = 36 statistics
-    expect(statDefs).toHaveLength(9 * 4);
+    // Count total stats: 11 metrics × 4 groups = 44 statistics
+    expect(statDefs).toHaveLength(11 * 4);
   });
 
   it('should compute correct values for each group', () => {
@@ -186,9 +221,9 @@ describe('EHT Statistics - Cell Type Groups', () => {
     const stats = generateEHTStatistics(params);
 
     // The stat IDs are in format: "metric_group" where metric can have underscores
-    // Known metrics: ab_distance, AX, BX, ax, bx, x, below_basal, above_apical, below_neighbours
+    // Known metrics: distances, projected x, tissue-strip fractions, tangent-line fractions, and control-line fraction
     // Extract groups by removing known metric prefixes
-    const knownMetrics = ['ab_distance', 'AX', 'BX', 'ax', 'bx', 'x', 'below_basal', 'above_apical', 'below_neighbours'];
+    const knownMetrics = ['below_control_cells', 'below_basal_line', 'above_apical_line', 'ab_distance', 'above_apical', 'below_basal', 'AX', 'BX', 'ax', 'bx', 'x'];
     const groups = new Set<string>();
 
     for (const stat of stats) {
@@ -204,7 +239,7 @@ describe('EHT Statistics - Cell Type Groups', () => {
     const groupsArray = Array.from(groups).sort();
     console.log('All unique groups:', groupsArray);
     console.log('Total statistics:', stats.length);
-    console.log('Expected:', 9, 'metrics ×', 4, 'groups =', 36);
+    console.log('Expected:', 11, 'metrics ×', 4, 'groups =', 44);
 
     // Should have 4 groups: all + 3 individuals (no pairs)
     expect(groupsArray).toEqual([
@@ -215,7 +250,7 @@ describe('EHT Statistics - Cell Type Groups', () => {
     ]);
 
     // Verify count
-    expect(stats).toHaveLength(9 * 4);
+    expect(stats).toHaveLength(11 * 4);
   });
 
   it('should dynamically update when cell type names change', () => {
@@ -224,7 +259,7 @@ describe('EHT Statistics - Cell Type Groups', () => {
     const stats1 = generateEHTStatistics(params1);
     const groups1 = new Set<string>();
 
-    const knownMetrics = ['ab_distance', 'AX', 'BX', 'ax', 'bx', 'x', 'below_basal', 'above_apical', 'below_neighbours'];
+    const knownMetrics = ['below_control_cells', 'below_basal_line', 'above_apical_line', 'ab_distance', 'above_apical', 'below_basal', 'AX', 'BX', 'ax', 'bx', 'x'];
     for (const stat of stats1) {
       for (const metric of knownMetrics) {
         if (stat.id.startsWith(metric + '_')) {
@@ -496,13 +531,41 @@ describe('EHT Statistics - x position calculation', () => {
     console.log('  x_control (mean):', stats['x_control']);
     console.log('  above_apical_control:', stats['above_apical_control']);
 
-    // Cell 1 has apical at y=4, nucleus at y=5
-    // For cell 1, the apical strip projection will be close to y=4
-    // So x = (5 - 0) / (4 - 0) = 1.25 > 1 (above apical!)
-    // This is correct behavior: the nucleus IS above the apical strip at that location
+    // Cell 1 has apical height 4 and nucleus height 5, so it is above both
+    // the curved-coordinate apical strip and its local apical tangent line.
+    expect(stats['above_apical_control']).toBeGreaterThan(0);
+    expect(stats['above_apical_line_control']).toBeGreaterThan(0);
+    console.log('  Note: Cell 1 should be above the apical tissue strip and tangent line');
+  });
 
-    // We expect above_apical > 0 because at least one cell is above its local apical strip
-    console.log('  Note: Cell 1 should have x > 1 because its nucleus is above its local apical strip');
+  it('should build basal and apical tissue strips from control-cell points only', () => {
+    const cells: CellState[] = [
+      createCellState(0, 'control', { x: 0, y: 5 }, { x: 0, y: 10 }, { x: 0, y: 0 }),
+      createCellState(1, 'emt', { x: 5, y: 7 }, { x: 5, y: 4 }, { x: 5, y: 0 }),
+      createCellState(2, 'control', { x: 10, y: 5 }, { x: 10, y: 10 }, { x: 10, y: 0 }),
+    ];
+
+    const state: EHTSimulationState = {
+      cells,
+      ap_links: [],
+      ba_links: [],
+      t: 0,
+      step_count: 0,
+      geometry: { curvature_1: 0, curvature_2: 0 },
+      basalGeometry: new StraightLineGeometry(),
+      rngSeed: 'test-seed',
+      global_event_states: {},
+    };
+
+    const params = createTestParams(['control', 'emt']);
+    const stats = computeEHTStatistics(state, params);
+
+    // The EMT apical point is below its nucleus, but it should not pull down
+    // the apical tissue strip. The strip is interpolated from the two control
+    // apical points at y=10, so the EMT nucleus at y=7 is not above apical.
+    expect(stats['above_apical_emt']).toBe(0);
+    expect(stats['below_basal_emt']).toBe(0);
+    expect(stats['above_apical_line_emt']).toBe(1);
   });
 
   it('should correctly compute x for single cell', () => {
@@ -720,5 +783,54 @@ describe('EHT Statistics - Batch state reconstruction', () => {
     expect(stats['x_control']).toBeGreaterThan(0);
     expect(stats['x_control']).toBeLessThan(1);
     expect(stats['above_apical_control']).toBe(0);
+  });
+
+  it('should interpolate the control-cell line across the periodic seam in curved coordinates', () => {
+    const curvature = 0.1;
+    const tissueHeight = 5;
+    const circularGeometry = new CircularGeometry(curvature, curvature);
+    const perimeter = circularGeometry.perimeter;
+
+    const pointAtHeight = (arcLength: number, height: number) => {
+      const theta = arcLength / circularGeometry.radius;
+      const basalPoint = new Vector2(
+        circularGeometry.center.x + circularGeometry.dir * circularGeometry.radius * Math.sin(theta),
+        circularGeometry.center.y + circularGeometry.dir * circularGeometry.radius * Math.cos(theta)
+      );
+      const normal = circularGeometry.getNormal(basalPoint);
+      return basalPoint.add(normal.scale(height));
+    };
+
+    const cells: CellState[] = [
+      createCellState(0, 'control', pointAtHeight(0, 4), pointAtHeight(0, tissueHeight), pointAtHeight(0, 0)),
+      createCellState(1, 'control', pointAtHeight(perimeter / 4, 4), pointAtHeight(perimeter / 4, tissueHeight), pointAtHeight(perimeter / 4, 0)),
+      createCellState(2, 'control', pointAtHeight(perimeter / 2, 4), pointAtHeight(perimeter / 2, tissueHeight), pointAtHeight(perimeter / 2, 0)),
+      createCellState(3, 'control', pointAtHeight(3 * perimeter / 4, 2), pointAtHeight(3 * perimeter / 4, tissueHeight), pointAtHeight(3 * perimeter / 4, 0)),
+      createCellState(4, 'emt', pointAtHeight(7 * perimeter / 8, 2.5), pointAtHeight(7 * perimeter / 8, tissueHeight), pointAtHeight(7 * perimeter / 8, 0)),
+    ];
+
+    const state: EHTSimulationState = {
+      cells,
+      ap_links: [],
+      ba_links: [],
+      t: 0,
+      step_count: 0,
+      geometry: { curvature_1: curvature, curvature_2: curvature },
+      basalGeometry: circularGeometry,
+      rngSeed: 'test-seed',
+      global_event_states: {},
+    };
+
+    const params = createTestParams(['control', 'emt']);
+    params.general.full_circle = true;
+
+    const stats = computeEHTStatistics(state, params);
+
+    // At s = 7/8 perimeter, the periodic control-line interpolation is halfway
+    // between the control nuclei at 3/4 perimeter (h = 2) and 0 (h = 4), so
+    // the control line has h = 3 and the EMT nucleus at h = 2.5 is below it.
+    expect(stats['below_control_cells_emt']).toBe(1);
+    expect(stats['below_basal_emt']).toBe(0);
+    expect(stats['above_apical_emt']).toBe(0);
   });
 });

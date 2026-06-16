@@ -12,6 +12,7 @@ import { shapeCenter } from '@/core/math/geometry';
 import { computeEllipseFromPerimeter } from './params/geometry';
 import { toEHTEngineParams } from './compat/engine-params';
 import { calcAllForces } from './simulation/forces';
+import { buildTissueLineSamples, sampleTissueLinePoints } from './tissue-lines';
 
 /**
  * Get curvatures from state.geometry or compute from params as fallback.
@@ -159,6 +160,36 @@ function drawBasalLinks(graphics: Graphics, state: EHTSimulationState, theme: EH
   graphics.stroke({ color: theme.basalLink, alpha: 1, width: 0.05 });
 }
 
+function drawPolyline(graphics: Graphics, points: { x: number; y: number }[], color: number): void {
+  if (points.length < 2) return;
+
+  graphics.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    graphics.lineTo(points[i].x, points[i].y);
+  }
+  graphics.stroke({ color, alpha: 0.75, width: 0.09 });
+}
+
+/**
+ * Draw curved-coordinate control-cell tissue strips used by below_basal and above_apical.
+ */
+function drawTissueLines(graphics: Graphics, state: EHTSimulationState, params: EHTParams, theme: EHTThemeColors): void {
+  const tissueLines = buildTissueLineSamples(state, params);
+  const basalPoints = sampleTissueLinePoints(
+    tissueLines.basal,
+    tissueLines.geometry,
+    tissueLines.fullCircle
+  );
+  const apicalPoints = sampleTissueLinePoints(
+    tissueLines.apical,
+    tissueLines.geometry,
+    tissueLines.fullCircle
+  );
+
+  drawPolyline(graphics, basalPoints, theme.basalLink);
+  drawPolyline(graphics, apicalPoints, theme.apicalLink);
+}
+
 /**
  * Draw cell IDs at the nucleus center of each cell.
  * Text is rendered in screen space (uiContainer) for crisp display.
@@ -300,6 +331,10 @@ export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
 
     // Draw cells
     drawCells(cellsGraphics, state, engineParams, theme);
+
+    if (ctx.renderOptions?.showTissueLines) {
+      drawTissueLines(overlayGraphics, state, engineParams, theme);
+    }
 
     const draggedCellIndex = getDraggedCellIndex(ctx.renderOptions, state);
     if (draggedCellIndex !== null) {

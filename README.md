@@ -2,6 +2,14 @@
 
 > **📹 Firefox Users:** Video export works in Firefox, but requires **WebM (VP9)** format instead of H.264 due to a [known Firefox bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1918769). The app will automatically select the best format for your browser. See [FIREFOX_VIDEO_EXPORT_SOLUTION.md](FIREFOX_VIDEO_EXPORT_SOLUTION.md) for details.
 
+## 2.6.0 (2026-06-16)
+
+- Reworked `below_basal` and `above_apical` statistics to compare nuclei against control-cell basal/apical tissue lines interpolated in curved coordinates.
+- Added `below_basal_line` and `above_apical_line` statistics for local tangent-line tests using directed normals.
+- Updated `below_control_cells` to use the interpolated non-boundary control-cell nucleus line at the same curved coordinate.
+- Added a disabled-by-default “Show Tissue Lines” render option that draws the control-cell basal and apical tissue lines.
+- Updated EHT statistics documentation and tests for control-cell-only tissue-line interpolation.
+
 ## 1.5.0 (2026-03-26)
 
 ### 2026-03-26
