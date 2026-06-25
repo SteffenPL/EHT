@@ -165,7 +165,7 @@ Both implementations handle apical and basal link removal similarly:
 **TypeScript**: `updateRunningState()` performs a geometry-based check:
 1. Projects cell's basal point onto the basal curve
 2. Computes signed distance in normal direction
-3. Sets `is_running = true` if distance < -2.0 AND running_mode >= 3 (or mode >= 1 with positive signed distance)
+3. Sets `is_running = true` when basal adhesion is gone and either `running_mode >= 3` or `running_mode >= 1` with distance < `-R_soft` along the opposite local normal
 4. Called every timestep for every cell
 
 ---

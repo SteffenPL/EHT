@@ -12,6 +12,7 @@ import { applyAllConstraints } from './constraints';
 import { processAllEvents } from './events';
 import { processGlobalEvents } from './global-events';
 import { rebuildGeometryIfNeeded } from './rebuild-geometry';
+import { advanceRunningBasalPoint, runningBasalCytoskeletonLength } from './running';
 
 /**
  * Update cytoskeleton rest lengths (eta_A, eta_B).
@@ -62,8 +63,8 @@ function updateCytoskeleton(
         if (cell.has_B) {
             cell.eta_B = expFactor * (cell.eta_B - basalDrl) + basalDrl;
         } else {
-            if (cell.running_mode >= 2 && cell.B.y > 0) {
-                cell.eta_B = distBX - cell.R_soft;
+            if (cell.running_mode >= 2) {
+                cell.eta_B = runningBasalCytoskeletonLength(cell);
             } else {
                 cell.eta_B = expFactor * (cell.eta_B - basalDrl) + basalDrl;
             }
@@ -136,15 +137,7 @@ function integrateForces(
 
         // Integrate basal force or running motion
         if (cell.is_running) {
-            const dx = cell.B.x - cell.pos.x;
-            const dy = cell.B.y - cell.pos.y;
-            const distSq = dx * dx + dy * dy;
-
-            if (distSq < 25 && distSq > 0) {
-                const scale = dt * cellType.running_speed / Math.sqrt(distSq);
-                cell.B.x += dx * scale;
-                cell.B.y += dy * scale;
-            }
+            advanceRunningBasalPoint(cell, dt * cellType.running_speed);
         } else {
             cell.B.x += (dt * f.fB.x) / mu;
             cell.B.y += (dt * f.fB.y) / mu;

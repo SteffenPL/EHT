@@ -108,15 +108,15 @@ Vector formulas using \`T\` or \`N\` are used directly. The final row force is d
   'cell_types.external_force': `Deprecated single external force formula. Use external force rows instead.`,
 
   // === Running Behavior ===
-  'cell_types.run': `Probability that an extruded cell becomes a "running" cell (migrating along the basal membrane). Value between 0 and 1.`,
+  'cell_types.run': `Probability that an extruded cell becomes a "running" cell. Value between 0 and 1.`,
 
   'cell_types.running_speed': `Speed of running cells in $\\mu m/h$.`,
 
   'cell_types.running_mode': `Running behavior mode:
 - **0**: No running
-- **1**: Run after extrusion (leaves tissue)
-- **2**: Run but retain length (stays connected)
-- **3**: Immediate running (starts running instantly)`,
+- **1**: Run after basal detachment once the cell has extruded beyond the local basal normal threshold
+- **2**: Same as mode 1, but retain basal cytoskeleton length after detachment
+- **3**: Run immediately after basal detachment`,
 
   // === Cytoskeleton Strain ===
   'cell_types.apical_cytos_strain_init': `Initial apical cytoskeleton strain. Controls the rest length scaling of the apical cytoskeleton:
@@ -202,7 +202,7 @@ If the dependency is skipped for a cell, this event is skipped for that cell too
 
   'events.special.lose_apical_interface': `Severs apical links between this cell type and other cell types at the interface, while preserving links between cells of the same type. Neighboring non-interface cells are reconnected.`,
 
-  'events.special.start_running': `Sets the cell's running mode to 3 (immediate running), enabling active migration.`,
+  'events.special.start_running': `Sets the cell's running mode to 3, enabling active migration as soon as basal adhesion is lost.`,
 
   'events.special.cell_division': `Triggers cell division. The cell divides into two daughter cells (or resets if \`p_div_out\` applies). Bypasses the normal phase-based division timing.`,
 
@@ -227,7 +227,7 @@ There are two kinds of events:
 | \`lose_apical_adhesion\` | Removes the cell's apical links and reduces apical stiffness to 10%. |
 | \`lose_basal_adhesion\` | Removes the cell's basal links and reduces basal stiffness to 10%. |
 | \`lose_apical_interface\` | Severs apical links between this cell type and other types at the interface, reconnecting non-interface neighbors. |
-| \`start_running\` | Sets running mode to 3, enabling active cell migration along the basal membrane. |
+| \`start_running\` | Sets running mode to 3, enabling active cell migration as soon as basal adhesion is lost. |
 | \`cell_division\` | Triggers cell division into two daughter cells (subject to \`p_div_out\`). |
 | \`cell_cycle_reset\` | Resets the cell cycle without dividing — fresh lifespan and re-sampled events. |
 

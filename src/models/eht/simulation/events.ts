@@ -22,6 +22,7 @@ import {
 import { divideSingleCell } from './division';
 import { evaluateUnitAwareFormula } from '../compat/formula-units';
 import { analyzeEventDependencies } from '../params/event-dependencies';
+import { shouldCellRun } from './running';
 
 /**
  * Resolve event period to a number. Handles 'dt' as a special value.
@@ -242,36 +243,12 @@ export function processLoseApicalInterface(
 
 /**
  * Update running state for a cell.
- * Checks that the basal point is at distance > 2 in the opposite normal direction.
  */
 export function updateRunningState(
   cell: CellState,
   state: EHTSimulationState
 ): void {
-  if (cell.has_B) {
-    cell.is_running = false;
-    return;
-  }
-
-  // Project cell.B onto basal curve
-  const B = Vector2.from(cell.B);
-  const projB = state.basalGeometry.projectPoint(B);
-
-  // Get normal at projected point (points away from curve)
-  const normal = state.basalGeometry.getNormal(projB);
-
-  // Compute signed distance in normal direction: (B - projB) · normal
-  const displacement = B.sub(projB);
-  const signedDistance = displacement.dot(normal);
-
-  // Check if distance in opposite normal direction is > 2 (i.e., signedDistance < -2)
-  const isFarEnough = signedDistance < -2.0;
-
-  // Additional running mode checks
-  const modeCheck = cell.running_mode >= 3 ||
-    (signedDistance > 0.0 && cell.running_mode >= 1);
-
-  cell.is_running = isFarEnough && modeCheck;
+  cell.is_running = shouldCellRun(cell, state);
 }
 
 // =============================================================================
