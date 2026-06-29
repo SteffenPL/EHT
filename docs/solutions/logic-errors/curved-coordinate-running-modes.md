@@ -58,7 +58,7 @@ export function shouldCellRun(cell: CellState, state: EHTSimulationState): boole
   }
 
   const signedDistance = getRunningBasalSignedDistance(state, Vector2.from(cell.B));
-  return signedDistance < -cell.R_soft;
+  return signedDistance < -0.01 * cell.R_soft;
 }
 ```
 
@@ -96,7 +96,7 @@ The basal geometry object is the source of truth for projection and local normal
 The corrected mode semantics are:
 
 - Mode 0: never runs.
-- Mode 1: after basal detachment, starts once the basal point is extruded past `h < -R_soft` along the opposite local normal.
+- Mode 1: after basal detachment, starts once the basal point is extruded just below the basal line, past `h < -0.01 * R_soft` along the opposite local normal.
 - Mode 2: same activation as mode 1, but retains basal cytoskeleton length after detachment.
 - Mode 3: starts immediately once basal adhesion is gone.
 

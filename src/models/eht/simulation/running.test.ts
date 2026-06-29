@@ -63,15 +63,15 @@ function makeState(
 }
 
 describe('running modes', () => {
-  it('uses local basal signed distance scaled by R_soft to activate modes 1 and 2 after detachment', () => {
+  it('uses a small R_soft-scaled epsilon below the basal line to activate modes 1 and 2 after detachment', () => {
     const state = makeState();
 
-    expect(shouldCellRun(makeCell({ running_mode: 1, B: { x: 0, y: -3 } }), state)).toBe(true);
-    expect(shouldCellRun(makeCell({ running_mode: 2, B: { x: 0, y: -3 } }), state)).toBe(true);
-    expect(shouldCellRun(makeCell({ running_mode: 1, B: { x: 0, y: -1 } }), state)).toBe(false);
-    expect(shouldCellRun(makeCell({ running_mode: 2, B: { x: 0, y: -1 } }), state)).toBe(false);
-    expect(shouldCellRun(makeCell({ running_mode: 1, R_soft: 4, B: { x: 0, y: -3 } }), state)).toBe(false);
-    expect(shouldCellRun(makeCell({ running_mode: 1, R_soft: 4, B: { x: 0, y: -5 } }), state)).toBe(true);
+    expect(shouldCellRun(makeCell({ running_mode: 1, B: { x: 0, y: 0 } }), state)).toBe(false);
+    expect(shouldCellRun(makeCell({ running_mode: 1, B: { x: 0, y: -0.005 } }), state)).toBe(false);
+    expect(shouldCellRun(makeCell({ running_mode: 1, B: { x: 0, y: -0.011 } }), state)).toBe(true);
+    expect(shouldCellRun(makeCell({ running_mode: 2, B: { x: 0, y: -0.011 } }), state)).toBe(true);
+    expect(shouldCellRun(makeCell({ running_mode: 1, R_soft: 4, B: { x: 0, y: -0.03 } }), state)).toBe(false);
+    expect(shouldCellRun(makeCell({ running_mode: 1, R_soft: 4, B: { x: 0, y: -0.05 } }), state)).toBe(true);
   });
 
   it('computes activation distance from curved basal geometry', () => {

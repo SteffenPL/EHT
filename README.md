@@ -2,6 +2,10 @@
 
 > **📹 Firefox Users:** Video export works in Firefox, but requires **WebM (VP9)** format instead of H.264 due to a [known Firefox bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1918769). The app will automatically select the best format for your browser. See [FIREFOX_VIDEO_EXPORT_SOLUTION.md](FIREFOX_VIDEO_EXPORT_SOLUTION.md) for details.
 
+## 2.7.0 (2026-06-29)
+
+- Changed EHT running modes 1 and 2 to activate once the basal point crosses just below the basal line, using a `0.01 * R_soft` epsilon instead of requiring a full `R_soft` distance below the basal membrane.
+
 ## 2.6.0 (2026-06-16)
 
 - Reworked `below_basal` and `above_apical` statistics to compare nuclei against control-cell basal/apical tissue lines interpolated in curved coordinates.

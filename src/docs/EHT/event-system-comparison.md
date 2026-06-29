@@ -273,7 +273,7 @@ Determines if cell is in running state:
 
 - Requires `has_B = false` (detached from basal membrane)
 - Checks distance from basal curve in opposite normal direction
-- Requires `signed_distance < -R_soft` for modes 1 and 2 (cell far enough away relative to its soft radius)
+- Requires `signed_distance < -0.01 * R_soft` for modes 1 and 2 (cell just below the basal line, with a small radius-scaled epsilon)
 - Checks `running_mode` conditions
 
 **Not present in Julia.**

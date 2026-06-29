@@ -2,6 +2,8 @@ import { Vector2 } from '@/core/math/vector2';
 import { getWorkingBasalGeometry } from '../tissue-lines';
 import type { CellState, EHTSimulationState } from '../types';
 
+const RUNNING_ACTIVATION_EPSILON_RADIUS = 0.01;
+
 export function getRunningBasalSignedDistance(
   state: EHTSimulationState,
   point: Vector2
@@ -23,7 +25,7 @@ export function shouldCellRun(cell: CellState, state: EHTSimulationState): boole
   }
 
   const signedDistance = getRunningBasalSignedDistance(state, Vector2.from(cell.B));
-  return signedDistance < -cell.R_soft;
+  return signedDistance < -RUNNING_ACTIVATION_EPSILON_RADIUS * cell.R_soft;
 }
 
 export function advanceRunningBasalPoint(
