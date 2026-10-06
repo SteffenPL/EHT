@@ -29,18 +29,18 @@ function getCurvatures(state: EHTSimulationState | undefined, params: EHTParams)
   };
 }
 
-/** Theme colors for EHT rendering */
-interface EHTThemeColors {
-  apicalPoint: number;
-  basalPoint: number;
-  apicalLink: number;
-  basalLink: number;
-  cytoskeleton: number;
-  membrane: number;
-  forceArrow: number;
+/** Theme colors for EHT rendering (exported for composite renderers). */
+export interface EHTThemeColors {
+    apicalPoint: number;
+    basalPoint: number;
+    apicalLink: number;
+    basalLink: number;
+    cytoskeleton: number;
+    membrane: number;
+    forceArrow: number;
 }
 
-const LIGHT_THEME: EHTThemeColors = {
+export const LIGHT_THEME: EHTThemeColors = {
   apicalPoint: 0x961414,
   basalPoint: 0x000000,
   apicalLink: 0x640000,
@@ -60,6 +60,36 @@ const DARK_THEME: EHTThemeColors = {
   forceArrow: 0x93c5fd,
 };
 
+/**
+ * Styling for a reusable EHT scene draw pass.
+ * `theme` selects the palette, `alphaScale` scales every fill/stroke alpha
+ * (useful for superimposing multiple scenes on one canvas).
+ */
+export interface EHTRenderStyle {
+    theme: EHTThemeColors;
+    alphaScale: number;
+}
+
+/** Optional styling overrides resolved over the active light/dark theme. */
+export interface EHTRenderStyleOverrides {
+    theme?: Partial<EHTThemeColors>;
+    /** Multiplier applied to all fill/stroke alphas (default 1). */
+    alphaScale?: number;
+}
+
+/** Resolve the effective render style from theme + optional overrides. */
+export function resolveEHTRenderStyle(isDark: boolean, overrides?: EHTRenderStyleOverrides): EHTRenderStyle {
+    return {
+        theme: { ...(isDark ? DARK_THEME : LIGHT_THEME), ...overrides?.theme },
+        alphaScale: overrides?.alphaScale ?? 1,
+    };
+}
+
+/** Scale a base alpha by the style's alphaScale, clamped to [0, 1]. */
+function scaledAlpha(style: EHTRenderStyle, value: number): number {
+    return Math.max(0, Math.min(1, value * style.alphaScale));
+}
+
 function getDraggedCellIndex(renderOptions: Record<string, unknown>, state: EHTSimulationState): number | null {
   const value = renderOptions.draggedCellIndex;
   if (typeof value !== 'number' || !Number.isInteger(value)) return null;
@@ -76,13 +106,13 @@ function rgbToHex(r: number, g: number, b: number): number {
 /**
  * Draw the basal membrane curve.
  */
-function drawBasalCurve(graphics: Graphics, curvature_1: number, curvature_2: number, w_init: number, theme: EHTThemeColors): void {
+function drawBasalCurve(graphics: Graphics, curvature_1: number, curvature_2: number, w_init: number, style: EHTRenderStyle): void {
   if (curvature_1 === 0 && curvature_2 === 0) {
     // Straight line - use w_init for extent
     const halfWidth = w_init / 2 + 5;
     graphics.moveTo(-halfWidth, 0);
     graphics.lineTo(halfWidth, 0);
-    graphics.stroke({ color: theme.membrane, alpha: 0.5, width: 0.05 });
+    graphics.stroke({ color: style.theme.membrane, alpha: scaledAlpha(style, 0.5), width: 0.05 });
   } else {
     // Ellipse
     const center = shapeCenter(curvature_1, curvature_2);
@@ -90,46 +120,46 @@ function drawBasalCurve(graphics: Graphics, curvature_1: number, curvature_2: nu
     const b = curvature_2 !== 0 ? Math.abs(1 / curvature_2) : 20;
 
     graphics.ellipse(center.x, center.y, a, b);
-    graphics.stroke({ color: theme.membrane, alpha: 0.5, width: 0.05 });
+    graphics.stroke({ color: style.theme.membrane, alpha: scaledAlpha(style, 0.5), width: 0.05 });
   }
 }
 
 /**
  * Draw all cells with their apical/basal points and cytoskeleton.
  */
-function drawCells(graphics: Graphics, state: EHTSimulationState, params: EHTParams, theme: EHTThemeColors): void {
+function drawCells(graphics: Graphics, state: EHTSimulationState, params: EHTParams, style: EHTRenderStyle): void {
   for (const cell of state.cells) {
     const cellType = params.cell_types[cell.typeIndex] ?? params.cell_types.control;
     const color = cellType.color;
 
     // Draw soft radius (semi-transparent ellipse)
     graphics.circle(cell.pos.x, cell.pos.y, cell.R_soft);
-    graphics.fill({ color: rgbToHex(color.r, color.g, color.b), alpha: 0.4 });
+    graphics.fill({ color: rgbToHex(color.r, color.g, color.b), alpha: scaledAlpha(style, 0.4) });
 
     // Draw hard radius (solid circle)
     graphics.circle(cell.pos.x, cell.pos.y, cell.R_hard);
-    graphics.fill({ color: rgbToHex(color.r, color.g, color.b), alpha: 1 });
+    graphics.fill({ color: rgbToHex(color.r, color.g, color.b), alpha: scaledAlpha(style, 1) });
 
     // Draw apical point
     graphics.circle(cell.A.x, cell.A.y, 0.1);
-    graphics.fill({ color: theme.apicalPoint, alpha: 1 });
+    graphics.fill({ color: style.theme.apicalPoint, alpha: scaledAlpha(style, 1) });
 
     // Draw basal point
     graphics.circle(cell.B.x, cell.B.y, 0.1);
-    graphics.fill({ color: theme.basalPoint, alpha: 1 });
+    graphics.fill({ color: style.theme.basalPoint, alpha: scaledAlpha(style, 1) });
 
     // Draw cytoskeleton lines (A to pos, B to pos)
     graphics.moveTo(cell.A.x, cell.A.y);
     graphics.lineTo(cell.pos.x, cell.pos.y);
     graphics.lineTo(cell.B.x, cell.B.y);
-    graphics.stroke({ color: theme.cytoskeleton, alpha: 0.5, width: 0.05 });
+    graphics.stroke({ color: style.theme.cytoskeleton, alpha: scaledAlpha(style, 0.5), width: 0.05 });
   }
 }
 
 /**
  * Draw apical links between neighboring cells.
  */
-function drawApicalLinks(graphics: Graphics, state: EHTSimulationState, theme: EHTThemeColors): void {
+function drawApicalLinks(graphics: Graphics, state: EHTSimulationState, style: EHTRenderStyle): void {
   for (const link of state.ap_links) {
     const cellI = state.cells[link.l];
     const cellJ = state.cells[link.r];
@@ -140,13 +170,13 @@ function drawApicalLinks(graphics: Graphics, state: EHTSimulationState, theme: E
     }
   }
 
-  graphics.stroke({ color: theme.apicalLink, alpha: 1, width: 0.05 });
+  graphics.stroke({ color: style.theme.apicalLink, alpha: scaledAlpha(style, 1), width: 0.05 });
 }
 
 /**
  * Draw basal links between neighboring cells.
  */
-function drawBasalLinks(graphics: Graphics, state: EHTSimulationState, theme: EHTThemeColors): void {
+function drawBasalLinks(graphics: Graphics, state: EHTSimulationState, style: EHTRenderStyle): void {
   for (const link of state.ba_links) {
     const cellI = state.cells[link.l];
     const cellJ = state.cells[link.r];
@@ -157,23 +187,23 @@ function drawBasalLinks(graphics: Graphics, state: EHTSimulationState, theme: EH
     }
   }
 
-  graphics.stroke({ color: theme.basalLink, alpha: 1, width: 0.05 });
+  graphics.stroke({ color: style.theme.basalLink, alpha: scaledAlpha(style, 1), width: 0.05 });
 }
 
-function drawPolyline(graphics: Graphics, points: { x: number; y: number }[], color: number): void {
+function drawPolyline(graphics: Graphics, points: { x: number; y: number }[], color: number, style: EHTRenderStyle): void {
   if (points.length < 2) return;
 
   graphics.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < points.length; i++) {
     graphics.lineTo(points[i].x, points[i].y);
   }
-  graphics.stroke({ color, alpha: 0.75, width: 0.09 });
+  graphics.stroke({ color, alpha: scaledAlpha(style, 0.75), width: 0.09 });
 }
 
 /**
  * Draw curved-coordinate control-cell tissue strips used by below_basal and above_apical.
  */
-function drawTissueLines(graphics: Graphics, state: EHTSimulationState, params: EHTParams, theme: EHTThemeColors): void {
+function drawTissueLines(graphics: Graphics, state: EHTSimulationState, params: EHTParams, style: EHTRenderStyle): void {
   const tissueLines = buildTissueLineSamples(state, params);
   const basalPoints = sampleTissueLinePoints(
     tissueLines.basal,
@@ -186,8 +216,8 @@ function drawTissueLines(graphics: Graphics, state: EHTSimulationState, params: 
     tissueLines.fullCircle
   );
 
-  drawPolyline(graphics, basalPoints, theme.basalLink);
-  drawPolyline(graphics, apicalPoints, theme.apicalLink);
+  drawPolyline(graphics, basalPoints, style.theme.basalLink, style);
+  drawPolyline(graphics, apicalPoints, style.theme.apicalLink, style);
 }
 
 /**
@@ -224,7 +254,7 @@ function drawForceArrow(
   state: EHTSimulationState,
   params: EHTParams,
   cellIndex: number,
-  theme: EHTThemeColors
+  style: EHTRenderStyle
 ): void {
   const cell = state.cells[cellIndex];
   if (!cell) return;
@@ -252,13 +282,47 @@ function drawForceArrow(
 
   graphics.moveTo(startX, startY);
   graphics.lineTo(endX, endY);
-  graphics.stroke({ color: theme.forceArrow, alpha: 0.95, width: 0.1 });
+  graphics.stroke({ color: style.theme.forceArrow, alpha: scaledAlpha(style, 0.95), width: 0.1 });
 
   graphics.moveTo(endX, endY);
   graphics.lineTo(endX - ux * headLength + px * headWidth, endY - uy * headLength + py * headWidth);
   graphics.lineTo(endX - ux * headLength - px * headWidth, endY - uy * headLength - py * headWidth);
   graphics.closePath();
-  graphics.fill({ color: theme.forceArrow, alpha: 0.95 });
+  graphics.fill({ color: style.theme.forceArrow, alpha: scaledAlpha(style, 0.95) });
+}
+
+/**
+ * Draw a full EHT scene (basal curve, links, cells, optional tissue lines)
+ * into the render context using the given style.
+ *
+ * Exported so composite renderers (e.g. the comparison view) can superimpose
+ * multiple EHT scenes on one canvas with per-scene palettes and alpha.
+ * `params` must already be in engine units (see toEHTEngineParams).
+ */
+export function renderEHTScene(
+  ctx: ModelRenderContext,
+  state: EHTSimulationState,
+  engineParams: EHTParams,
+  style: EHTRenderStyle
+): void {
+  const cellsGraphics = ctx.graphics.cells as Graphics;
+  const linksGraphics = ctx.graphics.links as Graphics;
+  const overlayGraphics = ctx.graphics.overlay as Graphics;
+  const { curvature_1, curvature_2 } = getCurvatures(state, engineParams);
+
+  // Draw basal membrane
+  drawBasalCurve(linksGraphics, curvature_1, curvature_2, engineParams.general.w_init, style);
+
+  // Draw links (behind cells)
+  drawBasalLinks(linksGraphics, state, style);
+  drawApicalLinks(linksGraphics, state, style);
+
+  // Draw cells
+  drawCells(cellsGraphics, state, engineParams, style);
+
+  if (ctx.renderOptions?.showTissueLines) {
+    drawTissueLines(overlayGraphics, state, engineParams, style);
+  }
 }
 
 /**
@@ -316,29 +380,13 @@ export const ehtRenderer: ModelRenderer<EHTParams, EHTSimulationState> = {
 
   render(ctx: ModelRenderContext, state: EHTSimulationState, params: EHTParams): void {
     const engineParams = toEHTEngineParams(params);
-    const theme = ctx.isDark ? DARK_THEME : LIGHT_THEME;
-    const cellsGraphics = ctx.graphics.cells as Graphics;
-    const linksGraphics = ctx.graphics.links as Graphics;
-    const overlayGraphics = ctx.graphics.overlay as Graphics;
-    const { curvature_1, curvature_2 } = getCurvatures(state, engineParams);
+    const style = resolveEHTRenderStyle(ctx.isDark);
 
-    // Draw basal membrane
-    drawBasalCurve(linksGraphics, curvature_1, curvature_2, engineParams.general.w_init, theme);
-
-    // Draw links (behind cells)
-    drawBasalLinks(linksGraphics, state, theme);
-    drawApicalLinks(linksGraphics, state, theme);
-
-    // Draw cells
-    drawCells(cellsGraphics, state, engineParams, theme);
-
-    if (ctx.renderOptions?.showTissueLines) {
-      drawTissueLines(overlayGraphics, state, engineParams, theme);
-    }
+    renderEHTScene(ctx, state, engineParams, style);
 
     const draggedCellIndex = getDraggedCellIndex(ctx.renderOptions, state);
     if (draggedCellIndex !== null) {
-      drawForceArrow(overlayGraphics, state, state.params ?? engineParams, draggedCellIndex, theme);
+      drawForceArrow(ctx.graphics.overlay as Graphics, state, state.params ?? engineParams, draggedCellIndex, style);
     }
 
     // Draw cell IDs if enabled
