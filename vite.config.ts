@@ -21,6 +21,11 @@ export default defineConfig(({ command }) => {
   return {
     plugins: [react(), tailwindcss()],
     base: command === 'build' ? basePath : '/',
+    server: {
+      // Allow exposing the dev server through a Tailscale serve proxy
+      // (https://<host>.ts.net) - see `tailscale serve`
+      allowedHosts: ['.ts.net'],
+    },
     resolve: {
       alias: {
         '@': resolve(__dirname, './src'),
