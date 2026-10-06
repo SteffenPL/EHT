@@ -3,7 +3,8 @@
  * Stores all computed states for scrubbing back and forth through the simulation.
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { SimulationEngine } from '../core/simulation/engine';
+import { SimulationEngine } from '../core/simulation';
+import { cloneSimulationState } from '../core/simulation/cloneState';
 import type { SimulationModel } from '../core/interfaces/model';
 import {
   nowMs,
@@ -52,23 +53,9 @@ export interface UseSimulationResult<Params = any, State = any> {
   engine: SimulationEngine<Params, State> | null;
 }
 
-/** Helper to deep clone state for storage */
+/** Helper to deep clone state for storage (preserves function-bearing geometry objects) */
 function cloneState<State>(s: State): State {
-  if (typeof s === 'object' && s !== null) {
-    const cloned = structuredClone(s);
-    const sourceAny = s as any;
-    const clonedAny = cloned as any;
-
-    if (
-      sourceAny.basalGeometry &&
-      typeof sourceAny.basalGeometry.projectPoint === 'function'
-    ) {
-      clonedAny.basalGeometry = sourceAny.basalGeometry;
-    }
-
-    return cloned;
-  }
-  return s;
+  return cloneSimulationState(s);
 }
 
 /** Helper to get time from state */

@@ -9,6 +9,7 @@
  */
 import type { ComponentType } from 'react';
 import { SimulationView } from './simulation/SimulationView';
+import { ComparisonView } from './comparison/ComparisonView';
 
 export interface ViewDefinition {
   id: string;
@@ -24,5 +25,11 @@ export const VIEW_DEFINITIONS: ViewDefinition[] = [
     title: 'Simulation',
     path: '/',
     component: SimulationView,
+  },
+  {
+    id: 'comparison',
+    title: 'Comparison',
+    path: '/comparison',
+    component: ComparisonView,
   },
 ];
