@@ -1,7 +1,7 @@
 ---
 title: "feat: Views architecture and perimeter-oscillation comparison view"
 type: feat
-status: in-progress
+status: completed
 date: 2026-10-06
 origin: live planning session (opencode)
 ---
