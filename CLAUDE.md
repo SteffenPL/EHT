@@ -76,15 +76,19 @@ src/
 │   └── toy/           # Simple example model
 ├── components/        # Shared UI components
 │   ├── ui/            # shadcn/ui base components
-│   ├── layout/        # App layout, header, model selector
+│   ├── layout/        # App layout, header, view tabs
 │   ├── params/        # Generic parameter input components
 │   ├── simulation/    # Canvas, controls, stats display
+│   ├── plots/         # Generic plot components (LinePlot)
 │   └── batch/         # Batch configuration, results, plots
+├── views/             # Top-level routable views (pages composing simulations)
+│   ├── registry.ts    # View registry (id, title, path, component) - drives routes + header tabs
+│   ├── simulation/    # Main single-simulation workspace (model selector, canvas, params, batch)
+│   └── comparison/    # Scenario comparison view (lockstep multi-run, superimposed canvas, plots)
 ├── rendering/         # Shared rendering infrastructure (Pixi.js wrapper)
 ├── hooks/             # React hooks (useSimulation, useRenderer)
 ├── contexts/          # React contexts (ModelContext, ThemeContext)
-├── docs/              # Markdown documentation with KaTeX math
-└── pages/             # Top-level route components
+└── docs/              # Markdown documentation with KaTeX math
 
 cli/                   # Headless CLI interface
 ├── commands/          # run, batch, stats commands
@@ -103,11 +107,20 @@ cli/                   # Headless CLI interface
    - `loadSnapshot(rows, params)` - Deserialize from CSV
    - `computeStats(state, params)` - Calculate statistics
 4. **Optional Components**:
-   - `ui` - Custom React parameter panels (ParametersTab, CellTypesTab, SimulationTab)
+   - `ui` - Custom React parameter panels (ParametersTab, ConstantsTab, SimulationTab)
    - `renderer` - Pixi.js rendering logic
    - `statistics` - Available statistics definitions
    - `batchParameters` - Parameters available for batch sweeps
    - `renderOptions` - Model-specific visualization toggles
+
+### Models vs. Views (decision rule)
+
+- A new **simulation** with its own params/CSV/batch/CLI lifecycle → a new registered **model** in `src/models/` (reuse EHT internals by importing `src/models/eht/...` directly; they are plain side-effect-free modules).
+- A new **presentation or composition** of existing simulations (comparisons, focused demo interfaces) → a **view** in `src/views/`. Views are routable pages; they never enter `modelRegistry` and are invisible to batch workers and the CLI.
+
+**Views** ([src/views/registry.ts](src/views/registry.ts)): each view is `{ id, title, path, component }`; the registry drives the app routes and the header tabs. The Simulation view (`/`) holds the model selector, single-run canvas, parameter editor, and batch tools. The Comparison view (`/comparison`) runs fixed EHT scenarios in lockstep ([useLockstepSimulations](src/views/comparison/useLockstepSimulations.ts)) and superimposes them via a composite renderer that reuses the exported EHT scene drawing ([renderEHTScene](src/models/eht/renderer.ts), which supports palette overrides and alpha scaling).
+
+When building views: pass a `model` prop to `SimulationCanvas` to render any model/renderer (falls back to the global ModelContext); import EHT functions directly rather than extracting a `src/shared/` layer prematurely; move code to `src/core/` only when it is truly model-agnostic or needed by a second model. View-local UI/orchestration duplication is acceptable; simulation math must never be duplicated.
 
 ### Key Files
 
@@ -119,6 +132,9 @@ cli/                   # Headless CLI interface
 - [src/models/eht/simulation/step.ts](src/models/eht/simulation/step.ts) - EHT timestep (forces, constraints, events)
 - [src/core/math/basal-geometry.ts](src/core/math/basal-geometry.ts) - Basal curve geometry (line/circle/ellipse) with projection, arc length, normals
 - [src/hooks/useSimulation.ts](src/hooks/useSimulation.ts) - React hook for single simulation state management
+- [src/views/registry.ts](src/views/registry.ts) - View registry driving routes and header tabs
+- [src/views/comparison/useLockstepSimulations.ts](src/views/comparison/useLockstepSimulations.ts) - Lockstep multi-simulation runner with per-frame stats harvesting
+- [src/core/simulation/cloneState.ts](src/core/simulation/cloneState.ts) - Deep-clone for simulation states, preserving function-bearing geometry objects
 
 ### Batch Simulations
 
