@@ -7,4 +7,4 @@
  */
 
 export { SimulationRenderer } from './SimulationRenderer';
-export type { RendererConfig } from './SimulationRenderer';
+export type { RendererConfig, RenderableModel } from './SimulationRenderer';

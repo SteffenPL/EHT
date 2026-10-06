@@ -3,7 +3,7 @@
  * Automatically resizes to fill its container.
  */
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { SimulationRenderer } from '../../rendering';
+import { SimulationRenderer, type RenderableModel } from '../../rendering';
 import { useTheme, useModel } from '@/contexts';
 import type { BaseSimulationParams } from '../../core/registry';
 import { nowMs } from '@/core/profiling/simulation-profiler';
@@ -60,6 +60,12 @@ export interface SimulationCanvasRef {
 export interface SimulationCanvasProps {
   state: any;
   params: BaseSimulationParams;
+  /**
+   * Model (or model-like object) providing the renderer for this canvas.
+   * Falls back to the globally selected model from ModelContext when omitted,
+   * so views that render a different model/renderer can pass their own.
+   */
+  model?: RenderableModel;
   /** Minimum height in pixels. Default: 350 */
   minHeight?: number;
   /** Maximum height in pixels. Default: Infinity (no cap) */
@@ -84,6 +90,7 @@ export interface SimulationCanvasProps {
 export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvasProps>(({
   state,
   params,
+  model,
   minHeight = 350,
   maxHeight = Infinity,
   aspectRatio = 1,
@@ -108,6 +115,8 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   const [size, setSize] = useState({ width: 800, height: minHeight });
   const { isDark } = useTheme();
   const { currentModel } = useModel();
+  // View-provided model takes precedence over the globally selected one
+  const renderModel: RenderableModel = model ?? currentModel;
 
   const renderState = useCallback((nextState: any) => {
     const renderer = rendererRef.current;
@@ -274,7 +283,7 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
         }
 
         rendererRef.current = renderer;
-        renderer.setModel(currentModel);
+        renderer.setModel(renderModel);
         renderer.setParams(params);
         setIsReady(true);
       } catch (error) {
@@ -349,14 +358,14 @@ export const SimulationCanvas = forwardRef<SimulationCanvasRef, SimulationCanvas
   // Update model when it changes
   useEffect(() => {
     if (rendererRef.current && isReady) {
-      rendererRef.current.setModel(currentModel);
+      rendererRef.current.setModel(renderModel);
       rendererRef.current.setParams(params);
       // Re-render with new model
       if (state) {
         renderState(state);
       }
     }
-  }, [currentModel, isReady, state, params, renderState]);
+  }, [renderModel, isReady, state, params, renderState]);
 
   // Update render options when they change
   useEffect(() => {

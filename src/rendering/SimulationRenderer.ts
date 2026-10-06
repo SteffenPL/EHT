@@ -4,16 +4,25 @@
  */
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import type {
-  SimulationModel,
   BaseSimulationParams,
   ModelRenderContext,
   BoundingBox,
-} from '../core/registry'; // registry re-exports SimulationModel now
+} from '../core/registry';
+import type { ModelRenderer } from '../core/interfaces/renderer';
 
 export interface RendererConfig {
   width: number;
   height: number;
   isDark?: boolean;
+}
+
+/**
+ * Minimal model surface needed for rendering. Any full `SimulationModel`
+ * satisfies this structurally, but render-only compositions (e.g. a view
+ * that superimposes multiple scenarios) only need to provide a renderer.
+ */
+export interface RenderableModel<Params extends BaseSimulationParams = BaseSimulationParams, State = any> {
+  renderer: ModelRenderer<Params, State>;
 }
 
 /**
@@ -32,7 +41,7 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
   private renderOptions: Record<string, unknown> = {};
   private interactionOverlay: Record<string, unknown> = {};
 
-  private model: SimulationModel<Params, State> | null = null;
+  private model: RenderableModel<Params, State> | null = null;
   private params: Params | null = null;
 
   // Viewport transform
@@ -82,9 +91,9 @@ export class SimulationRenderer<Params extends BaseSimulationParams = BaseSimula
   }
 
   /**
-   * Set the current model.
+   * Set the current model (or any renderable model-like object).
    */
-  setModel(model: SimulationModel<Params, State>): void {
+  setModel(model: RenderableModel<Params, State>): void {
     this.model = model;
     // Update background color for the model
     const backgroundColor = model.renderer.getBackgroundColor(this.isDark);
