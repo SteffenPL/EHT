@@ -1,10 +1,10 @@
 /**
- * Application header with title, model selector, and theme toggle.
+ * Application header with title, view tabs, and theme toggle.
  */
 import { Moon, Sun } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { Button } from '../ui/button';
-import { ModelSelector } from './ModelSelector';
+import { VIEW_DEFINITIONS } from '@/views/registry';
 
 export interface HeaderProps {
   isDark: boolean;
@@ -25,10 +25,30 @@ export function Header({ isDark, onToggleTheme }: HeaderProps) {
             ) : null}
           </div>
           <div className="h-4 w-px bg-border" />
-          <ModelSelector />
-          <Link to="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-            Documentation
-          </Link>
+          <nav className="flex items-center gap-1" aria-label="Views">
+            {VIEW_DEFINITIONS.map((view) => (
+              <NavLink
+                key={view.id}
+                to={view.path}
+                end={view.path === '/'}
+                className={({ isActive }) =>
+                  `rounded-md px-2.5 py-1 text-sm transition-colors ${
+                    isActive
+                      ? 'bg-muted text-foreground font-medium'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`
+                }
+              >
+                {view.title}
+              </NavLink>
+            ))}
+            <Link
+              to="/docs"
+              className="rounded-md px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Documentation
+            </Link>
+          </nav>
         </div>
         <Button variant="ghost" size="icon" onClick={onToggleTheme} aria-label="Toggle theme" className="rounded-full">
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
