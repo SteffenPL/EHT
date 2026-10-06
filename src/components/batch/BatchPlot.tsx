@@ -1,8 +1,11 @@
 /**
  * Observable Plot component for batch simulation results.
+ * The 'line' mode delegates to the shared LinePlot component;
+ * 'line_ci' and 'histogram' modes are rendered here.
  */
 import { useEffect, useRef } from 'react';
 import * as Plot from '@observablehq/plot';
+import { LinePlot } from '@/components/plots/LinePlot';
 
 export interface BatchPlotProps {
   data: { time: number; value: number; cell_group?: string }[];
@@ -36,6 +39,10 @@ export function BatchPlot({
     if (plotType === 'line' && data.length === 0) return;
     if (plotType === 'line_ci' && (!dataWithCI || dataWithCI.length === 0)) return;
     if (plotType === 'histogram' && (!histogramData || histogramData.length === 0)) return;
+
+    // The plain 'line' mode is rendered by the shared LinePlot child below;
+    // only 'line_ci' and 'histogram' build their marks here.
+    if (plotType === 'line') return;
 
     let marks: any[];
     let colorScheme: any = { legend: true };
@@ -119,44 +126,8 @@ export function BatchPlot({
         color: { legend: true, label: 'Cell Group', type: 'ordinal' }
       };
     } else {
-      // Simple line plot - check if we have cell_group data
-      const hasGroups = data.some(d => d.cell_group !== undefined);
-
-      if (hasGroups) {
-        marks = [
-          Plot.line(data, {
-            x: 'time',
-            y: 'value',
-            stroke: 'cell_group',
-            strokeWidth: 2,
-          }),
-          Plot.dot(data, {
-            x: 'time',
-            y: 'value',
-            fill: 'cell_group',
-            r: 3,
-          }),
-        ];
-        colorScheme = {
-          color: { legend: true, label: 'Cell Group', type: 'ordinal' }
-        };
-      } else {
-        // Fallback to single color
-        marks = [
-          Plot.line(data, {
-            x: 'time',
-            y: 'value',
-            stroke: 'steelblue',
-            strokeWidth: 2,
-          }),
-          Plot.dot(data, {
-            x: 'time',
-            y: 'value',
-            fill: 'steelblue',
-            r: 3,
-          }),
-        ];
-      }
+      // Unreachable: the 'line' mode returns early above
+      return;
     }
 
     const plot = Plot.plot({
@@ -179,5 +150,21 @@ export function BatchPlot({
     };
   }, [data, dataWithCI, histogramData, xAxisLabel, yAxisLabel, plotType, width, height, yMin, yMax]);
 
-  return <div ref={containerRef} />;
+  return (
+    <div ref={containerRef}>
+      {plotType === 'line' && data.length > 0 && (
+        <LinePlot
+          data={data.map((d) => ({ time: d.time, value: d.value, series: d.cell_group }))}
+          seriesLegendLabel="Cell Group"
+          xAxisLabel={xAxisLabel}
+          yAxisLabel={yAxisLabel}
+          width={width}
+          height={height}
+          yMin={yMin}
+          yMax={yMax}
+          showDots
+        />
+      )}
+    </div>
+  );
 }

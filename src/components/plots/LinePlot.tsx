@@ -28,6 +28,8 @@ export interface LinePlotProps {
   height?: number;
   yMin?: number;
   yMax?: number;
+  /** Draw a dot at every datum (useful for sparsely sampled data). */
+  showDots?: boolean;
 }
 
 export function LinePlot({
@@ -41,6 +43,7 @@ export function LinePlot({
   height = 260,
   yMin,
   yMax,
+  showDots = false,
 }: LinePlotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -64,29 +67,43 @@ export function LinePlot({
         ? [yMin ?? 0, yMax ?? undefined]
         : undefined;
 
+    // Legend always shows for multi-series plots; explicit seriesColors
+    // additionally pin the palette and ordering.
+    const colorConfig = hasSeries
+      ? seriesOrder
+        ? {
+            legend: true,
+            type: 'ordinal' as const,
+            domain: seriesOrder,
+            range: colorRange,
+            label: seriesLegendLabel,
+          }
+        : { legend: true, type: 'ordinal' as const, label: seriesLegendLabel }
+      : undefined;
+
     const plot = Plot.plot({
       width,
       height,
       marginLeft: 60,
       marginBottom: 40,
-      marginRight: seriesOrder ? 120 : 20,
+      marginRight: hasSeries ? 120 : 20,
       grid: true,
       x: { label: xAxisLabel },
       y: { label: yAxisLabel, domain: yDomain },
-      ...(hasSeries && seriesOrder
-        ? {
-            color: {
-              legend: true,
-              type: 'ordinal',
-              domain: seriesOrder,
-              range: colorRange,
-              label: seriesLegendLabel,
-            },
-          }
-        : {}),
+      ...(colorConfig ? { color: colorConfig } : {}),
       marks: hasSeries
-        ? [Plot.line(rows, { x: 'time', y: 'value', stroke: 'series', strokeWidth: 2 })]
-        : [Plot.line(rows, { x: 'time', y: 'value', stroke: 'steelblue', strokeWidth: 2 })],
+        ? [
+            Plot.line(rows, { x: 'time', y: 'value', stroke: 'series', strokeWidth: 2 }),
+            ...(showDots
+              ? [Plot.dot(rows, { x: 'time', y: 'value', fill: 'series', r: 3 })]
+              : []),
+          ]
+        : [
+            Plot.line(rows, { x: 'time', y: 'value', stroke: 'steelblue', strokeWidth: 2 }),
+            ...(showDots
+              ? [Plot.dot(rows, { x: 'time', y: 'value', fill: 'steelblue', r: 3 })]
+              : []),
+          ],
     });
 
     containerRef.current.appendChild(plot);
@@ -104,6 +121,7 @@ export function LinePlot({
     height,
     yMin,
     yMax,
+    showDots,
   ]);
 
   return <div ref={containerRef} />;
