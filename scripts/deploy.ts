@@ -20,6 +20,13 @@ function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
 }
 
+function validateTarget(target: string): string {
+  if (target !== 'primary' && !/^[a-zA-Z0-9][a-zA-Z0-9.-]*$/.test(target)) {
+    throw new Error(`Invalid deployment target "${target}". Use letters, numbers, dots, and hyphens (for example: v2.8-comp).`);
+  }
+  return target;
+}
+
 function ensurePagesRepo(): void {
   const gitDir = path.join(PAGES_REPO, '.git');
 
@@ -49,7 +56,7 @@ function buildAndCopy(targetDir: string, subdir?: string): void {
     delete env.VITE_BASE_SUBDIR;
   }
 
-  execSync('ppnpm run build', { stdio: 'inherit', env });
+  execSync('pnpm run build', { stdio: 'inherit', env });
 
   execSync(`mkdir -p ${shellQuote(targetDir)}`, { stdio: 'inherit' });
 
@@ -102,7 +109,8 @@ async function selectInteractive(): Promise<DeployOptions> {
   const targetChoices = [
     { title: 'Primary (/internal/eht/)', value: 'primary' },
     { title: 'Beta (/internal/eht/beta/)', value: 'beta' },
-    { title: 'Alpha (/internal/eht/alpha/)', value: 'alpha' }
+    { title: 'Alpha (/internal/eht/alpha/)', value: 'alpha' },
+    { title: 'Named experiment version…', value: '__custom__' }
   ];
 
   // Add versioned target option if a tag was selected
@@ -114,17 +122,28 @@ async function selectInteractive(): Promise<DeployOptions> {
     });
   }
 
-  const { target } = await prompts({
+  const { target: selectedTarget } = await prompts({
     type: 'select',
     name: 'target',
     message: 'Select target:',
     choices: targetChoices
   });
 
-  return { source: sourceChoice.source, ref, target };
+  let target = selectedTarget;
+  if (target === '__custom__') {
+    const { customTarget } = await prompts({
+      type: 'text',
+      name: 'customTarget',
+      message: 'Enter target name (e.g. v2.8-comp):'
+    });
+    target = customTarget;
+  }
+
+  return { source: sourceChoice.source, ref, target: validateTarget(target) };
 }
 
 async function deploy(options: DeployOptions) {
+  options.target = validateTarget(options.target);
   const originalBranch = execSync('git branch --show-current', { encoding: 'utf-8' }).trim();
   const originalCommit = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
   const updateLatest = options.source === 'current'

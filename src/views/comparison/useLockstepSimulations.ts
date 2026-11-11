@@ -16,7 +16,7 @@ import { EHTModel } from '@/models/eht';
 import { computeEHTStatistics } from '@/models/eht/statistics';
 import type { EHTParams } from '@/models/eht/params/types';
 import type { EHTSimulationState } from '@/models/eht/types';
-import type { ComparisonScenario } from './scenarios';
+import { MAX_COMPARISON_FRAMES, type ComparisonScenario } from './scenarios';
 
 export interface LockstepScenarioDefinition {
   scenario: ComparisonScenario;
@@ -32,9 +32,9 @@ export interface UseLockstepSimulationsResult {
   computedFrames: number;
   /** Total frames needed to reach t_end. */
   totalFrames: number;
-  /** Shared playback resolution, equal to the smallest scenario timestep. */
+  /** Shared playback resolution, adjusted to keep the timeline within its frame limit. */
   dt: number;
-  /** Playback end time, equal to the largest scenario end time [hours]. */
+  /** Shared playback end time [hours]. */
   tEnd: number;
   isRunning: boolean;
   isCatchingUp: boolean;
@@ -60,16 +60,27 @@ function computeStatsOf(state: EHTSimulationState): Record<string, number> {
   return computeEHTStatistics(state, state.params ?? undefined);
 }
 
+function thinArray<T>(items: T[]): void {
+  if (items.length <= MAX_COMPARISON_FRAMES) return;
+  const lastIndex = items.length - 1;
+  let writeIndex = 1; // Preserve the initial sample.
+  for (let readIndex = 1; readIndex <= lastIndex; readIndex++) {
+    if (readIndex % 2 === 0 || readIndex === lastIndex) {
+      items[writeIndex++] = items[readIndex];
+    }
+  }
+  items.length = writeIndex;
+}
+
 export function useLockstepSimulations(
   definitions: LockstepScenarioDefinition[]
 ): UseLockstepSimulationsResult {
-  const dt = definitions.length
+  const minimumScenarioDt = definitions.length
     ? Math.min(...definitions.map((def) => def.params.general.dt))
     : 1;
-  const tEnd = definitions.length
-    ? Math.max(...definitions.map((def) => def.params.general.t_end))
-    : 0;
-  const totalFrames = Math.max(0, Math.ceil(tEnd / dt - 1e-9));
+  const tEnd = definitions[0]?.params.general.t_end ?? 0;
+  const dt = Math.max(minimumScenarioDt, tEnd / MAX_COMPARISON_FRAMES);
+  const totalFrames = Math.min(MAX_COMPARISON_FRAMES, Math.max(0, Math.ceil(tEnd / dt - 1e-9)));
 
   const enginesRef = useRef<SimulationEngine<EHTParams, EHTSimulationState>[]>([]);
   const historiesRef = useRef<Record<string, EHTSimulationState[]>>({});
@@ -116,6 +127,11 @@ export function useLockstepSimulations(
         historiesRef.current[id].push(cloned);
         statsRef.current[id].push(computeStatsOf(cloned));
         timesRef.current[id].push(cloned.t);
+        if (historiesRef.current[id].length > MAX_COMPARISON_FRAMES) {
+          thinArray(historiesRef.current[id]);
+          thinArray(statsRef.current[id]);
+          thinArray(timesRef.current[id]);
+        }
       }
     }
     computedFramesRef.current += 1;

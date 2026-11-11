@@ -1,8 +1,8 @@
 /**
  * Scenario definitions for the perimeter-oscillation comparison view.
  *
- * Two EHT parameter variants are simulated side by side with independent
- * timing parameters on a shared elapsed-time playback timeline:
+ * Two EHT parameter variants are simulated side by side with a shared end
+ * time and independent timestep sizes on a shared elapsed-time timeline:
  *
  *  - "oscillating": the tissue perimeter follows a 120 bpm heartbeat
  *    with a ±10% amplitude, driven by a general perimeter formula.
@@ -14,16 +14,13 @@ import type { EHTParams } from '@/models/eht/params/types';
 import { createDefaultEHTParams } from '@/models/eht/params/defaults';
 import type { EHTRenderStyleOverrides } from '@/models/eht/renderer';
 
-// --- Shared comparison timing -------------------------------------------------
+// --- Comparison timing defaults ------------------------------------------------
 
 /** Heart rate of the oscillating scenario [beats per minute]. */
 const HEART_RATE_BPM = 120;
 
 /** Fractional perimeter change around the mean (±10%). */
 const PERIMETER_AMPLITUDE = 0.1;
-
-/** Timesteps per heartbeat cycle (temporal resolution of the oscillation). */
-const STEPS_PER_CYCLE = 12;
 
 /** Physics substeps per timestep. */
 const N_SUBSTEPS = 10;
@@ -34,8 +31,8 @@ const RANDOM_SEED = 42;
 /** Period of one heartbeat in simulation hours (simulation t is in hours). */
 export const HEART_PERIOD_H = 1 / (HEART_RATE_BPM * 60);
 
-/** Oscillating scenario timestep [hours]. */
-export const DT_H = HEART_PERIOD_H / STEPS_PER_CYCLE;
+/** Default oscillating scenario timestep [hours]. */
+export const DT_H = 0.0001;
 
 /** Default end time for comparison runs [hours]. */
 export const T_END_H = 6;
@@ -43,7 +40,10 @@ export const T_END_H = 6;
 /** Default timestep for the averaged model [hours]. */
 export const AVERAGED_DT_H = 0.1;
 
-/** Prevent impractical shared playback timelines when timing is edited. */
+/** Smallest timestep accepted by either comparison scenario [hours]. */
+export const MIN_COMPARISON_DT_H = 1e-7;
+
+/** Maximum shared playback frames and retained history samples per scenario. */
 export const MAX_COMPARISON_FRAMES = 100_000;
 
 // -----------------------------------------------------------------------------

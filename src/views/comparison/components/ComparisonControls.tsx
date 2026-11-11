@@ -2,6 +2,7 @@
  * Controls for the comparison view: shared timeline transport, per-scenario
  * timing inputs, and visibility toggles.
  */
+import { useEffect, useState } from 'react';
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -29,10 +30,10 @@ export interface ComparisonControlsProps {
   onReset: () => void;
   onSeekFrame: (frame: number) => void;
   /** Timing values and update callback for each scenario. */
-  scenarioTimings: { id: string; label: string; tEnd: number; dt: number; nSubsteps: number }[];
-  maxEndTime: number;
+  scenarioTimings: { id: string; label: string; dt: number; nSubsteps: number }[];
   minTimeStep: number;
-  onTimingChange: (id: string, key: 't_end' | 'dt' | 'n_substeps', value: number) => void;
+  onEndTimeChange: (value: number) => void;
+  onTimingChange: (id: string, key: 'dt' | 'n_substeps', value: number) => void;
   /** Scenario legend entries: { id, label, color }. */
   scenarios: { id: string; label: string; color: string }[];
   renderOptions: Record<string, boolean>;
@@ -43,6 +44,51 @@ export interface ComparisonControlsProps {
 function formatTime(t: number): string {
   if (t < 0.5) return `${(t * 3600).toFixed(2)} s`;
   return `${t.toFixed(2)} h`;
+}
+
+function TimingNumberInput({
+  label,
+  value,
+  min,
+  max,
+  integer = false,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max?: number;
+  integer?: boolean;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+
+  useEffect(() => setDraft(String(value)), [value]);
+
+  const commit = () => {
+    const parsed = Number(draft);
+    if (Number.isFinite(parsed) && parsed >= min && (!integer || Number.isInteger(parsed)) && (max === undefined || parsed <= max)) {
+      onCommit(parsed);
+    } else {
+      setDraft(String(value));
+    }
+  };
+
+  return (
+    <Input
+      aria-label={label}
+      type="number"
+      min={min}
+      max={max}
+      step={integer ? 1 : 'any'}
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur();
+      }}
+    />
+  );
 }
 
 export function ComparisonControls({
@@ -60,8 +106,8 @@ export function ComparisonControls({
   onReset,
   onSeekFrame,
   scenarioTimings,
-  maxEndTime,
   minTimeStep,
+  onEndTimeChange,
   onTimingChange,
   scenarios,
   renderOptions,
@@ -105,52 +151,38 @@ export function ComparisonControls({
         aria-label="Timeline"
       />
 
+      <label className="block max-w-xs space-y-1 text-xs text-muted-foreground">
+        Shared end time (t_end, h)
+        <TimingNumberInput
+          label="Shared end time t_end (hours)"
+          value={tEnd}
+          min={0.000001}
+          onCommit={onEndTimeChange}
+        />
+      </label>
+
       <div className="grid gap-3 sm:grid-cols-2">
         {scenarioTimings.map((scenario) => (
           <fieldset key={scenario.id} className="space-y-2 rounded-md border p-3">
             <legend className="px-1 text-sm font-medium">{scenario.label} timing</legend>
-            <div className="grid grid-cols-3 gap-2">
-              <label className="space-y-1 text-xs text-muted-foreground">
-                End (h)
-                <Input
-                  aria-label={`${scenario.label} end time (hours)`}
-                  type="number"
-                  min="0.000001"
-                  max={maxEndTime}
-                  step="any"
-                  value={scenario.tEnd}
-                  onChange={(event) => {
-                    const value = Number(event.target.value);
-                    if (Number.isFinite(value) && value > 0) onTimingChange(scenario.id, 't_end', value);
-                  }}
-                />
-              </label>
+            <div className="grid grid-cols-2 gap-2">
               <label className="space-y-1 text-xs text-muted-foreground">
                 Timestep (h)
-                <Input
-                  aria-label={`${scenario.label} timestep (hours)`}
-                  type="number"
+                <TimingNumberInput
+                  label={`${scenario.label} timestep (hours)`}
                   min={minTimeStep}
-                  step="any"
                   value={scenario.dt}
-                  onChange={(event) => {
-                    const value = Number(event.target.value);
-                    if (Number.isFinite(value) && value > 0) onTimingChange(scenario.id, 'dt', value);
-                  }}
+                  onCommit={(value) => onTimingChange(scenario.id, 'dt', value)}
                 />
               </label>
               <label className="space-y-1 text-xs text-muted-foreground">
                 Substeps
-                <Input
-                  aria-label={`${scenario.label} physics substeps`}
-                  type="number"
-                  min="1"
-                  step="1"
+                <TimingNumberInput
+                  label={`${scenario.label} physics substeps`}
+                  min={1}
+                  integer
                   value={scenario.nSubsteps}
-                  onChange={(event) => {
-                    const value = Number(event.target.value);
-                    if (Number.isInteger(value) && value > 0) onTimingChange(scenario.id, 'n_substeps', value);
-                  }}
+                  onCommit={(value) => onTimingChange(scenario.id, 'n_substeps', value)}
                 />
               </label>
             </div>

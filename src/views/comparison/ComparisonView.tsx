@@ -1,7 +1,7 @@
 /**
  * Comparison view: high-frequency perimeter oscillation vs. averaged model.
  *
- * Runs two fixed EHT scenarios in lockstep on a shared timeline and renders
+ * Runs two EHT scenarios with independent timestep sizes on a shared timeline and renders
  * them superimposed on one canvas (oscillating scenario in normal colors,
  * averaged model tinted and semi-transparent), with per-scenario visibility
  * toggles and comparative statistics plots below.
@@ -9,7 +9,7 @@
 import { useMemo, useState } from 'react';
 import { SimulationCanvas } from '@/components/simulation';
 import { Card } from '@/components/ui/card';
-import { COMPARISON_SCENARIOS, MAX_COMPARISON_FRAMES } from './scenarios';
+import { COMPARISON_SCENARIOS, MIN_COMPARISON_DT_H } from './scenarios';
 import {
   comparisonCanvasModel,
   buildComparisonParams,
@@ -29,15 +29,23 @@ export function ComparisonView() {
 
   const sim = useLockstepSimulations(definitions);
 
-  const updateTiming = (id: string, key: 't_end' | 'dt' | 'n_substeps', value: number) => {
+  const updateTiming = (id: string, key: 'dt' | 'n_substeps', value: number) => {
     setDefinitions((current) => {
       const updated = current.map((def) => def.scenario.id === id
         ? { ...def, params: { ...def.params, general: { ...def.params.general, [key]: value } } }
         : def
       );
-      const minimumDt = Math.min(...updated.map((def) => def.params.general.dt));
-      const maximumEnd = Math.max(...updated.map((def) => def.params.general.t_end));
-      if (Math.ceil(maximumEnd / minimumDt - 1e-9) > MAX_COMPARISON_FRAMES) return current;
+      if (key === 'dt' && value < MIN_COMPARISON_DT_H) return current;
+      return updated;
+    });
+  };
+
+  const updateEndTime = (value: number) => {
+    setDefinitions((current) => {
+      const updated = current.map((def) => ({
+        ...def,
+        params: { ...def.params, general: { ...def.params.general, t_end: value } },
+      }));
       return updated;
     });
   };
@@ -98,12 +106,11 @@ export function ComparisonView() {
         scenarioTimings={definitions.map(({ scenario, params }) => ({
           id: scenario.id,
           label: scenario.label,
-          tEnd: params.general.t_end,
           dt: params.general.dt,
           nSubsteps: params.general.n_substeps,
         }))}
-        maxEndTime={Math.min(...definitions.map((def) => def.params.general.dt)) * MAX_COMPARISON_FRAMES}
-        minTimeStep={Math.max(...definitions.map((def) => def.params.general.t_end)) / MAX_COMPARISON_FRAMES}
+        onEndTimeChange={updateEndTime}
+        minTimeStep={MIN_COMPARISON_DT_H}
         onTimingChange={updateTiming}
         scenarios={COMPARISON_SCENARIOS.map(({ id, label, color }) => ({ id, label, color }))}
         renderOptions={renderOptions}
@@ -115,6 +122,8 @@ export function ComparisonView() {
         stats={sim.stats}
         scenarioTimes={sim.scenarioTimes}
         currentTime={sim.time}
+        tEnd={sim.tEnd}
+        averagedDt={definitions.find((def) => def.scenario.id === 'averaged')?.params.general.dt ?? 0.1}
       />
     </div>
   );
