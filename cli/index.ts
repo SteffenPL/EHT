@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * CLI entry point for EHT Simulator.
- * Run simulations headlessly via `npm run cli`.
+ * Run simulations headlessly via `ppnpm run cli`.
  */
 
 import { runCommand } from './commands/run';
@@ -16,7 +16,7 @@ function showHelp(): void {
 EHT Simulator CLI
 
 Usage:
-  npm run cli -- <command> [options]
+  ppnpm run cli -- <command> [options]
 
 Commands:
   run       Run a single simulation
@@ -37,10 +37,10 @@ Options for 'batch':
   --stats <stat1,stat2>    Compute statistics (comma-separated, or 'all')
 
 Examples:
-  npm run cli -- run
-  npm run cli -- run -c simulation.toml -o output.csv
-  npm run cli -- run --seed 42 --times 0,24,6 --param general.N_emt=10
-  npm run cli -- batch -c batch_config.toml -o results.csv --stats all
+  ppnpm run cli -- run
+  ppnpm run cli -- run -c simulation.toml -o output.csv
+  ppnpm run cli -- run --seed 42 --times 0,24,6 --param general.N_emt=10
+  ppnpm run cli -- batch -c batch_config.toml -o results.csv --stats all
 `);
 }
 

@@ -19,7 +19,7 @@
  * | epi.init_zone.size.y        | general.h_init                  | Direct                                   |
  * | epi.mu                      | general.mu                      | Direct                                   |
  * | alg.n_substeps              | general.n_substeps              | Direct                                   |
- * | alg.dt                      | general.alg_dt                  | Direct                                   |
+ * | alg.dt                      | —                               | Ignored (legacy, unused)                 |
  * | stat.num_rep                | -                               | Ignored (batch config)                   |
  * | epi.init_distr              | -                               | Parsed for N_init per type               |
  * | epi.init_method             | -                               | Ignored                                  |
@@ -210,9 +210,6 @@ export function importLegacyXLSX(data: LegacyXLSXData): EHTParams {
   }
   if (p['alg.n_substeps'] !== undefined) {
     params.general.n_substeps = Math.floor(parseNumber(p['alg.n_substeps'], 30));
-  }
-  if (p['alg.dt'] !== undefined) {
-    params.general.alg_dt = parseNumber(p['alg.dt'], 0.01);
   }
   if (p['epi.init_zone.size.x'] !== undefined) {
     params.general.w_init = parseNumber(p['epi.init_zone.size.x'], 80);

@@ -176,8 +176,7 @@ export interface EHTGeneralParams {
   w_init: number;           // Initial tissue width
   h_init: number;           // Initial tissue height
   mu: number;               // Friction coefficient
-  n_substeps: number;       // Number of substeps per timestep
-  alg_dt: number;           // Algorithm time step
+  n_substeps: number;       // Number of physics substeps per timestep; physics dt = dt / n_substeps
   w_screen: number;         // Screen width (visualization)
   h_screen: number;         // Screen height (visualization)
   p_div_out: number;        // Probability of division producing one offspring

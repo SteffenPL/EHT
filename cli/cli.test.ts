@@ -11,7 +11,7 @@ import * as os from 'os';
 
 describe('CLI Integration Tests', () => {
   it('should run stats command without error', () => {
-    const result = execSync('npm run cli -- stats', {
+    const result = execSync('ppnpm run cli -- stats', {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -24,7 +24,7 @@ describe('CLI Integration Tests', () => {
 
   it('should run a simple simulation without error', () => {
     // Run a very short simulation
-    const result = execSync('npm run cli -- run --times 0,0.01,0.01', {
+    const result = execSync('ppnpm run cli -- run --times 0,0.01,0.01', {
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe'],
       timeout: 30000, // 30 second timeout
@@ -59,7 +59,7 @@ time_samples = "0,0.01"
 
     try {
       // Run batch command
-      const result = execSync(`npm run cli -- batch -c ${tomlPath}`, {
+      const result = execSync(`ppnpm run cli -- batch -c ${tomlPath}`, {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         timeout: 60000, // 60 second timeout
@@ -103,7 +103,7 @@ time_samples = "0,0.01"
 
     try {
       // Run batch command
-      const result = execSync(`npm run cli -- batch -c ${tomlPath}`, {
+      const result = execSync(`ppnpm run cli -- batch -c ${tomlPath}`, {
         encoding: 'utf-8',
         stdio: ['pipe', 'pipe', 'pipe'],
         timeout: 60000, // 60 second timeout

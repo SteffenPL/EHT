@@ -37,18 +37,18 @@ src/
 
 ## CLI Interface
 
-Headless simulation via `npm run cli`:
+Headless simulation via `pnpm run cli`:
 
 ```bash
-npm run cli -- run                              # Single sim with defaults
-npm run cli -- run -c params.toml -o out.csv   # With config and output
-npm run cli -- batch -c batch.toml --stats all # Batch with all stats
-npm run cli -- stats                            # List available statistics
+pnpm run cli -- run                              # Single sim with defaults
+pnpm run cli -- run -c params.toml -o out.csv   # With config and output
+pnpm run cli -- batch -c batch.toml --stats all # Batch with all stats
+pnpm run cli -- stats                            # List available statistics
 ```
 
 ## Development
 
 ```bash
-npm run dev    # Dev server (check output for port)
-npm run build  # Production build
+pnpm run dev    # Dev server (check output for port)
+pnpm run build  # Production build
 ```

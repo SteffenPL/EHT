@@ -1,0 +1,22 @@
+label = "Amniote Cyclic Stretch (900 µm, 110 bpm)"
+
+[metadata]
+model = "EHT"
+version = "2.0.0"
+unit_system = "microns"
+
+[general]
+dt = 0.000015151515151515152
+perimeter = 900
+
+[general.formulas]
+perimeter = "sinwave(t, period=1 / (heart_rate_bpm * 60), from=init_value, to=init_value * 1.1)"
+
+[constants]
+heart_rate_bpm = 110
+
+[cell_types.control]
+N_init = 52
+
+[cell_types.emt]
+N_init = 8

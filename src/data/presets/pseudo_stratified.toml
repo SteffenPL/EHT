@@ -15,7 +15,6 @@ w_init = 20
 h_init = 2
 mu = 0.5
 n_substeps = 40
-alg_dt = 0.01
 w_screen = 30
 h_screen = 0
 p_div_out = 0.9

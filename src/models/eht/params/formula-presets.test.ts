@@ -37,6 +37,20 @@ describe('FORMULA_PRESETS', () => {
     expect(evaluate(formula, { ...scope, t: 6 })).toBeCloseTo(1);
   });
 
+  it('includes a 10% heartbeat-paced cyclic stretch preset', () => {
+    const preset = FORMULA_QUICK_PRESETS.find(p => p.key === 'cyclic_stretch_10_percent_110_bpm');
+
+    expect(preset).toBeDefined();
+    expect(preset!.initialValueMode).toBe('multiply');
+    const formula = preset!.generate();
+    const period = 1 / (110 * 60);
+    const scope = { ...formulaFunctions };
+
+    expect(evaluate(formula, { ...scope, t: 0 })).toBeCloseTo(1);
+    expect(evaluate(formula, { ...scope, t: period / 2 })).toBeCloseTo(1.1);
+    expect(evaluate(formula, { ...scope, t: period })).toBeCloseTo(1);
+  });
+
   it('includes an up and down quick preset for multiply mode', () => {
     const preset = FORMULA_QUICK_PRESETS.find(p => p.key === 'up_and_down');
 

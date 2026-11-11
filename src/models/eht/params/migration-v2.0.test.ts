@@ -42,6 +42,21 @@ describe('EHT v2 micron parameter migration', () => {
     expect(reloaded.cell_types.control.R_soft).toBe(DEFAULT_EHT_PARAMS.cell_types.control.R_soft);
   });
 
+  it('accepts and discards the retired alg_dt field from old configs', () => {
+    const params = mergeWithDefaults({
+      metadata: { model: 'EHT', version: '1.5.0' },
+      general: {
+        dt: 0.1,
+        n_substeps: 42,
+        alg_dt: 0.00001,
+      },
+    });
+
+    expect(params.general.dt).toBe(0.1);
+    expect(params.general.n_substeps).toBe(42);
+    expect(params.general).not.toHaveProperty('alg_dt');
+  });
+
   it('converts migrated params back to the original legacy engine values', () => {
     const migrated = mergeWithDefaults(LEGACY_DEFAULT_EHT_PARAMS);
     const engine = micronParamsToLegacy(migrated);

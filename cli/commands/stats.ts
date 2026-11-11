@@ -43,5 +43,5 @@ export function statsCommand(_args: string[]): void {
   }
 
   console.log(`Total: ${stats.length} statistics available`);
-  console.log('\nExample: npm run cli -- run --stats ab_distance_all,x_emt,below_basal_emt');
+  console.log('\nExample: ppnpm run cli -- run --stats ab_distance_all,x_emt,below_basal_emt');
 }

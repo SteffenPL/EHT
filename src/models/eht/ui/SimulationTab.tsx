@@ -29,14 +29,6 @@ export function EHTSimulationTab({ params, onChange, disabled }: ModelUITabProps
             step={0.01}
             min={0.001}
           />
-          <NumberInput
-            label="Algo Time Step"
-            value={g.alg_dt}
-            onChange={(v) => update('alg_dt', v)}
-            disabled={disabled}
-            step={0.001}
-            min={0.0001}
-          />
           <IntegerInput
             label="Substeps"
             value={g.n_substeps}
@@ -52,9 +44,8 @@ export function EHTSimulationTab({ params, onChange, disabled }: ModelUITabProps
         <p className="font-medium mb-1">Notes:</p>
         <ul className="list-disc list-inside space-y-0.5">
           <li><strong>dt</strong>: Output time step (visualization/export interval)</li>
-          <li><strong>alg_dt</strong>: Internal algorithm time step for physics</li>
           <li><strong>n_substeps</strong>: Number of physics steps per output step</li>
-          <li>Effective physics dt = alg_dt, run n_substeps times per dt</li>
+          <li>Effective physics dt = dt / n_substeps</li>
         </ul>
       </div>
     </div>

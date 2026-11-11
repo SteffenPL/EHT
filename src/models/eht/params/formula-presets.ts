@@ -108,6 +108,14 @@ export const FORMULA_QUICK_PRESETS: FormulaQuickPreset[] = [
     generate: () => 'sinwave(t, period=6, from=1, to=1.1)',
   },
   {
+    key: 'cyclic_stretch_10_percent_110_bpm',
+    name: '10% cyclic stretch (110 bpm)',
+    context: 'time',
+    description: 'Multiply the initial value by a heartbeat-paced sine wave from baseline to 10% above baseline at 110 bpm',
+    initialValueMode: 'multiply',
+    generate: () => 'sinwave(t, period=1 / (110 * 60), from=1, to=1.1)',
+  },
+  {
     key: 'up_and_down',
     name: 'Up and down',
     context: 'time',

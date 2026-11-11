@@ -10,6 +10,10 @@ export const PARAMETER_DESCRIPTIONS: Record<string, string> = {
   // === General Parameters ===
   'general.t_end': `Simulation end time in hours.`,
 
+  'general.dt': `Outer simulation time step in hours. Each outer step is divided into \`n_substeps\` physics updates.`,
+
+  'general.n_substeps': `Number of physics updates per outer time step. The effective physics time step is $dt / n\_substeps$.`,
+
   'general.random_seed': `Seed for the random number generator. Using the same seed produces identical simulations.`,
 
   'general.p_div_out': `Probability that cell division occurs perpendicular to the epithelial plane (out-of-plane division). Value between 0 and 1.`,

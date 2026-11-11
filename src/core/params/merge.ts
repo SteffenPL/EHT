@@ -65,6 +65,10 @@ export function mergeWithDefaults(
   if (partial.general) {
     mergeWith(result.general, partial.general, customMerge);
   }
+  // alg_dt was exposed historically but never used by the integrator.
+  // Accept old files containing it, then discard it so n_substeps remains
+  // the only control over the internal physics step (dt / n_substeps).
+  delete result.general.alg_dt;
 
   // Merge cell_prop params
   if (partial.cell_prop) {

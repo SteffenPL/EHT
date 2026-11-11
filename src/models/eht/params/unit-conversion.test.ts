@@ -21,7 +21,6 @@ function makeParams(): EHTParams {
       h_init: 5,
       mu: 0.2,
       n_substeps: 30,
-      alg_dt: 0.01,
       w_screen: 50,
       h_screen: 25,
       p_div_out: 1,

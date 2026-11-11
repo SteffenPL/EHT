@@ -168,7 +168,6 @@ export const ehtGeneralParamsSchema = z.object({
   h_init: z.number().positive(),
   mu: z.number().positive(),
   n_substeps: z.number().int().positive(),
-  alg_dt: z.number().positive(),
   w_screen: z.number().positive(),
   h_screen: z.number().positive(),
   p_div_out: z.number().min(0).max(1),

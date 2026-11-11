@@ -16,31 +16,31 @@ React 18 + TypeScript, Vite, Pixi.js, shadcn/ui + Tailwind, TOML params, CSV exp
 
 ```bash
 # Development
-npm run dev              # Start dev server (Vite will display the port)
-npm run build            # TypeScript compile + production build
-npm run preview          # Preview production build
-npx tsc --noEmit         # Type-check only (no emit)
+pppnpm run dev             # Start dev server (Vite will display the port)
+pppnpm run build           # TypeScript compile + production build
+pppnpm run preview         # Preview production build
+pnpm exec tsc --noEmit   # Type-check only (no emit)
 
 # Testing
-npm run test             # Run all tests once
-npm run test:watch       # Run tests in watch mode
-npm run test:ui          # Open Vitest UI
-npm run test:coverage    # Run tests with coverage report
+pppnpm run test            # Run all tests once
+pppnpm run test:watch      # Run tests in watch mode
+pppnpm run test:ui         # Open Vitest UI
+pppnpm run test:coverage   # Run tests with coverage report
 
 # CLI (headless simulations)
-npm run cli -- run                              # Single simulation with defaults
-npm run cli -- run -c params.toml -o out.csv    # With config and output
-npm run cli -- batch -c batch.toml --stats all  # Batch with all statistics
-npm run cli -- stats                            # List available statistics
+pppnpm run cli -- run                              # Single simulation with defaults
+pppnpm run cli -- run -c params.toml -o out.csv    # With config and output
+pppnpm run cli -- batch -c batch.toml --stats all  # Batch with all statistics
+pppnpm run cli -- stats                            # List available statistics
 
 # Deployment (scripts/deploy.ts)
-npx tsx scripts/deploy.ts                        # Interactive: select source, target, confirm
-npx tsx scripts/deploy.ts --current              # Deploy working directory → primary
-npx tsx scripts/deploy.ts --current --target beta   # Deploy working directory → beta
-npx tsx scripts/deploy.ts --current --target alpha  # Deploy working directory → alpha
-npx tsx scripts/deploy.ts --tag 1.2.0            # Deploy git tag → primary
-npx tsx scripts/deploy.ts --tag 1.2.0 --target beta # Deploy git tag → beta
-npx tsx scripts/deploy.ts --commit abc123        # Deploy specific commit → primary
+pnpm exec tsx scripts/deploy.ts                        # Interactive: select source, target, confirm
+pnpm exec tsx scripts/deploy.ts --current              # Deploy working directory → primary
+pnpm exec tsx scripts/deploy.ts --current --target beta   # Deploy working directory → beta
+pnpm exec tsx scripts/deploy.ts --current --target alpha  # Deploy working directory → alpha
+pnpm exec tsx scripts/deploy.ts --tag 1.2.0            # Deploy git tag → primary
+pnpm exec tsx scripts/deploy.ts --tag 1.2.0 --target beta # Deploy git tag → beta
+pnpm exec tsx scripts/deploy.ts --commit abc123        # Deploy specific commit → primary
 ```
 
 ## Architecture

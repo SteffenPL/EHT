@@ -54,4 +54,29 @@ describe('EHT preset v2 migration', () => {
       )
     ).toBe(false);
   });
+
+  it('provides an amniote cyclic-stretch preset at 900 microns and 110 bpm', () => {
+    const preset = EHT_PRESETS.find(
+      (candidate) => candidate.label === 'Amniote Cyclic Stretch (900 µm, 110 bpm)'
+    );
+    expect(preset).toBeDefined();
+
+    const params = preset!.create();
+
+    expect(preset!.key).toBe('amniote_cyclic_stretch');
+    expect(params.general.dt).toBeCloseTo(1 / (110 * 60 * 10), 12);
+    expect(params.general.perimeter).toBe(900);
+    expect(params.cell_types.control.N_init).toBe(52);
+    expect(params.cell_types.emt.N_init).toBe(8);
+    expect(
+      Object.values(params.cell_types).reduce(
+        (coverage, cellType) => coverage + cellType.N_init * cellType.max_basal_junction_dist,
+        0
+      )
+    ).toBeGreaterThan(params.general.perimeter);
+    expect(params.constants.heart_rate_bpm).toBe(110);
+    expect(params.general.formulas.perimeter).toBe(
+      'sinwave(t, period=1 / (heart_rate_bpm * 60), from=init_value, to=init_value * 1.1)'
+    );
+  });
 });

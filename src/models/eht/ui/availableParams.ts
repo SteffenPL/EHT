@@ -33,7 +33,6 @@ export function generateEHTBatchParameters(params: EHTParams): BatchParameterDef
     { path: 'general.h_init', label: 'h_init (Initial height)' },
     { path: 'general.mu', label: 'mu (Friction)' },
     { path: 'general.n_substeps', label: 'n_substeps', isInteger: true },
-    { path: 'general.alg_dt', label: 'alg_dt (Algorithm dt)' },
     { path: 'general.p_div_out', label: 'p_div_out (Division probability)' },
     { path: 'general.perimeter', label: 'Perimeter' },
     { path: 'general.aspect_ratio', label: 'Aspect ratio' },

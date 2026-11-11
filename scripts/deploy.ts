@@ -41,6 +41,26 @@ function tagToVersionUrl(tag: string): string {
   return 'v' + tag.replace(/\./g, '-');
 }
 
+function buildAndCopy(targetDir: string, subdir?: string): void {
+  const env = { ...process.env };
+  if (subdir) {
+    env.VITE_BASE_SUBDIR = subdir;
+  } else {
+    delete env.VITE_BASE_SUBDIR;
+  }
+
+  execSync('ppnpm run build', { stdio: 'inherit', env });
+
+  execSync(`mkdir -p ${shellQuote(targetDir)}`, { stdio: 'inherit' });
+
+  // Clean only build artifacts, preserving nested deployment targets.
+  execSync(`rm -f ${shellQuote(path.join(targetDir, 'index.html'))}`, { stdio: 'inherit' });
+  execSync(`rm -rf ${shellQuote(path.join(targetDir, 'assets'))}`, { stdio: 'inherit' });
+  execSync(`rm -rf ${shellQuote(path.join(targetDir, 'presets'))}`, { stdio: 'inherit' });
+
+  execSync(`cp -r dist/* ${shellQuote(targetDir)}/`, { stdio: 'inherit' });
+}
+
 async function getTags(): Promise<{ name: string; date: string }[]> {
   const output = execSync('git tag -l --sort=-creatordate', { encoding: 'utf-8' });
   return output.trim().split('\n').filter(Boolean).map(tag => ({
@@ -107,6 +127,9 @@ async function selectInteractive(): Promise<DeployOptions> {
 async function deploy(options: DeployOptions) {
   const originalBranch = execSync('git branch --show-current', { encoding: 'utf-8' }).trim();
   const originalCommit = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
+  const updateLatest = options.source === 'current'
+    && originalBranch === 'main'
+    && options.target === 'primary';
 
   try {
     ensurePagesRepo();
@@ -117,28 +140,17 @@ async function deploy(options: DeployOptions) {
       execSync(`git checkout ${options.ref}`, { stdio: 'inherit' });
     }
 
-    // Set target directory and env
+    // Set target directory
     const targetDir = options.target === 'primary'
       ? TARGET_BASE
       : `${TARGET_BASE}/${options.target}`;
 
-    const env = { ...process.env };
-    if (options.target !== 'primary') {
-      env.VITE_BASE_SUBDIR = options.target;
+    buildAndCopy(targetDir, options.target === 'primary' ? undefined : options.target);
+
+    // Keep /latest/ as an independent snapshot of the latest primary deploy from main.
+    if (updateLatest) {
+      buildAndCopy(path.join(TARGET_BASE, 'latest'), 'latest');
     }
-
-    // Build
-    execSync('npm run build', { stdio: 'inherit', env });
-
-    // Deploy
-    execSync(`mkdir -p ${shellQuote(targetDir)}`, { stdio: 'inherit' });
-
-    // Clean up only specific build artifacts (preserving subdirectories like alpha/, beta/, v*/)
-    execSync(`rm -f ${shellQuote(path.join(targetDir, 'index.html'))}`, { stdio: 'inherit' });
-    execSync(`rm -rf ${shellQuote(path.join(targetDir, 'assets'))}`, { stdio: 'inherit' });
-    execSync(`rm -rf ${shellQuote(path.join(targetDir, 'presets'))}`, { stdio: 'inherit' });
-
-    execSync(`cp -r dist/* ${shellQuote(targetDir)}/`, { stdio: 'inherit' });
 
     // Return to original state
     if (options.source !== 'current') {
@@ -154,7 +166,8 @@ async function deploy(options: DeployOptions) {
       console.log(`\nNo pages changes for ${sourceLabel} -> ${options.target}.`);
       return;
     }
-    execSync(`git -C ${shellQuote(PAGES_REPO)} commit -m ${shellQuote(`Deploy EHT: ${sourceLabel} -> ${options.target}`)}`, { stdio: 'inherit' });
+    const latestLabel = updateLatest ? ' + latest' : '';
+    execSync(`git -C ${shellQuote(PAGES_REPO)} commit -m ${shellQuote(`Deploy EHT: ${sourceLabel} -> ${options.target}${latestLabel}`)}`, { stdio: 'inherit' });
     execSync(`git -C ${shellQuote(PAGES_REPO)} push origin main`, { stdio: 'inherit' });
 
     console.log('\nDeployed successfully!');

@@ -255,7 +255,6 @@ export const LEGACY_DEFAULT_EHT_PARAMS: EHTParams = {
     h_init: 5,
     mu: 0.2,
     n_substeps: 30,
-    alg_dt: 0.01,
     w_screen: 50,      // Minimum visible width in simulation units
     h_screen: 25,      // Minimum visible height in simulation units
     p_div_out: 1.0,
@@ -326,6 +325,8 @@ function mergePresetWithDefaults(partial: PartialEHTParams): EHTParams {
   if (partial.general) {
     base.general = { ...base.general, ...partial.general };
   }
+  // Retain compatibility with old preset files while removing the unused field.
+  delete (base.general as unknown as Record<string, unknown>).alg_dt;
 
   // Merge constants
   if (partial.constants) {
