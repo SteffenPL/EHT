@@ -9,7 +9,7 @@
 import { useMemo, useState } from 'react';
 import { SimulationCanvas } from '@/components/simulation';
 import { Card } from '@/components/ui/card';
-import { COMPARISON_SCENARIOS } from './scenarios';
+import { COMPARISON_SCENARIOS, MAX_COMPARISON_FRAMES } from './scenarios';
 import {
   comparisonCanvasModel,
   buildComparisonParams,
@@ -21,13 +21,26 @@ import { ComparisonControls } from './components/ComparisonControls';
 import { ScenarioPlots } from './components/ScenarioPlots';
 
 export function ComparisonView() {
-  // Resolve scenario params once; the definitions object identity stays
-  // stable so the lockstep runner only re-initializes on remount.
-  const [scenarioDefs] = useState<LockstepScenarioDefinition[]>(() =>
+  // Keep scenario params in state so timing edits rebuild their engines and
+  // reset the comparison timeline.
+  const [definitions, setDefinitions] = useState<LockstepScenarioDefinition[]>(() =>
     COMPARISON_SCENARIOS.map((scenario) => ({ scenario, params: scenario.buildParams() }))
   );
 
-  const sim = useLockstepSimulations(scenarioDefs);
+  const sim = useLockstepSimulations(definitions);
+
+  const updateTiming = (id: string, key: 't_end' | 'dt' | 'n_substeps', value: number) => {
+    setDefinitions((current) => {
+      const updated = current.map((def) => def.scenario.id === id
+        ? { ...def, params: { ...def.params, general: { ...def.params.general, [key]: value } } }
+        : def
+      );
+      const minimumDt = Math.min(...updated.map((def) => def.params.general.dt));
+      const maximumEnd = Math.max(...updated.map((def) => def.params.general.t_end));
+      if (Math.ceil(maximumEnd / minimumDt - 1e-9) > MAX_COMPARISON_FRAMES) return current;
+      return updated;
+    });
+  };
 
   const [renderOptions, setRenderOptions] = useState<Record<string, boolean>>(() => ({
     showTissueLines: false,
@@ -35,26 +48,26 @@ export function ComparisonView() {
   }));
 
   const comparisonParams = useMemo(
-    () => buildComparisonParams(scenarioDefs.map((def) => def.params)),
-    [scenarioDefs]
+    () => buildComparisonParams(definitions.map((def) => def.params)),
+    [definitions]
   );
 
   const frame: ComparisonFrame | null = useMemo(() => {
     const scenarios: ComparisonScenarioFrame[] = [];
-    for (const def of scenarioDefs) {
+    for (const def of definitions) {
       const state = sim.states[def.scenario.id];
       if (state) scenarios.push({ scenario: def.scenario, params: def.params, state });
     }
     return scenarios.length > 0 ? { scenarios } : null;
-  }, [scenarioDefs, sim.states]);
+  }, [definitions, sim.states]);
 
   return (
     <div className="min-w-0 space-y-4">
       <p className="max-w-3xl text-sm text-muted-foreground">
         Compares a high-frequency perimeter oscillation ({'120 bpm, ±10%'}) with an averaged
         EHT model (constant perimeter at the mean, parameters adapted to describe the mean
-        behaviour). Both scenarios run in lockstep from the same initial tissue; the canvas
-        superimposes them and the plots below track statistics over time.
+        behaviour). Both scenarios start from the same tissue and are shown at matching
+        elapsed times; the canvas superimposes them and the plots track statistics over time.
       </p>
 
       <Card className="overflow-hidden">
@@ -82,6 +95,16 @@ export function ComparisonView() {
         onStep={sim.step}
         onReset={sim.reset}
         onSeekFrame={sim.seekToFrame}
+        scenarioTimings={definitions.map(({ scenario, params }) => ({
+          id: scenario.id,
+          label: scenario.label,
+          tEnd: params.general.t_end,
+          dt: params.general.dt,
+          nSubsteps: params.general.n_substeps,
+        }))}
+        maxEndTime={Math.min(...definitions.map((def) => def.params.general.dt)) * MAX_COMPARISON_FRAMES}
+        minTimeStep={Math.max(...definitions.map((def) => def.params.general.t_end)) / MAX_COMPARISON_FRAMES}
+        onTimingChange={updateTiming}
         scenarios={COMPARISON_SCENARIOS.map(({ id, label, color }) => ({ id, label, color }))}
         renderOptions={renderOptions}
         onRenderOptionsChange={setRenderOptions}
@@ -90,8 +113,8 @@ export function ComparisonView() {
       <ScenarioPlots
         scenarios={COMPARISON_SCENARIOS}
         stats={sim.stats}
-        visibleFrames={sim.computedFrames + 1}
-        dt={sim.dt}
+        scenarioTimes={sim.scenarioTimes}
+        currentTime={sim.time}
       />
     </div>
   );

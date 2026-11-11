@@ -1,14 +1,14 @@
 /**
  * Lockstep multi-simulation runner for comparison views.
  *
- * Runs one SimulationEngine per scenario on a *shared frame timeline*:
- * all scenarios must use the same dt and t_end (validated with a warning),
- * so frame index k shows every scenario at simulation time k * dt.
+ * Runs one SimulationEngine per scenario on a shared physical-time timeline.
+ * Each engine advances with its own dt and t_end; displayed states are the
+ * latest states at or before the shared timeline time.
  *
  * This intentionally mirrors a slice of useSimulation's slider/catch-up
  * logic (single rAF loop, cloned history per frame, seek with catch-up)
- * but orchestrates N engines in lockstep and additionally harvests
- * per-frame statistics for each scenario.
+ * but orchestrates N engines on a shared playback clock and harvests
+ * per-step statistics and timestamps for each scenario.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SimulationEngine, cloneSimulationState } from '@/core/simulation';
@@ -32,17 +32,19 @@ export interface UseLockstepSimulationsResult {
   computedFrames: number;
   /** Total frames needed to reach t_end. */
   totalFrames: number;
-  /** Timestep shared by all scenarios [hours]. */
+  /** Shared playback resolution, equal to the smallest scenario timestep. */
   dt: number;
-  /** End time shared by all scenarios [hours]. */
+  /** Playback end time, equal to the largest scenario end time [hours]. */
   tEnd: number;
   isRunning: boolean;
   isCatchingUp: boolean;
   isComplete: boolean;
   /** Display state per scenario id at the current frame. */
   states: Record<string, EHTSimulationState | null>;
-  /** Per-frame statistics per scenario id (array index = frame index). */
+  /** Per-step statistics per scenario id (index aligns with scenarioTimes). */
   stats: Record<string, Array<Record<string, number>>>;
+  /** Actual state/statistic times per scenario [hours]. */
+  scenarioTimes: Record<string, number[]>;
   start: () => void;
   pause: () => void;
   step: () => void;
@@ -61,24 +63,18 @@ function computeStatsOf(state: EHTSimulationState): Record<string, number> {
 export function useLockstepSimulations(
   definitions: LockstepScenarioDefinition[]
 ): UseLockstepSimulationsResult {
-  const first = definitions[0];
-  const dt = first?.params.general.dt ?? 1;
-  const tEnd = first?.params.general.t_end ?? 0;
+  const dt = definitions.length
+    ? Math.min(...definitions.map((def) => def.params.general.dt))
+    : 1;
+  const tEnd = definitions.length
+    ? Math.max(...definitions.map((def) => def.params.general.t_end))
+    : 0;
   const totalFrames = Math.max(0, Math.ceil(tEnd / dt - 1e-9));
-
-  // Lockstep frame alignment requires shared timing across scenarios.
-  for (const def of definitions) {
-    if (def.params.general.dt !== dt || def.params.general.t_end !== tEnd) {
-      console.warn(
-        '[useLockstepSimulations] all scenarios must share general.dt and general.t_end ' +
-          'for lockstep frame alignment'
-      );
-    }
-  }
 
   const enginesRef = useRef<SimulationEngine<EHTParams, EHTSimulationState>[]>([]);
   const historiesRef = useRef<Record<string, EHTSimulationState[]>>({});
   const statsRef = useRef<Record<string, Array<Record<string, number>>>>({});
+  const timesRef = useRef<Record<string, number[]>>({});
   const animationFrameRef = useRef<number | null>(null);
   const seekTargetRef = useRef<number | null>(null);
   const frameIndexRef = useRef(0);
@@ -90,30 +86,51 @@ export function useLockstepSimulations(
   const [isCatchingUp, setIsCatchingUp] = useState(false);
   const [displayStates, setDisplayStates] = useState<Record<string, EHTSimulationState | null>>({});
 
+  const stateAtTime = useCallback((id: string, targetTime: number) => {
+    const history = historiesRef.current[id] ?? [];
+    const times = timesRef.current[id] ?? [];
+    let low = 0;
+    let high = times.length;
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2);
+      if (times[mid] <= targetTime + 1e-9) low = mid + 1;
+      else high = mid;
+    }
+    return history[Math.max(0, low - 1)] ?? null;
+  }, []);
+
   const computeFrame = useCallback(() => {
+    const targetTime = Math.min((computedFramesRef.current + 1) * dt, tEnd);
     for (let i = 0; i < definitions.length; i++) {
       const engine = enginesRef.current[i];
-      if (!engine || engine.isComplete()) continue;
-
-      engine.step();
-      const cloned = cloneSimulationState(engine.getState());
-      historiesRef.current[definitions[i].scenario.id].push(cloned);
-      statsRef.current[definitions[i].scenario.id].push(computeStatsOf(cloned));
+      if (!engine) continue;
+      const def = definitions[i];
+      const id = def.scenario.id;
+      const scenarioEnd = def.params.general.t_end;
+      while (!engine.isComplete() && engine.getState().t < scenarioEnd && (
+        engine.getState().t + def.params.general.dt <= targetTime + 1e-9 ||
+        targetTime >= scenarioEnd
+      )) {
+        engine.step();
+        const cloned = cloneSimulationState(engine.getState());
+        historiesRef.current[id].push(cloned);
+        statsRef.current[id].push(computeStatsOf(cloned));
+        timesRef.current[id].push(cloned.t);
+      }
     }
     computedFramesRef.current += 1;
     setComputedFrames(computedFramesRef.current);
-  }, [definitions]);
+  }, [definitions, dt, tEnd]);
 
   const showFrame = useCallback((index: number) => {
     const states: Record<string, EHTSimulationState | null> = {};
     for (const def of definitions) {
-      const history = historiesRef.current[def.scenario.id];
-      states[def.scenario.id] = history?.[Math.min(index, history.length - 1)] ?? null;
+      states[def.scenario.id] = stateAtTime(def.scenario.id, Math.min(index * dt, tEnd));
     }
     frameIndexRef.current = index;
     setFrameIndex(index);
     setDisplayStates(states);
-  }, [definitions]);
+  }, [definitions, stateAtTime, dt, tEnd]);
 
   const allComplete = useCallback(() => computedFramesRef.current >= totalFrames, [totalFrames]);
 
@@ -131,17 +148,20 @@ export function useLockstepSimulations(
 
     const histories: Record<string, EHTSimulationState[]> = {};
     const stats: Record<string, Array<Record<string, number>>> = {};
+    const times: Record<string, number[]> = {};
     const states: Record<string, EHTSimulationState | null> = {};
 
     definitions.forEach((def, i) => {
       const initial = cloneSimulationState(enginesRef.current[i].getState());
       histories[def.scenario.id] = [initial];
       stats[def.scenario.id] = [computeStatsOf(initial)];
+      times[def.scenario.id] = [initial.t];
       states[def.scenario.id] = initial;
     });
 
     historiesRef.current = histories;
     statsRef.current = stats;
+    timesRef.current = times;
 
     computedFramesRef.current = 0;
     frameIndexRef.current = 0;
@@ -263,8 +283,7 @@ export function useLockstepSimulations(
     seekToFrame(time / dt);
   }, [seekToFrame, dt]);
 
-  const firstId = definitions[0]?.scenario.id;
-  const time = (firstId && displayStates[firstId]?.t) || frameIndex * dt;
+  const time = Math.min(frameIndex * dt, tEnd);
 
   return {
     frameIndex,
@@ -278,6 +297,7 @@ export function useLockstepSimulations(
     isComplete: computedFrames >= totalFrames,
     states: displayStates,
     stats: statsRef.current,
+    scenarioTimes: timesRef.current,
     start,
     pause,
     step,

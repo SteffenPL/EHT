@@ -40,7 +40,7 @@ export interface ComparisonParams extends BaseSimulationParams {
   scenarioParams: EHTParams[];
 }
 
-/** Build canvas params from resolved scenario params (shared timing). */
+/** Build canvas params from resolved per-scenario params. */
 export function buildComparisonParams(scenarioParams: EHTParams[]): ComparisonParams {
   const first = scenarioParams[0];
   return {

@@ -1,12 +1,13 @@
 /**
- * Controls for the comparison view: shared timeline transport
- * (play/pause/step/reset/seek) plus per-scenario visibility toggles.
+ * Controls for the comparison view: shared timeline transport, per-scenario
+ * timing inputs, and visibility toggles.
  */
 import { Play, Pause, RotateCcw, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 
 export interface ComparisonControlsProps {
   isRunning: boolean;
@@ -27,6 +28,11 @@ export interface ComparisonControlsProps {
   onStep: () => void;
   onReset: () => void;
   onSeekFrame: (frame: number) => void;
+  /** Timing values and update callback for each scenario. */
+  scenarioTimings: { id: string; label: string; tEnd: number; dt: number; nSubsteps: number }[];
+  maxEndTime: number;
+  minTimeStep: number;
+  onTimingChange: (id: string, key: 't_end' | 'dt' | 'n_substeps', value: number) => void;
   /** Scenario legend entries: { id, label, color }. */
   scenarios: { id: string; label: string; color: string }[];
   renderOptions: Record<string, boolean>;
@@ -53,6 +59,10 @@ export function ComparisonControls({
   onStep,
   onReset,
   onSeekFrame,
+  scenarioTimings,
+  maxEndTime,
+  minTimeStep,
+  onTimingChange,
   scenarios,
   renderOptions,
   onRenderOptionsChange,
@@ -94,6 +104,59 @@ export function ComparisonControls({
         onValueChange={(values) => onSeekFrame(values[0] ?? 0)}
         aria-label="Timeline"
       />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {scenarioTimings.map((scenario) => (
+          <fieldset key={scenario.id} className="space-y-2 rounded-md border p-3">
+            <legend className="px-1 text-sm font-medium">{scenario.label} timing</legend>
+            <div className="grid grid-cols-3 gap-2">
+              <label className="space-y-1 text-xs text-muted-foreground">
+                End (h)
+                <Input
+                  aria-label={`${scenario.label} end time (hours)`}
+                  type="number"
+                  min="0.000001"
+                  max={maxEndTime}
+                  step="any"
+                  value={scenario.tEnd}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    if (Number.isFinite(value) && value > 0) onTimingChange(scenario.id, 't_end', value);
+                  }}
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                Timestep (h)
+                <Input
+                  aria-label={`${scenario.label} timestep (hours)`}
+                  type="number"
+                  min={minTimeStep}
+                  step="any"
+                  value={scenario.dt}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    if (Number.isFinite(value) && value > 0) onTimingChange(scenario.id, 'dt', value);
+                  }}
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                Substeps
+                <Input
+                  aria-label={`${scenario.label} physics substeps`}
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={scenario.nSubsteps}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    if (Number.isInteger(value) && value > 0) onTimingChange(scenario.id, 'n_substeps', value);
+                  }}
+                />
+              </label>
+            </div>
+          </fieldset>
+        ))}
+      </div>
 
       {/* Scenario visibility (doubles as the color legend) */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">

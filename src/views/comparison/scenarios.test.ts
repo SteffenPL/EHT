@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { SimulationEngine } from '@/core/simulation';
 import { EHTHeadlessModel } from '@/models/eht/headless';
-import { COMPARISON_SCENARIOS, DT_H, T_END_H, HEART_PERIOD_H } from './scenarios';
+import { AVERAGED_DT_H, COMPARISON_SCENARIOS, DT_H, T_END_H, HEART_PERIOD_H } from './scenarios';
 import type { EHTSimulationState } from '@/models/eht/types';
 
 function perimeterOf(state: EHTSimulationState): number {
@@ -13,13 +13,12 @@ function perimeterOf(state: EHTSimulationState): number {
 }
 
 describe('comparison scenarios', () => {
-  it('all scenarios share lockstep timing and seed', () => {
+  it('scenarios use independent default timing and share a seed', () => {
     const paramsList = COMPARISON_SCENARIOS.map((s) => s.buildParams());
-    for (const params of paramsList) {
-      expect(params.general.dt).toBe(DT_H);
-      expect(params.general.t_end).toBe(T_END_H);
-      expect(params.general.random_seed).toBe(paramsList[0].general.random_seed);
-    }
+    expect(paramsList[0].general.dt).toBe(DT_H);
+    expect(paramsList[1].general.dt).toBe(AVERAGED_DT_H);
+    expect(paramsList.map((params) => params.general.t_end)).toEqual([T_END_H, T_END_H]);
+    expect(paramsList[1].general.random_seed).toBe(paramsList[0].general.random_seed);
     // One full heartbeat cycle spans STEPS_PER_CYCLE frames
     expect(HEART_PERIOD_H / DT_H).toBe(12);
   });

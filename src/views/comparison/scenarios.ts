@@ -1,9 +1,8 @@
 /**
  * Scenario definitions for the perimeter-oscillation comparison view.
  *
- * Two EHT parameter variants are simulated side by side on a shared
- * timeline (identical dt / t_end / seed, so lockstep frame k shows both
- * scenarios at simulation time k * dt):
+ * Two EHT parameter variants are simulated side by side with independent
+ * timing parameters on a shared elapsed-time playback timeline:
  *
  *  - "oscillating": the tissue perimeter follows a 120 bpm heartbeat
  *    with a ±10% amplitude, driven by a general perimeter formula.
@@ -23,9 +22,6 @@ const HEART_RATE_BPM = 120;
 /** Fractional perimeter change around the mean (±10%). */
 const PERIMETER_AMPLITUDE = 0.1;
 
-/** Number of heartbeat cycles to simulate. */
-const CYCLES = 30;
-
 /** Timesteps per heartbeat cycle (temporal resolution of the oscillation). */
 const STEPS_PER_CYCLE = 12;
 
@@ -38,11 +34,17 @@ const RANDOM_SEED = 42;
 /** Period of one heartbeat in simulation hours (simulation t is in hours). */
 export const HEART_PERIOD_H = 1 / (HEART_RATE_BPM * 60);
 
-/** Timestep shared by all scenarios [hours]. */
+/** Oscillating scenario timestep [hours]. */
 export const DT_H = HEART_PERIOD_H / STEPS_PER_CYCLE;
 
-/** End time shared by all scenarios [hours]. */
-export const T_END_H = CYCLES * HEART_PERIOD_H;
+/** Default end time for comparison runs [hours]. */
+export const T_END_H = 6;
+
+/** Default timestep for the averaged model [hours]. */
+export const AVERAGED_DT_H = 0.1;
+
+/** Prevent impractical shared playback timelines when timing is edited. */
+export const MAX_COMPARISON_FRAMES = 100_000;
 
 // -----------------------------------------------------------------------------
 
@@ -57,11 +59,11 @@ export interface ComparisonScenario {
   buildParams(): EHTParams;
 }
 
-/** Common timing and seeding for every comparison scenario. */
-function baseComparisonParams(): EHTParams {
+/** Default timing and common seeding for a comparison scenario. */
+function baseComparisonParams(dt: number): EHTParams {
   const params = createDefaultEHTParams();
   params.general.t_end = T_END_H;
-  params.general.dt = DT_H;
+  params.general.dt = dt;
   params.general.n_substeps = N_SUBSTEPS;
   params.general.random_seed = RANDOM_SEED;
   return params;
@@ -84,7 +86,7 @@ export const COMPARISON_SCENARIOS: ComparisonScenario[] = [
       'Perimeter oscillates sinusoidally with a 120 bpm heartbeat (±10% around the mean).',
     color: '#dc2626',
     buildParams(): EHTParams {
-      const params = baseComparisonParams();
+      const params = baseComparisonParams(DT_H);
       params.general.formulas = {
         ...params.general.formulas,
         perimeter: OSCILLATING_PERIMETER_FORMULA,
@@ -113,7 +115,7 @@ export const COMPARISON_SCENARIOS: ComparisonScenario[] = [
       alphaScale: 0.55,
     },
     buildParams(): EHTParams {
-      const params = baseComparisonParams();
+      const params = baseComparisonParams(AVERAGED_DT_H);
 
       // Averaged-model adaptations: the perimeter stays constant at the
       // oscillation mean (the default value). Adapt stiffnesses and other

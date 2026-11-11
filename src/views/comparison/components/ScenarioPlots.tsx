@@ -9,12 +9,12 @@ import type { ComparisonScenario } from '../scenarios';
 
 export interface ScenarioPlotsProps {
   scenarios: ComparisonScenario[];
-  /** Per-frame statistics per scenario id (array index = frame index). */
+  /** Per-step statistics per scenario id. */
   stats: Record<string, Array<Record<string, number>>>;
-  /** Number of frames available (stats arrays are sliced to this length). */
-  visibleFrames: number;
-  /** Timestep [hours], used to convert frame indices to times. */
-  dt: number;
+  /** Actual per-step times for each scenario [hours]. */
+  scenarioTimes: Record<string, number[]>;
+  /** Current shared playback time [hours]. */
+  currentTime: number;
 }
 
 /** Statistics tracked in the comparison plots (EHT group means, engine units). */
@@ -31,7 +31,7 @@ const PLOTTED_STATS: { key: string; label: string; unit: string }[] = [
  */
 const PLOT_STRIDE = 20;
 
-export function ScenarioPlots({ scenarios, stats, visibleFrames, dt }: ScenarioPlotsProps) {
+export function ScenarioPlots({ scenarios, stats, scenarioTimes, currentTime }: ScenarioPlotsProps) {
   const seriesColors = useMemo(
     () => Object.fromEntries(scenarios.map((s) => [s.id, s.color])),
     [scenarios]
@@ -41,8 +41,6 @@ export function ScenarioPlots({ scenarios, stats, visibleFrames, dt }: ScenarioP
     [scenarios]
   );
 
-  const sampledVisibleFrames = Math.max(1, Math.floor(visibleFrames / PLOT_STRIDE) * PLOT_STRIDE);
-
   const plotData = useMemo(() => {
     const byStat = new Map<string, LinePlotDatum[]>();
 
@@ -51,13 +49,27 @@ export function ScenarioPlots({ scenarios, stats, visibleFrames, dt }: ScenarioP
 
       for (const scenario of scenarios) {
         const series = stats[scenario.id];
-        if (!series) continue;
+        const times = scenarioTimes[scenario.id];
+        if (!series || !times) continue;
 
-        const frames = Math.min(sampledVisibleFrames, series.length);
+        const frames = Math.min(series.length, times.length);
+        let lastIncluded = -1;
         for (let i = 0; i < frames; i++) {
+          if (times[i] > currentTime + 1e-9) break;
+          if (i % PLOT_STRIDE !== 0 && i !== frames - 1) continue;
           const value = series[i]?.[stat.key];
           if (typeof value === 'number' && Number.isFinite(value)) {
-            rows.push({ time: i * dt, value, series: scenario.id });
+            rows.push({ time: times[i], value, series: scenario.id });
+            lastIncluded = i;
+          }
+        }
+        // Keep the latest visible point, even if it falls between plot samples.
+        const firstFuture = times.findIndex((time) => time > currentTime + 1e-9);
+        const latestIndex = Math.min(frames - 1, (firstFuture === -1 ? frames : firstFuture) - 1);
+        if (latestIndex >= 0 && latestIndex !== lastIncluded) {
+          const value = series[latestIndex]?.[stat.key];
+          if (typeof value === 'number' && Number.isFinite(value)) {
+            rows.push({ time: times[latestIndex], value, series: scenario.id });
           }
         }
       }
@@ -66,9 +78,7 @@ export function ScenarioPlots({ scenarios, stats, visibleFrames, dt }: ScenarioP
     }
 
     return byStat;
-    // visibleFrames drives sampledVisibleFrames via the stride above
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenarios, stats, sampledVisibleFrames, visibleFrames, dt]);
+  }, [scenarios, stats, scenarioTimes, currentTime]);
 
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-2">
